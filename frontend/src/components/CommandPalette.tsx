@@ -63,9 +63,9 @@ export function CommandPalette({
       category: "Files",
       title: "auth.ts",
       subtitle: "Target AST function: validateToken()",
-      icon: <FileCode className="w-4 h-4 text-blue-400" />,
+      icon: <FileCode className="w-4 h-4 text-[#f54e00]" />,
       badge: "Target",
-      badgeColor: "bg-blue-950/60 text-blue-400 border-blue-800/40",
+      badgeColor: "bg-[#1c1c1c] text-[#f54e00] border-[#333333]",
       shortcut: "⌘1",
       onSelect: () => {
         onSelectFile("auth.ts");
@@ -161,9 +161,9 @@ export function CommandPalette({
       category: "Agent Refactor",
       title: "Open Side-by-Side Diff Review",
       subtitle: "Inspect pending patch with Accept (⌘Y) / Reject (⌘N)",
-      icon: <ArrowRight className="w-4 h-4 text-blue-400" />,
+      icon: <ArrowRight className="w-4 h-4 text-neutral-300" />,
       badge: "Monaco Diff",
-      badgeColor: "bg-blue-950/60 text-blue-400 border-blue-800/40",
+      badgeColor: "bg-[#1c1c1c] text-neutral-300 border-[#333333]",
       onSelect: () => {
         onSelectView("diff");
       },
@@ -175,7 +175,7 @@ export function CommandPalette({
       category: "AI Models",
       title: "Switch to Claude 3.5 Sonnet",
       subtitle: "Anthropic Claude reasoning engine",
-      icon: <Cloud className="w-4 h-4 text-blue-400" />,
+      icon: <Cloud className="w-4 h-4 text-[#f54e00]" />,
       badge: currentModel.includes("claude") ? "Active" : "Cloud",
       badgeColor: currentModel.includes("claude") ? "bg-emerald-950/60 text-emerald-400 border-emerald-800/40" : "bg-neutral-800 text-neutral-400",
       onSelect: () => onSelectModel("claude-3.5-sonnet"),
@@ -195,7 +195,7 @@ export function CommandPalette({
       category: "AI Models",
       title: "Switch to GPT-4o",
       subtitle: "OpenAI multi-modal model",
-      icon: <Cloud className="w-4 h-4 text-blue-400" />,
+      icon: <Cloud className="w-4 h-4 text-neutral-300" />,
       badge: currentModel.includes("gpt") ? "Active" : "Cloud",
       badgeColor: currentModel.includes("gpt") ? "bg-emerald-950/60 text-emerald-400 border-emerald-800/40" : "bg-neutral-800 text-neutral-400",
       onSelect: () => onSelectModel("gpt-4o"),

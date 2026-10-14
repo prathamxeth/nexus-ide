@@ -274,7 +274,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                 : "text-neutral-400 hover:text-neutral-200 hover:bg-[#222]"
             }`}
           >
-            <Cloud size={14} className={activeTab === "byok" ? "text-blue-400" : "text-neutral-500"} />
+            <Cloud size={14} className={activeTab === "byok" ? "text-[#f54e00]" : "text-neutral-500"} />
             <span>Cloud Providers (BYOK)</span>
           </button>
 
@@ -349,7 +349,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                   <label className="text-neutral-300 font-medium">Detected Local Models</label>
                   <button 
                     onClick={checkOllamaModels}
-                    className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                    className="text-[11px] text-[#f54e00] hover:text-[#ff6a26] flex items-center gap-1"
                   >
                     <RefreshCw size={11} className={ollamaStatus === "testing" ? "animate-spin" : ""} />
                     <span>Rescan</span>
@@ -365,12 +365,12 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                         onClick={() => { playUiSound("click"); setSelectedOllamaModel(model); }}
                         className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-[background-color,border-color,box-shadow] duration-150 ${
                           isSelected
-                            ? "bg-[#252525] border-[#3b82f6] shadow-sm"
+                            ? "bg-[#252525] border-[#f54e00]/60 shadow-sm"
                             : "bg-[#161616] border-[#292929] hover:bg-[#1a1a1a]"
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <Cpu size={15} className={isSelected ? "text-blue-400" : "text-neutral-500"} />
+                          <Cpu size={15} className={isSelected ? "text-[#f54e00]" : "text-neutral-500"} />
                           <div>
                             <div className="font-mono text-xs text-white">{model}</div>
                             <div className="text-[10px] text-neutral-500 font-sans">
@@ -379,7 +379,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                           </div>
                         </div>
                         {isSelected && (
-                          <div className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono text-[10px] flex items-center gap-1">
+                          <div className="px-2 py-0.5 rounded bg-[#f54e00]/15 text-[#f54e00] font-mono text-[10px] flex items-center gap-1 border border-[#f54e00]/30">
                             <Check size={11} />
                             <span>Active</span>
                           </div>
@@ -443,7 +443,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                     {keyValidationStatus.anthropic === "validating" ? (
                       <RefreshCw size={13} className="animate-spin text-neutral-400" />
                     ) : (
-                      <ShieldCheck size={13} className="text-blue-400" />
+                      <ShieldCheck size={13} className="text-emerald-400" />
                     )}
                     <span>Verify</span>
                   </button>
@@ -496,7 +496,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                     {keyValidationStatus.openai === "validating" ? (
                       <RefreshCw size={13} className="animate-spin text-neutral-400" />
                     ) : (
-                      <ShieldCheck size={13} className="text-blue-400" />
+                      <ShieldCheck size={13} className="text-emerald-400" />
                     )}
                     <span>Verify</span>
                   </button>
@@ -549,7 +549,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                     {keyValidationStatus.openrouter === "validating" ? (
                       <RefreshCw size={13} className="animate-spin text-neutral-400" />
                     ) : (
-                      <ShieldCheck size={13} className="text-blue-400" />
+                      <ShieldCheck size={13} className="text-emerald-400" />
                     )}
                     <span>Verify</span>
                   </button>

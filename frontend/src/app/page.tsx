@@ -45,7 +45,7 @@ import { MCP_CODEBASE_REGISTRY } from "@/lib/mcp-codebase";
 const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#0d1017] text-xs font-mono text-neutral-500">
+    <div className="w-full h-full flex items-center justify-center bg-[#000000] text-xs font-mono text-neutral-500">
       Loading Code Editor...
     </div>
   ),
@@ -56,7 +56,7 @@ const DiffEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full flex items-center justify-center bg-[#0d1017] text-xs font-mono text-neutral-500">
+      <div className="w-full h-full flex items-center justify-center bg-[#000000] text-xs font-mono text-neutral-500">
         Loading Diff View...
       </div>
     ),
@@ -155,10 +155,10 @@ function FormattedMessageContent({ text }: { text: string }) {
           return (
             <div
               key={segIdx}
-              className="my-2 rounded-[8px] border border-[#1e2436] bg-[#0b0e16] overflow-hidden"
+              className="my-2 rounded-[8px] border border-[#222222] bg-[#0a0a0a] overflow-hidden"
             >
-              <div className="h-7 px-3 bg-[#111520] border-b border-[#1b2130] flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                <span className="text-sky-400 font-semibold">{seg.language || "code"}</span>
+              <div className="h-7 px-3 bg-[#121212] border-b border-[#202020] flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                <span className="text-neutral-200 font-semibold">{seg.language || "code"}</span>
                 <button
                   onClick={() => handleCopy(seg.content, segIdx)}
                   className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -192,7 +192,7 @@ function FormattedMessageContent({ text }: { text: string }) {
               if (!trimmed) return <div key={idx} className="h-1" />;
 
               if (trimmed === "---") {
-                return <div key={idx} className="my-2 border-t border-[#1e2436]" />;
+                return <div key={idx} className="my-2 border-t border-[#202020]" />;
               }
 
               const isBullet = trimmed.startsWith("- ") || trimmed.startsWith("* ");
@@ -224,7 +224,7 @@ function FormattedMessageContent({ text }: { text: string }) {
                         return (
                           <code
                             key={pIdx}
-                            className="px-1.5 py-0.5 mx-0.5 rounded bg-[#161d2b] border border-[#263248] text-sky-300 font-mono text-[11px]"
+                            className="px-1.5 py-0.5 mx-0.5 rounded bg-[#141414] border border-[#262626] text-neutral-200 font-mono text-[11px]"
                           >
                             {part.slice(1, -1)}
                           </code>
@@ -828,7 +828,7 @@ export default function NexusIDE() {
   }, [messages]);
 
   return (
-    <div className="w-screen h-screen min-h-dvh bg-[#080a0f] text-[#e2e8f0] font-sans antialiased overflow-hidden flex flex-col select-none">
+    <div className="w-screen h-screen min-h-dvh bg-[#000000] text-[#e2e8f0] font-sans antialiased overflow-hidden flex flex-col select-none">
       {/* ========================================================================= */}
       {/* MAIN WORKSPACE ROW (LEFT IDE + RESIZER + RIGHT GRAPH) */}
       {/* ========================================================================= */}
@@ -838,13 +838,13 @@ export default function NexusIDE() {
         {/* ========================================================================= */}
       <div 
         style={{ width: `${ideSplitPercent}%` }} 
-        className="h-full flex flex-col shrink-0 min-w-[340px] bg-[#0c0e14] border-r border-[#1e2330] overflow-hidden select-none"
+        className="h-full flex flex-col shrink-0 min-w-[340px] bg-[#050505] border-r border-[#1e1e1e] overflow-hidden select-none"
       >
         {/* TOP IDE APP BAR */}
-        <div className="h-11 px-3 border-b border-[#1b202c] flex items-center justify-between shrink-0 bg-[#090b10]">
+        <div className="h-11 px-3 border-b border-[#1e1e1e] flex items-center justify-between shrink-0 bg-[#080808]">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_8px_#0284c7]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#f54e00] shadow-[0_0_8px_#f54e00]" />
               <span className="text-xs font-semibold tracking-tight text-white font-mono">
                 fastapi-worker-dani-mcp-server
               </span>
@@ -854,7 +854,7 @@ export default function NexusIDE() {
                 setActiveActivityTab("git");
                 setIsSidebarOpen(true);
               }}
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-[#161a26] hover:bg-[#1f2538] text-[10px] font-mono text-neutral-300 hover:text-white border border-[#23283c] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-[#141414] hover:bg-[#1f1f1f] text-[10px] font-mono text-neutral-300 hover:text-white border border-[#262626] transition-colors cursor-pointer"
               title="Open Source Control"
             >
               <GitBranch size={11} className="text-[#f54e00]" />
@@ -867,7 +867,7 @@ export default function NexusIDE() {
             <button
               onClick={handlePingHealth}
               title="Ping FalkorDB Health"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-[#111420] hover:bg-[#181d2e] border border-[#20263c] text-[10px] font-mono transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] text-[10px] font-mono transition-colors cursor-pointer"
             >
               <span className={`w-1.5 h-1.5 rounded-full ${backendStatus === "connected" ? "bg-emerald-400 shadow-[0_0_6px_#22c55e]" : "bg-amber-400"}`} />
               <span className="text-neutral-400">FalkorDB:</span>
@@ -895,7 +895,7 @@ export default function NexusIDE() {
               className={`flex items-center gap-1 px-2.5 py-1 rounded-[8px] text-[10px] font-mono border transition-colors cursor-pointer ${
                 isDiffMode
                   ? "bg-[#f54e00]/20 border-[#f54e00]/50 text-[#f54e00]"
-                  : "bg-[#141824] border-[#252c40] text-neutral-300 hover:text-white"
+                  : "bg-[#141414] border-[#262626] text-neutral-300 hover:text-white"
               }`}
             >
               <SplitSquareVertical size={11} />
@@ -905,7 +905,7 @@ export default function NexusIDE() {
             <button
               onClick={fetchGraphData}
               title="Refresh FalkorDB Graph"
-              className="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#181c28] transition-colors cursor-pointer"
+              className="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1c1c1c] transition-colors cursor-pointer"
             >
               <RotateCw size={13} className={isLoadingGraph ? "animate-spin text-[#f54e00]" : ""} />
             </button>
@@ -915,7 +915,7 @@ export default function NexusIDE() {
         {/* IDE BODY: ACTIVITY BAR + SIDEBAR + EDITOR & COMPOSER */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* ACTIVITY BAR (VS Code Style Left Strip) */}
-          <div className="w-11 border-r border-[#1b202c] bg-[#07090e] flex flex-col items-center py-2.5 gap-3 shrink-0">
+          <div className="w-11 border-r border-[#1e1e1e] bg-[#050505] flex flex-col items-center py-2.5 gap-3 shrink-0">
             <button
               onClick={() => {
                 if (activeActivityTab === "files" && isSidebarOpen) {
@@ -928,7 +928,7 @@ export default function NexusIDE() {
               title="Explorer"
               className={`p-2 rounded-lg transition-colors cursor-pointer ${
                 activeActivityTab === "files" && isSidebarOpen
-                  ? "text-[#f54e00] bg-[#161b2a]"
+                  ? "text-[#f54e00] bg-[#1a1a1a]"
                   : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
@@ -943,7 +943,7 @@ export default function NexusIDE() {
               title="Search Symbols"
               className={`p-2 rounded-lg transition-colors cursor-pointer ${
                 activeActivityTab === "search" && isSidebarOpen
-                  ? "text-[#f54e00] bg-[#161b2a]"
+                  ? "text-[#f54e00] bg-[#1a1a1a]"
                   : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
@@ -958,7 +958,7 @@ export default function NexusIDE() {
               title="Source Control"
               className={`p-2 rounded-lg transition-colors cursor-pointer ${
                 activeActivityTab === "git" && isSidebarOpen
-                  ? "text-[#f54e00] bg-[#161b2a]"
+                  ? "text-[#f54e00] bg-[#1a1a1a]"
                   : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
@@ -969,7 +969,7 @@ export default function NexusIDE() {
               <button
                 onClick={() => setIsSettingsOpen(true)}
                 title="Cursor IDE Settings"
-                className="p-2 text-neutral-500 hover:text-[#f54e00] hover:bg-[#161b2a] rounded-lg transition-colors cursor-pointer"
+                className="p-2 text-neutral-500 hover:text-[#f54e00] hover:bg-[#1a1a1a] rounded-lg transition-colors cursor-pointer"
               >
                 <Settings size={16} />
               </button>
@@ -978,17 +978,17 @@ export default function NexusIDE() {
 
           {/* COLLAPSIBLE SIDEBAR */}
           {isSidebarOpen && (
-            <div className="w-56 border-r border-[#1b202c] bg-[#0a0c12] flex flex-col shrink-0 select-none">
+            <div className="w-56 border-r border-[#1e1e1e] bg-[#080808] flex flex-col shrink-0 select-none">
               {/* 1. FILE EXPLORER TAB */}
               {activeActivityTab === "files" && (
                 <>
-                  <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#181c28]">
+                  <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#1e1e1e]">
                     <span>Explorer</span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setIsCreatingFile(true)}
                         title="New File"
-                        className="p-1 rounded hover:bg-[#181d2e] text-neutral-400 hover:text-[#f54e00] transition-colors cursor-pointer"
+                        className="p-1 rounded hover:bg-[#181818] text-neutral-400 hover:text-[#f54e00] transition-colors cursor-pointer"
                       >
                         <Plus size={13} />
                       </button>
@@ -998,8 +998,8 @@ export default function NexusIDE() {
 
                   <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 font-mono text-xs">
                     {isCreatingFile && (
-                      <div className="p-1.5 flex items-center gap-1.5 bg-[#121622] rounded-[6px] border border-[#f54e00]/60 mb-1">
-                        <FileCode size={13} className="text-sky-400 shrink-0" />
+                      <div className="p-1.5 flex items-center gap-1.5 bg-[#141414] rounded-[6px] border border-[#f54e00]/60 mb-1">
+                        <FileCode size={13} className="text-neutral-200 shrink-0" />
                         <input
                           type="text"
                           value={newFileNameInput}
@@ -1044,17 +1044,17 @@ export default function NexusIDE() {
                           className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] cursor-pointer transition-colors ${
                             isCurrent
                               ? "bg-[#f54e00]/15 text-[#f54e00] border border-[#f54e00]/30 font-medium"
-                              : "text-neutral-400 hover:bg-[#141824] hover:text-white"
+                              : "text-neutral-400 hover:bg-[#161616] hover:text-white"
                           }`}
                         >
-                          <FileCode size={13} className={fileName.endsWith(".ts") ? "text-sky-400" : "text-amber-400"} />
+                          <FileCode size={13} className={fileName.endsWith(".ts") ? "text-neutral-200" : "text-amber-400"} />
                           <span className="truncate">{fileName}</span>
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="p-2.5 border-t border-[#181c28] bg-[#07090e] text-[10px] font-mono text-neutral-400 flex items-center justify-between">
+                  <div className="p-2.5 border-t border-[#1e1e1e] bg-[#050505] text-[10px] font-mono text-neutral-400 flex items-center justify-between">
                     <span>AST Symbols</span>
                     <span className="text-[#f54e00] font-semibold">{nodes.length} Nodes</span>
                   </div>
@@ -1064,13 +1064,13 @@ export default function NexusIDE() {
               {/* 2. SEARCH PANEL TAB */}
               {activeActivityTab === "search" && (
                 <>
-                  <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#181c28]">
+                  <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#1e1e1e]">
                     <span>Search</span>
                     <span className="text-[10px] text-neutral-500 font-mono">{searchResults.length} matches</span>
                   </div>
 
-                  <div className="p-2 border-b border-[#181c28]">
-                    <div className="flex items-center gap-1.5 px-2 py-1.5 bg-[#121622] rounded-[8px] border border-[#22293c]">
+                  <div className="p-2 border-b border-[#1e1e1e]">
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 bg-[#141414] rounded-[8px] border border-[#262626]">
                       <Search size={12} className="text-neutral-500 shrink-0" />
                       <input
                         type="text"
@@ -1096,7 +1096,7 @@ export default function NexusIDE() {
                       <div
                         key={idx}
                         onClick={() => handleSearchResultClick(res.file, res.line)}
-                        className="p-1.5 rounded-[6px] hover:bg-[#141824] cursor-pointer transition-colors group"
+                        className="p-1.5 rounded-[6px] hover:bg-[#161616] cursor-pointer transition-colors group"
                       >
                         <div className="flex items-center justify-between text-neutral-400 group-hover:text-[#f54e00]">
                           <span className="font-semibold text-xs">{res.file}</span>
@@ -1118,12 +1118,12 @@ export default function NexusIDE() {
               {/* 3. SOURCE CONTROL (GIT) TAB */}
               {activeActivityTab === "git" && (
                 <>
-                  <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#181c28]">
+                  <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#1e1e1e]">
                     <span>Source Control</span>
                     <span className="text-[10px] text-[#f54e00] font-mono">main</span>
                   </div>
 
-                  <div className="p-2 border-b border-[#181c28] space-y-2">
+                  <div className="p-2 border-b border-[#1e1e1e] space-y-2">
                     <input
                       type="text"
                       value={gitCommitMessage}
@@ -1132,7 +1132,7 @@ export default function NexusIDE() {
                         if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleGitCommit();
                       }}
                       placeholder="Commit message (⌘Enter)..."
-                      className="w-full px-2.5 py-1.5 rounded-[8px] bg-[#121622] border border-[#22293c] text-xs font-mono text-white placeholder-neutral-500 outline-none focus:border-[#f54e00]"
+                      className="w-full px-2.5 py-1.5 rounded-[8px] bg-[#141414] border border-[#262626] text-xs font-mono text-white placeholder-neutral-500 outline-none focus:border-[#f54e00]"
                     />
                     <button
                       onClick={handleGitCommit}
@@ -1151,10 +1151,10 @@ export default function NexusIDE() {
                       <div
                         key={fileName}
                         onClick={() => handleSelectFile(fileName)}
-                        className="flex items-center justify-between px-2.5 py-1.5 rounded-[6px] hover:bg-[#141824] cursor-pointer transition-colors text-neutral-300"
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-[6px] hover:bg-[#161616] cursor-pointer transition-colors text-neutral-300"
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <FileCode size={13} className="text-sky-400 shrink-0" />
+                          <FileCode size={13} className="text-neutral-200 shrink-0" />
                           <span className="truncate">{fileName}</span>
                         </div>
                         <span className="text-[10px] text-amber-400 font-semibold">M</span>
@@ -1167,9 +1167,9 @@ export default function NexusIDE() {
           )}
 
           {/* MAIN EDITOR & AGENT COMPOSER REGION */}
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#0a0c12]">
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#050505]">
             {/* TABS BAR */}
-            <div className="h-9 px-2 bg-[#090b10] border-b border-[#1b202c] flex items-center gap-1 overflow-x-auto select-none">
+            <div className="h-9 px-2 bg-[#080808] border-b border-[#1e1e1e] flex items-center gap-1 overflow-x-auto select-none">
               {openTabs.map((tab) => {
                 const isActive = activeFileName === tab;
                 return (
@@ -1178,11 +1178,11 @@ export default function NexusIDE() {
                     onClick={() => handleSelectFile(tab)}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-t-md text-xs font-mono border-t border-x cursor-pointer transition-colors shrink-0 max-w-[160px] ${
                       isActive
-                        ? "bg-[#0c0e14] border-[#22293b] text-white font-medium"
-                        : "bg-[#08090e] border-transparent text-neutral-400 hover:text-neutral-200"
+                        ? "bg-[#000000] border-[#262626] text-white font-medium"
+                        : "bg-[#080808] border-transparent text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
-                    <FileCode size={12} className={tab.endsWith(".ts") ? "text-sky-400 shrink-0" : "text-amber-400 shrink-0"} />
+                    <FileCode size={12} className={tab.endsWith(".ts") ? "text-neutral-200 shrink-0" : "text-amber-400 shrink-0"} />
                     <span className="truncate">{tab}</span>
                     <button
                       onClick={(e) => handleCloseTab(tab, e)}
@@ -1201,7 +1201,7 @@ export default function NexusIDE() {
                   setIsCreatingFile(true);
                 }}
                 title="New File"
-                className="p-1.5 rounded hover:bg-[#141824] text-neutral-500 hover:text-[#f54e00] transition-colors cursor-pointer shrink-0 ml-1"
+                className="p-1.5 rounded hover:bg-[#161616] text-neutral-500 hover:text-[#f54e00] transition-colors cursor-pointer shrink-0 ml-1"
               >
                 <Plus size={13} />
               </button>
@@ -1211,7 +1211,7 @@ export default function NexusIDE() {
             <div className="flex-1 min-h-[220px] relative">
               {isDiffMode && modifiedCodeForDiff ? (
                 <div className="w-full h-full flex flex-col">
-                  <div className="h-7 px-3 bg-[#111420] border-b border-[#20273a] flex items-center justify-between text-[11px] font-mono text-neutral-300">
+                  <div className="h-7 px-3 bg-[#0e0e0e] border-b border-[#202020] flex items-center justify-between text-[11px] font-mono text-neutral-300">
                     <span className="text-amber-300 truncate">Monaco Split Diff: Original (Left) vs Patched (Right)</span>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
@@ -1282,15 +1282,15 @@ export default function NexusIDE() {
             </div>
 
             {/* AGENT COMPOSER / CHAT PANEL (BOTTOM DOCK) */}
-            <div className="h-64 border-t border-[#1b202c] bg-[#080a0f] flex flex-col shrink-0">
+            <div className="h-64 border-t border-[#1e1e1e] bg-[#000000] flex flex-col shrink-0">
               {/* COMPOSER HEADER */}
-              <div className="h-8 px-3 bg-[#0d0f17] border-b border-[#1b202c] flex items-center justify-between text-xs font-mono text-neutral-400 gap-2">
+              <div className="h-8 px-3 bg-[#080808] border-b border-[#1e1e1e] flex items-center justify-between text-xs font-mono text-neutral-400 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Bot size={13} className="text-[#f54e00] shrink-0" />
                   <span className="text-white font-medium shrink-0">Nexus Agent</span>
                   <span className="text-neutral-600 shrink-0">•</span>
                   <span className="text-neutral-400 shrink-0">Target:</span>
-                  <span className="font-semibold px-2 py-0.5 rounded-full bg-[#9fbbe0]/15 border border-[#9fbbe0]/40 text-[#9fbbe0] text-[10px] truncate max-w-[130px]">
+                  <span className="font-semibold px-2 py-0.5 rounded-full bg-[#1a1a1a] border border-[#2c2c2c] text-neutral-200 text-[10px] truncate max-w-[130px]">
                     @{selectedNode ? selectedNode.label : "validateToken"}
                   </span>
                 </div>
@@ -1308,7 +1308,7 @@ export default function NexusIDE() {
                       Grepping ({visitedBlockIds.length})
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full bg-[#9fbbe0]/15 border border-[#9fbbe0]/35 text-[#9fbbe0] font-mono text-[10px] shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-[#1a1a1a] border border-[#2c2c2c] text-neutral-300 font-mono text-[10px] shrink-0">
                       Reading
                     </span>
                   )}
@@ -1317,13 +1317,13 @@ export default function NexusIDE() {
                   <div className="relative shrink-0">
                     <button
                       onClick={() => setIsModelPickerOpen(!isModelPickerOpen)}
-                      className="px-2 py-0.5 rounded-[8px] bg-[#161a25] hover:bg-[#1e2436] border border-[#23293c] text-neutral-200 text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
+                      className="px-2 py-0.5 rounded-[8px] bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] text-neutral-200 text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
                     >
                       <span>{selectedModel}</span>
                       <ChevronDown size={10} className="text-neutral-400" />
                     </button>
                     {isModelPickerOpen && (
-                      <div className="absolute right-0 top-7 w-44 bg-[#141824] border border-[#282f45] rounded-xl shadow-2xl p-1 z-50 flex flex-col gap-0.5">
+                      <div className="absolute right-0 top-7 w-44 bg-[#111111] border border-[#282828] rounded-xl shadow-2xl p-1 z-50 flex flex-col gap-0.5">
                         {["claude-3-5-sonnet", "claude-3-7-sonnet", "gpt-4o", "deepseek-r1"].map((m) => (
                           <button
                             key={m}
@@ -1332,7 +1332,7 @@ export default function NexusIDE() {
                               setIsModelPickerOpen(false);
                             }}
                             className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-mono cursor-pointer transition-colors ${
-                              selectedModel === m ? "bg-[#f54e00]/20 text-[#f54e00]" : "text-neutral-300 hover:bg-[#1e2436]"
+                              selectedModel === m ? "bg-[#f54e00]/20 text-[#f54e00]" : "text-neutral-300 hover:bg-[#1a1a1a]"
                             }`}
                           >
                             <span>{m}</span>
@@ -1366,7 +1366,7 @@ export default function NexusIDE() {
                         className={`p-2.5 rounded-xl max-w-[95%] leading-relaxed ${
                           m.role === "user"
                             ? "bg-[#f54e00]/20 border border-[#f54e00]/40 text-neutral-100 font-mono"
-                            : "bg-[#121622] border border-[#202738] text-neutral-200"
+                            : "bg-[#0e0e0e] border border-[#202020] text-neutral-200"
                         }`}
                       >
                         <FormattedMessageContent text={m.content} />
@@ -1375,7 +1375,7 @@ export default function NexusIDE() {
                         )}
 
                         {m.codePatch && (
-                          <div className="mt-2.5 pt-2 border-t border-[#23283c] flex items-center gap-2">
+                          <div className="mt-2.5 pt-2 border-t border-[#202020] flex items-center gap-2">
                             <button
                               onClick={() => {
                                 handleCodeChange(m.codePatch!);
@@ -1394,7 +1394,7 @@ export default function NexusIDE() {
                                 setModifiedCodeForDiff(m.codePatch!);
                                 setIsDiffMode(true);
                               }}
-                              className="px-2.5 py-1 rounded-[8px] bg-[#141824] hover:bg-[#1f2638] border border-[#2a344a] text-neutral-300 text-[11px] font-mono cursor-pointer transition-colors"
+                              className="px-2.5 py-1 rounded-[8px] bg-[#161616] hover:bg-[#202020] border border-[#2a2a2a] text-neutral-300 text-[11px] font-mono cursor-pointer transition-colors"
                             >
                               View Split Diff
                             </button>
@@ -1408,7 +1408,7 @@ export default function NexusIDE() {
               </div>
 
               {/* QUICK PROMPT SUGGESTION CHIPS */}
-              <div className="px-2.5 py-1.5 bg-[#090b10] border-t border-[#1b202c] flex items-center gap-1.5 overflow-x-auto select-none">
+              <div className="px-2.5 py-1.5 bg-[#080808] border-t border-[#1e1e1e] flex items-center gap-1.5 overflow-x-auto select-none">
                 {[
                   "Refactor validateToken with 60s clock skew",
                   "Analyze processInvoice blast radius",
@@ -1419,7 +1419,7 @@ export default function NexusIDE() {
                     onClick={() => {
                       setInputQuery(chip);
                     }}
-                    className="px-2.5 py-1 rounded-full bg-[#121622] hover:bg-[#1b2234] border border-[#22293c] hover:border-[#f54e00]/60 text-[10px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer shrink-0 truncate max-w-[260px]"
+                    className="px-2.5 py-1 rounded-full bg-[#141414] hover:bg-[#1e1e1e] border border-[#262626] hover:border-[#f54e00]/60 text-[10px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer shrink-0 truncate max-w-[260px]"
                   >
                     {chip}
                   </button>
@@ -1427,7 +1427,7 @@ export default function NexusIDE() {
               </div>
 
               {/* INPUT BAR */}
-              <div className="p-2.5 bg-[#090b10] border-t border-[#1b202c] flex items-center gap-2">
+              <div className="p-2.5 bg-[#080808] border-t border-[#1e1e1e] flex items-center gap-2">
                 <input
                   type="text"
                   value={inputQuery}
@@ -1436,7 +1436,7 @@ export default function NexusIDE() {
                     if (e.key === "Enter") handleSendQuery();
                   }}
                   placeholder="Ask agent to refactor validateToken with 60s clock skew..."
-                  className="flex-1 bg-[#11141d] border border-[#202636] focus:border-[#f54e00]/70 rounded-[8px] px-3 py-1.5 text-xs font-mono text-white placeholder-neutral-500 outline-none"
+                  className="flex-1 bg-[#121212] border border-[#222222] focus:border-[#f54e00]/70 rounded-[8px] px-3 py-1.5 text-xs font-mono text-white placeholder-neutral-500 outline-none"
                 />
                 <button
                   onClick={handleSendQuery}
@@ -1461,7 +1461,7 @@ export default function NexusIDE() {
       {/* ========================================================================= */}
       <div
         onMouseDown={handleMouseDown}
-        className="w-1.5 hover:w-2 bg-[#121622] hover:bg-[#f54e00]/50 cursor-col-resize transition-all duration-150 flex items-center justify-center relative group select-none z-30"
+        className="w-1.5 hover:w-2 bg-[#141414] hover:bg-[#f54e00]/50 cursor-col-resize transition-all duration-150 flex items-center justify-center relative group select-none z-30"
       >
         <div className="w-1 h-6 rounded-full bg-neutral-600 group-hover:bg-white flex items-center justify-center">
           <span className="text-[8px] font-mono text-neutral-400 select-none pointer-events-none">||</span>
@@ -1471,7 +1471,7 @@ export default function NexusIDE() {
       {/* ========================================================================= */}
       {/* 3. RIGHT 25% SCREEN: LIVE REAL-TIME NETWORK GRAPH MATCHING USER IMAGE */}
       {/* ========================================================================= */}
-      <div className="flex-1 h-full min-w-[260px] relative bg-[#080a0f] overflow-hidden flex flex-col">
+      <div className="flex-1 h-full min-w-[260px] relative bg-[#000000] overflow-hidden flex flex-col">
         {/* GRAPH CANVAS ENGINE WITH INTEGRATED HEADER AND BOTTOM CONTROLS */}
         <div className="flex-1 w-full h-full min-h-0 relative">
           <NetworkGraphCanvas
@@ -1492,7 +1492,7 @@ export default function NexusIDE() {
     {/* ========================================================================= */}
     {/* 4. CURSOR BOTTOM STATUS BAR (FULL WIDTH, ZERO OVERLAPS, MATCHING MASTER.MD) */}
     {/* ========================================================================= */}
-    <div className="h-6 bg-[#07090e] border-t border-[#1b202c] px-3 flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 z-30 select-none">
+    <div className="h-6 bg-[#050505] border-t border-[#1e1e1e] px-3 flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 z-30 select-none">
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={() => {
@@ -1533,7 +1533,7 @@ export default function NexusIDE() {
       <div className="flex items-center gap-3 text-neutral-500 shrink-0">
         <span className="hidden sm:inline">{activeFile.code.split("\n").length} lines</span>
         <span className="hidden sm:inline">UTF-8</span>
-        <span className="text-neutral-400 uppercase text-[10px] px-1.5 py-0.2 rounded bg-[#121622] border border-[#1e2538]">
+        <span className="text-neutral-400 uppercase text-[10px] px-1.5 py-0.2 rounded bg-[#141414] border border-[#242424]">
           {activeFile.language}
         </span>
         <span className="text-neutral-300 font-medium">
@@ -1547,16 +1547,16 @@ export default function NexusIDE() {
     {/* 5. CURSOR IDE SETTINGS MODAL */}
     {/* ========================================================================= */}
     {isSettingsOpen && (
-      <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-[#0e111a] border border-[#232a3d] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
-          <div className="h-12 px-4 border-b border-[#1f2638] flex items-center justify-between bg-[#0b0e15]">
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="w-full max-w-lg bg-[#0c0c0c] border border-[#242424] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
+          <div className="h-12 px-4 border-b border-[#202020] flex items-center justify-between bg-[#080808]">
             <div className="flex items-center gap-2">
               <Settings size={15} className="text-[#f54e00]" />
               <span className="text-sm font-semibold text-white font-mono">Cursor IDE Settings</span>
             </div>
             <button
               onClick={() => setIsSettingsOpen(false)}
-              className="p-1 rounded hover:bg-[#1a2133] text-neutral-400 hover:text-white cursor-pointer"
+              className="p-1 rounded hover:bg-[#1c1c1c] text-neutral-400 hover:text-white cursor-pointer"
             >
               <X size={15} />
             </button>
@@ -1575,7 +1575,7 @@ export default function NexusIDE() {
                     className={`p-2 rounded-[8px] border text-left cursor-pointer transition-colors ${
                       selectedModel === m
                         ? "bg-[#f54e00]/15 border-[#f54e00] text-white"
-                        : "bg-[#141824] border-[#202738] text-neutral-400 hover:text-white"
+                        : "bg-[#141414] border-[#242424] text-neutral-400 hover:text-white"
                     }`}
                   >
                     <div className="font-semibold">{m}</div>
@@ -1587,18 +1587,18 @@ export default function NexusIDE() {
               </div>
             </div>
 
-            <div className="border-t border-[#1b2234] pt-3">
+            <div className="border-t border-[#202020] pt-3">
               <label className="text-neutral-400 uppercase text-[10px] tracking-wider block mb-1.5 font-semibold">
                 FalkorDB Graph Engine
               </label>
-              <div className="bg-[#121622] border border-[#1e2538] rounded-xl p-3 space-y-1.5 text-neutral-300">
+              <div className="bg-[#121212] border border-[#222222] rounded-xl p-3 space-y-1.5 text-neutral-300">
                 <div className="flex justify-between">
                   <span className="text-neutral-500">Host / Port:</span>
                   <span>localhost:6379</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">Graph Key:</span>
-                  <span className="text-sky-400 font-semibold">graphicode_ast</span>
+                  <span className="text-neutral-100 font-semibold">graphicode_ast</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">Live Status:</span>
@@ -1609,7 +1609,7 @@ export default function NexusIDE() {
               </div>
             </div>
 
-            <div className="border-t border-[#1b2234] pt-3">
+            <div className="border-t border-[#202020] pt-3">
               <label className="text-neutral-400 uppercase text-[10px] tracking-wider block mb-1.5 font-semibold">
                 Design Tokens (DESIGN.md)
               </label>
@@ -1624,7 +1624,7 @@ export default function NexusIDE() {
             </div>
           </div>
 
-          <div className="h-11 px-4 border-t border-[#1f2638] bg-[#0b0e15] flex items-center justify-end">
+          <div className="h-11 px-4 border-t border-[#202020] bg-[#080808] flex items-center justify-end">
             <button
               onClick={() => setIsSettingsOpen(false)}
               className="px-4 py-1.5 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white font-mono text-xs font-medium cursor-pointer transition-colors"
@@ -1640,7 +1640,7 @@ export default function NexusIDE() {
     {/* 6. TOAST NOTIFICATION */}
     {/* ========================================================================= */}
     {toastMessage && (
-      <div className="fixed bottom-9 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-[#141824] border border-[#2e374f] text-xs font-mono text-white shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+      <div className="fixed bottom-9 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-[#141414] border border-[#2a2a2a] text-xs font-mono text-white shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
         <CheckCircle2 size={13} className="text-[#f54e00]" />
         <span>{toastMessage}</span>
       </div>

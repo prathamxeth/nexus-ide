@@ -9,7 +9,7 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex flex-col items-center justify-center text-xs font-mono text-neutral-500 gap-2">
-      <RotateCw className="w-5 h-5 text-sky-400 animate-spin" />
+      <RotateCw className="w-5 h-5 text-neutral-400 animate-spin" />
       <span>Rendering Network Topology...</span>
     </div>
   ),
@@ -46,7 +46,7 @@ interface NetworkGraphCanvasProps {
 }
 
 const COLOR_MAP: Record<string, string> = {
-  Module: "#9fbbe0",    // Cursor timeline-read (pastel blue)
+  Module: "#d4d4d8",    // Clean silver neutral (replaces blue)
   Endpoint: "#f54e00",  // Cursor primary (Cursor Orange)
   File: "#c0a8dd",      // Cursor timeline-edit (lavender)
   Class: "#9fc9a2",     // Cursor timeline-grep (mint)
@@ -199,11 +199,11 @@ export default function NetworkGraphCanvas({
   );
 
   return (
-    <div className="w-full h-full bg-[#080a0f] flex flex-col overflow-hidden select-none relative">
+    <div className="w-full h-full bg-[#000000] flex flex-col overflow-hidden select-none relative">
       {/* ======================================================== */}
       {/* 1. TOP HEADER TOOLBAR: STATUS & SEARCH DROPDOWN */}
       {/* ======================================================== */}
-      <div className="h-10 px-3 border-b border-[#1b202c] bg-[#0c0e14] flex items-center justify-between shrink-0 z-20 gap-2">
+      <div className="h-10 px-3 border-b border-[#1e1e1e] bg-[#080808] flex items-center justify-between shrink-0 z-20 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {hasHighlighted ? (
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-950/90 border border-red-500/60 text-[10px] font-mono text-red-200 animate-pulse truncate shadow-sm shrink-0">
@@ -212,8 +212,8 @@ export default function NetworkGraphCanvas({
             </div>
           ) : (
             <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400 min-w-0 truncate">
-              <Network size={13} className="text-sky-400 shrink-0" />
-              <span className="text-white font-medium truncate">Topology Canvas</span>
+              <Network size={13} className="text-[#f54e00] shrink-0" />
+              <span className="text-neutral-100 font-medium truncate">Topology Canvas</span>
             </div>
           )}
         </div>
@@ -222,17 +222,17 @@ export default function NetworkGraphCanvas({
         <div className="relative shrink-0">
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="flex items-center gap-1.5 text-xs font-mono text-neutral-200 hover:text-white cursor-pointer px-2 py-1 rounded-lg bg-[#141824] hover:bg-[#1a1f2e] border border-[#232838] transition-colors"
+            className="flex items-center gap-1.5 text-xs font-mono text-neutral-200 hover:text-white cursor-pointer px-2 py-1 rounded-lg bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] transition-colors"
           >
             <span className="text-[10px] text-neutral-400 uppercase hidden sm:inline">Node:</span>
-            <span className="max-w-[70px] sm:max-w-[100px] truncate text-sky-300 font-semibold">{selectedNodeId || "Search"}</span>
+            <span className="max-w-[70px] sm:max-w-[100px] truncate text-neutral-100 font-semibold">{selectedNodeId || "Search"}</span>
             <ChevronDown size={11} className="text-neutral-400 shrink-0" />
           </button>
 
           {/* Dropdown Popover */}
           {isSearchOpen && (
-            <div className="absolute right-0 top-9 w-64 bg-[#141824] border border-[#282f45] rounded-xl shadow-2xl p-2 z-40 flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#0d1019] rounded-lg border border-[#23283a] text-xs font-mono text-neutral-200 mb-1">
+            <div className="absolute right-0 top-9 w-64 bg-[#111111] border border-[#282828] rounded-xl shadow-2xl p-2 z-40 flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#0a0a0a] rounded-lg border border-[#222222] text-xs font-mono text-neutral-200 mb-1">
                 <Search size={12} className="text-neutral-500 shrink-0" />
                 <input
                   type="text"
@@ -246,7 +246,7 @@ export default function NetworkGraphCanvas({
               <div className="max-h-56 overflow-y-auto space-y-0.5">
                 {searchResults.map((n) => {
                   const isSelected = selectedNodeId === n.id;
-                  const nodeColor = COLOR_MAP[n.type || "Function"] || "#06b6d4";
+                  const nodeColor = COLOR_MAP[n.type || "Function"] || "#d4d4d8";
                   return (
                     <div
                       key={n.id}
@@ -256,7 +256,7 @@ export default function NetworkGraphCanvas({
                         setSearchQuery("");
                       }}
                       className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-mono cursor-pointer transition-colors ${
-                        isSelected ? "bg-sky-500/20 text-sky-200" : "text-neutral-300 hover:bg-[#1e2436] hover:text-white"
+                        isSelected ? "bg-[#f54e00]/15 text-[#f54e00]" : "text-neutral-300 hover:bg-[#1a1a1a] hover:text-white"
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
@@ -279,13 +279,13 @@ export default function NetworkGraphCanvas({
       {/* ======================================================== */}
       {/* 2. DYNAMIC RESIZE-AWARE FORCE GRAPH 2D CANVAS */}
       {/* ======================================================== */}
-      <div ref={canvasContainerRef} className="flex-1 w-full min-h-0 relative overflow-hidden bg-[#080a0f]">
+      <div ref={canvasContainerRef} className="flex-1 w-full min-h-0 relative overflow-hidden bg-[#000000]">
         <ForceGraph2D
           ref={fgRef}
           width={dimensions.width}
           height={dimensions.height}
           graphData={graphData}
-          backgroundColor="#080a0f"
+          backgroundColor="#000000"
           nodeRelSize={5.5}
           dagMode={layoutMode === "tree" ? "td" : undefined}
           dagLevelDistance={55}
@@ -298,15 +298,15 @@ export default function NetworkGraphCanvas({
           onEngineStop={() => {
             fgRef.current?.zoomToFit(250, 24);
           }}
-          // Link styling: fine white / grey connections
+          // Link styling: clean monochrome neutral connections
           linkColor={(link: any) => {
-            if (!connectedNeighbors) return "#222a38";
+            if (!connectedNeighbors) return "#222222";
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
             if (connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
-              return "#38bdf8"; // highlighted link
+              return "#f54e00"; // highlighted link
             }
-            return "#141924"; // dimmed
+            return "#141414"; // dimmed
           }}
           linkWidth={(link: any) => {
             if (!connectedNeighbors) return 0.9;
@@ -320,7 +320,7 @@ export default function NetworkGraphCanvas({
             const nLabel = String(node.label || "");
             const nName = String(node.name || "");
             const type = node.type || "Function";
-            const baseColor = node.color || COLOR_MAP[type] || "#06b6d4";
+            const baseColor = node.color || COLOR_MAP[type] || "#d4d4d8";
 
             const isSelected = selectedNodeId === nid;
             const isConnected = connectedNeighbors ? connectedNeighbors.has(nid) : true;
@@ -365,7 +365,7 @@ export default function NetworkGraphCanvas({
             } else if (connectedNeighbors && isConnected) {
               ctx.beginPath();
               ctx.arc(node.x, node.y, radius + 2, 0, 2 * Math.PI, false);
-              ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
               ctx.lineWidth = 1 / globalScale;
               ctx.stroke();
             }
@@ -376,7 +376,7 @@ export default function NetworkGraphCanvas({
             ctx.fillStyle = isHighlighted ? "#cf2d56" : baseColor;
             ctx.fill();
 
-            ctx.strokeStyle = isHighlighted ? "#fce7ee" : "#0d1117";
+            ctx.strokeStyle = isHighlighted ? "#fce7ee" : "#000000";
             ctx.lineWidth = (isHighlighted ? 1.8 : 1.2) / globalScale;
             ctx.stroke();
 
@@ -396,8 +396,8 @@ export default function NetworkGraphCanvas({
               const pillY = node.y + radius + 2.5 / globalScale;
               const pillWidth = textWidth + 6 / globalScale;
 
-              // Crisp backdrop pill
-              ctx.fillStyle = "rgba(10, 14, 22, 0.88)";
+              // Crisp backdrop pill in dark black
+              ctx.fillStyle = "rgba(10, 10, 10, 0.92)";
               ctx.beginPath();
               if (typeof ctx.roundRect === "function") {
                 ctx.roundRect(
@@ -415,12 +415,12 @@ export default function NetworkGraphCanvas({
               ctx.strokeStyle = isHighlighted
                 ? "rgba(239, 68, 68, 0.5)"
                 : isSelected
-                ? "rgba(56, 189, 248, 0.4)"
-                : "rgba(255, 255, 255, 0.08)";
+                ? "rgba(245, 78, 0, 0.5)"
+                : "rgba(255, 255, 255, 0.1)";
               ctx.lineWidth = 0.7 / globalScale;
               ctx.stroke();
 
-              ctx.fillStyle = isHighlighted ? "#fca5a5" : isSelected ? "#38bdf8" : "#cbd5e1";
+              ctx.fillStyle = isHighlighted ? "#fca5a5" : isSelected ? "#f54e00" : "#d4d4d8";
               ctx.fillText(label, node.x, pillY + pillHeight / 2);
             }
 
@@ -432,32 +432,32 @@ export default function NetworkGraphCanvas({
       {/* ======================================================== */}
       {/* 3. INTEGRATED BOTTOM TOOLBAR (ZERO COLLISION / ZERO OVERLAP) */}
       {/* ======================================================== */}
-      <div className="h-10 px-2 sm:px-3 border-t border-[#1b202c] bg-[#0c0e14] flex items-center justify-between shrink-0 z-20 gap-1.5 overflow-hidden">
+      <div className="h-10 px-2 sm:px-3 border-t border-[#1e1e1e] bg-[#080808] flex items-center justify-between shrink-0 z-20 gap-1.5 overflow-hidden">
         <div className="flex items-center gap-1 shrink-0">
           {/* Layout Mode Pill: Tree vs Cluster */}
-          <div className="flex items-center bg-[#141824] border border-[#232838] rounded-lg p-0.5 shadow-sm">
+          <div className="flex items-center bg-[#141414] border border-[#262626] rounded-lg p-0.5 shadow-sm">
             <button
               onClick={() => setLayoutMode("tree")}
               className={`flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                 layoutMode === "tree"
-                  ? "bg-sky-500/25 text-sky-200 border border-sky-500/40"
+                  ? "bg-[#242424] text-white border border-[#383838]"
                   : "text-neutral-400 hover:text-white"
               }`}
               title="Tree Graph Layout (Structured Hierarchical)"
             >
-              <GitFork size={11} className="text-sky-400" />
+              <GitFork size={11} className="text-neutral-300" />
               <span className={dimensions.width < 320 ? "hidden" : "inline"}>Tree</span>
             </button>
             <button
               onClick={() => setLayoutMode("cluster")}
               className={`flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                 layoutMode === "cluster"
-                  ? "bg-sky-500/25 text-sky-200 border border-sky-500/40"
+                  ? "bg-[#242424] text-white border border-[#383838]"
                   : "text-neutral-400 hover:text-white"
               }`}
               title="Compact Cluster Layout (Force Bounded)"
             >
-              <Network size={11} className="text-emerald-400" />
+              <Network size={11} className="text-neutral-300" />
               <span className={dimensions.width < 320 ? "hidden" : "inline"}>Cluster</span>
             </button>
           </div>
@@ -465,7 +465,7 @@ export default function NetworkGraphCanvas({
           {/* Fit to View Button */}
           <button
             onClick={() => fgRef.current?.zoomToFit(300, 24)}
-            className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#141824] hover:bg-[#1e2436] border border-[#232838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
             title="Fit all nodes inside view"
           >
             <Maximize2 size={11} className="text-neutral-400" />
@@ -476,7 +476,7 @@ export default function NetworkGraphCanvas({
           <div className="relative">
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#141824] hover:bg-[#1e2436] border border-[#232838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
               title="Filter node layers"
             >
               <Filter size={11} className="text-neutral-400" />
@@ -484,13 +484,13 @@ export default function NetworkGraphCanvas({
             </button>
 
             {isFilterOpen && (
-              <div className="absolute bottom-9 left-0 w-44 bg-[#141824] border border-[#282f45] rounded-xl shadow-2xl p-2 z-40 flex flex-col gap-1">
-                <div className="text-[10px] uppercase font-sans text-neutral-400 font-semibold px-2 py-1 border-b border-[#232838]">
+              <div className="absolute bottom-9 left-0 w-44 bg-[#111111] border border-[#282828] rounded-xl shadow-2xl p-2 z-40 flex flex-col gap-1">
+                <div className="text-[10px] uppercase font-sans text-neutral-400 font-semibold px-2 py-1 border-b border-[#222222]">
                   Toggle Visible Layers
                 </div>
                 {Object.keys(activeTypes).map((typeKey) => {
                   const isActive = activeTypes[typeKey];
-                  const color = COLOR_MAP[typeKey] || "#06b6d4";
+                  const color = COLOR_MAP[typeKey] || "#d4d4d8";
                   return (
                     <button
                       key={typeKey}
@@ -500,13 +500,13 @@ export default function NetworkGraphCanvas({
                           [typeKey]: !prev[typeKey],
                         }))
                       }
-                      className="flex items-center justify-between px-2 py-1 rounded-md text-xs font-mono text-neutral-200 hover:bg-[#1e2436] transition-colors cursor-pointer"
+                      className="flex items-center justify-between px-2 py-1 rounded-md text-xs font-mono text-neutral-200 hover:bg-[#1c1c1c] transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                         <span>{typeKey}</span>
                       </div>
-                      {isActive && <Check size={12} className="text-sky-400" />}
+                      {isActive && <Check size={12} className="text-[#f54e00]" />}
                     </button>
                   );
                 })}

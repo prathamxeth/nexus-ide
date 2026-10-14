@@ -339,7 +339,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
                     ? "bg-[#1F190F]/95 border-amber-500/60 hover:border-amber-400 text-amber-100 hover:shadow-[0_0_30px_rgba(245,158,11,0.35)]"
                     : isPR
                     ? "bg-[#0E2018]/95 border-emerald-500/60 hover:border-emerald-400 text-emerald-100 hover:shadow-[0_0_30px_rgba(34,197,94,0.35)]"
-                    : "bg-[#151D2F]/95 border-blue-500/50 hover:border-blue-400 text-blue-100 hover:shadow-[0_0_30px_rgba(59,130,246,0.35)]"
+                    : "bg-[#0a0a0a]/95 border-[#282828] hover:border-[#383838] text-neutral-200 hover:shadow-[0_0_30px_rgba(0,0,0,0.8)]"
                 )
               }`}
               style={{
@@ -358,7 +358,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
                     ? "bg-gradient-to-r from-amber-500 via-orange-400 to-transparent"
                     : isPR
                     ? "bg-gradient-to-r from-emerald-500 via-teal-400 to-transparent"
-                    : "bg-gradient-to-r from-blue-500 via-cyan-400 to-transparent"
+                    : "bg-gradient-to-r from-[#f54e00] via-orange-400 to-transparent"
                 }`}
               />
 
@@ -372,14 +372,14 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
                       ? "bg-amber-400 shadow-[0_0_8px_#f59e0b] animate-pulse"
                       : isPR
                       ? "bg-emerald-400 shadow-[0_0_8px_#22c55e] animate-pulse"
-                      : "bg-blue-400 shadow-[0_0_8px_#3b82f6] animate-pulse"
+                      : "bg-[#f54e00] shadow-[0_0_8px_#f54e00] animate-pulse"
                   }`} />
                   
                   <span className="font-bold flex items-center gap-1.5 truncate text-[11px] text-white tracking-wide">
                     {isBlast && <ShieldAlert size={13} className="text-rose-400 shrink-0" />}
                     {isMemory && <Brain size={13} className="text-amber-400 shrink-0" />}
                     {isPR && <GitPullRequest size={13} className="text-emerald-400 shrink-0" />}
-                    {isFunction && <Code2 size={13} className="text-blue-400 shrink-0" />}
+                    {isFunction && <Code2 size={13} className="text-[#f54e00] shrink-0" />}
                     <span className="truncate">{block.title || block.id}</span>
                   </span>
                 </div>
@@ -402,7 +402,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
                     COMPANY BRAIN
                   </span>
                 ) : (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 shrink-0">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#1c1c1c] text-[#f54e00] border border-[#333333] shrink-0">
                     TS
                   </span>
                 )}
@@ -411,7 +411,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
               {/* File / Caller Path with Icon */}
               <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1.5">
                 <span className="flex items-center gap-1 truncate font-medium text-neutral-300">
-                  <Folder size={11} className={isBlast ? "text-rose-400" : isMemory ? "text-amber-400" : isPR ? "text-emerald-400" : "text-blue-400"} />
+                  <Folder size={11} className={isBlast ? "text-rose-400" : isMemory ? "text-amber-400" : isPR ? "text-emerald-400" : "text-[#f54e00]"} />
                   <span className="truncate">{block.file || "Internal AST Node"}</span>
                 </span>
                 {block.data?.line && (
@@ -423,9 +423,9 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
 
               {/* Function Signature for AST Node */}
               {isFunction && block.data?.signature && (
-                <div className="mt-1 text-[9px] text-blue-200/90 font-mono bg-[#0B132B]/80 px-2 py-1 rounded border border-blue-500/20 truncate">
-                  <span className="text-purple-400">function </span>
-                  <span className="text-blue-300">{block.data.signature}</span>
+                <div className="mt-1 text-[9px] text-neutral-200 font-mono bg-[#141414] px-2 py-1 rounded border border-[#262626] truncate">
+                  <span className="text-amber-400">function </span>
+                  <span className="text-neutral-300">{block.data.signature}</span>
                 </div>
               )}
 
