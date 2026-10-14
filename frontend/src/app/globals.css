@@ -83,3 +83,10 @@ code, kbd, samp, pre, .font-mono {
   }
 }
 
+/* Suppress dev indicator portal from obscuring bottom dock or AST symbols */
+nextjs-portal,
+[data-nextjs-toast],
+[data-nextjs-dialog-overlay] {
+  display: none !important;
+}
+

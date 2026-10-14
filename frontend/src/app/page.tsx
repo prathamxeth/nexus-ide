@@ -111,6 +111,42 @@ interface ChatMessage {
   isStreaming?: boolean;
 }
 
+function FormattedMessageContent({ text }: { text: string }) {
+  const lines = text.split("\n");
+  return (
+    <div className="space-y-1">
+      {lines.map((line, idx) => {
+        if (!line.trim()) return <div key={idx} className="h-1" />;
+        const parts = line.split(/(\*\*.*?\*\*|`.*?`)/g);
+        return (
+          <div key={idx} className="leading-relaxed">
+            {parts.map((part, pIdx) => {
+              if (part.startsWith("**") && part.endsWith("**")) {
+                return (
+                  <strong key={pIdx} className="text-white font-semibold mr-1">
+                    {part.slice(2, -2)}
+                  </strong>
+                );
+              }
+              if (part.startsWith("`") && part.endsWith("`")) {
+                return (
+                  <code
+                    key={pIdx}
+                    className="px-1.5 py-0.5 mx-0.5 rounded bg-[#161d2b] border border-[#263248] text-sky-300 font-mono text-[11px]"
+                  >
+                    {part.slice(1, -1)}
+                  </code>
+                );
+              }
+              return <span key={pIdx}>{part}</span>;
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function NexusIDE() {
   // Screen Split State: Default 75% IDE, 25% Live Graph
   const [ideSplitPercent, setIdeSplitPercent] = useState<number>(75);
@@ -562,10 +598,14 @@ export default function NexusIDE() {
   }, [messages]);
 
   return (
-    <div className="w-screen h-screen min-h-dvh bg-[#080a0f] text-[#e2e8f0] font-sans antialiased overflow-hidden flex select-none">
+    <div className="w-screen h-screen min-h-dvh bg-[#080a0f] text-[#e2e8f0] font-sans antialiased overflow-hidden flex flex-col select-none">
       {/* ========================================================================= */}
-      {/* 1. LEFT 60% SCREEN: NORMAL NEXUS-IDE (ACTIVITY BAR + EXPLORER + MONACO + COMPOSER) */}
+      {/* MAIN WORKSPACE ROW (LEFT IDE + RESIZER + RIGHT GRAPH) */}
       {/* ========================================================================= */}
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+        {/* ========================================================================= */}
+        {/* 1. LEFT 75% SCREEN: NORMAL NEXUS-IDE (ACTIVITY BAR + EXPLORER + MONACO + COMPOSER) */}
+        {/* ========================================================================= */}
       <div 
         style={{ width: `${ideSplitPercent}%` }} 
         className="h-full flex flex-col shrink-0 min-w-[340px] bg-[#0c0e14] border-r border-[#1e2330] overflow-hidden select-none"
@@ -862,10 +902,10 @@ export default function NexusIDE() {
                         className={`p-2.5 rounded-xl max-w-[95%] leading-relaxed ${
                           m.role === "user"
                             ? "bg-sky-600/20 border border-sky-500/30 text-sky-100 font-mono"
-                            : "bg-[#121622] border border-[#202738] text-neutral-200 whitespace-pre-wrap"
+                            : "bg-[#121622] border border-[#202738] text-neutral-200"
                         }`}
                       >
-                        {m.content}
+                        <FormattedMessageContent text={m.content} />
                         {m.isStreaming && (
                           <span className="inline-block w-1.5 h-3 ml-1 bg-sky-400 animate-pulse align-middle" />
                         )}
@@ -922,31 +962,7 @@ export default function NexusIDE() {
       {/* 3. RIGHT 25% SCREEN: LIVE REAL-TIME NETWORK GRAPH MATCHING USER IMAGE */}
       {/* ========================================================================= */}
       <div className="flex-1 h-full min-w-[260px] relative bg-[#080a0f] overflow-hidden flex flex-col">
-        {/* TOP STATUS PILL (IF TRAVERSAL ACTIVE) */}
-        {visitedBlockIds.length > 0 && (
-          <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/80 border border-red-500/60 text-xs font-mono text-red-200 shadow-2xl animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
-            <span>Blast Radius: {visitedBlockIds.length} Nodes (Red)</span>
-          </div>
-        )}
-
-        {/* BOTTOM KEYBOARD LEGEND MATCHING SCREENSHOT */}
-        <div className="absolute bottom-5 right-5 z-20 flex items-center gap-4 text-[11px] font-sans text-neutral-400 select-none bg-[#12151e]/90 backdrop-blur-md border border-[#232838] px-3.5 py-1.5 rounded-xl shadow-2xl">
-          <div className="flex items-center gap-1.5">
-            <span>Focus on node</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-[#181d2a] border border-[#242b3d] text-neutral-300 font-mono text-[10px]">
-              Click
-            </kbd>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span>Expand/collapse</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-[#181d2a] border border-[#242b3d] text-neutral-300 font-mono text-[10px]">
-              ⌘ + Click
-            </kbd>
-          </div>
-        </div>
-
-        {/* GRAPH CANVAS ENGINE */}
+        {/* GRAPH CANVAS ENGINE WITH INTEGRATED HEADER AND BOTTOM CONTROLS */}
         <div className="flex-1 w-full h-full min-h-0 relative">
           <NetworkGraphCanvas
             nodes={nodes}
@@ -962,5 +978,42 @@ export default function NexusIDE() {
         </div>
       </div>
     </div>
-  );
+
+    {/* ========================================================================= */}
+    {/* 4. CURSOR BOTTOM STATUS BAR (FULL WIDTH, ZERO OVERLAPS, MATCHING MASTER.MD) */}
+    {/* ========================================================================= */}
+    <div className="h-6 bg-[#07090e] border-t border-[#1b202c] px-3 flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 z-30 select-none">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
+          <GitBranch size={11} className="text-sky-400" />
+          <span>main</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 text-emerald-400">
+            <CheckCircle2 size={11} />
+            <span>0 errors, 0 warnings</span>
+          </span>
+        </div>
+        <span className="text-neutral-600">•</span>
+        <div className="flex items-center gap-1.5 text-neutral-400">
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              backendStatus === "connected"
+                ? "bg-emerald-400 shadow-[0_0_6px_#22c55e]"
+                : "bg-amber-400"
+            }`}
+          />
+          <span>FalkorDB: {backendStatus === "connected" ? "Live (0.8ms)" : "Connecting..."}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 text-neutral-500">
+        <span className="hidden sm:inline">UTF-8</span>
+        <span className="hidden sm:inline">{activeFile.language}</span>
+        <span className="text-neutral-400">Ln 14, Col 1</span>
+        <span className="text-sky-400 font-medium">Nexus IDE</span>
+      </div>
+    </div>
+  </div>
+);
 }
