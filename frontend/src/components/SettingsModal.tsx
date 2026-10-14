@@ -239,7 +239,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
 
           {/* Modal Title */}
           <div className="text-xs font-mono font-medium text-neutral-300 flex items-center gap-2">
-            <span>GraphiCode Preferences</span>
+            <span>Nexus IDE Preferences</span>
             <span className="text-[10px] text-neutral-500 font-normal">⌘,</span>
           </div>
 

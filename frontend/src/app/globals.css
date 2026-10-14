@@ -33,12 +33,21 @@ html, body, #__next {
   background-color: #0B0F19;
   color: #E2E8F0;
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code, kbd, samp, pre, .font-mono {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 1.5px solid rgba(59, 130, 246, 0.8);
+  outline-offset: 1px;
 }
 
 /* Specific layout transitions for resizing panels */

@@ -54,7 +54,7 @@ export interface GraphLink {
 }
 
 // Demo Video Script text shown in user screenshots
-const DEMO_VIDEO_SCRIPT = `# 🎬 GraphiCode — 3-Minute Hackathon Winning Demo Script
+const DEMO_VIDEO_SCRIPT = `# Nexus IDE — 3-Minute Hackathon Winning Demo Script
 
 > **Recording Tool**: Loom or Screen Studio (1080p / 60fps)  
 > **Total Duration**: 3:00  
@@ -73,15 +73,15 @@ const DEMO_VIDEO_SCRIPT = `# 🎬 GraphiCode — 3-Minute Hackathon Winning Demo
 > 
 > Why? Because **Vector RAG is topologically blind**. Embeddings find semantically similar text, but they have zero awareness of caller graphs, multi-hop dependencies, or procedural constraints.  
 > 
-> To solve this, we built **GraphiCode**—the graph-native agentic IDE powered by **FalkorDB**."
+> To solve this, we built **Nexus IDE**—the graph-native agentic IDE powered by **FalkorDB**."
 
 ---
 
 ### Segment 2: The FalkorDB Advantage (0:30 – 1:30)
-**[Visual]**: Transition to GraphiCode running at \`http://localhost:3000\`. Show the sleek dark desktop interface.
+**[Visual]**: Transition to Nexus IDE running at \`http://localhost:3000\`. Show the sleek dark desktop interface.
 
 **[Narrator]**:
-> "Here is GraphiCode. Notice the left sidebar with our active review queue, our central Composer Agent, and our interactive live workspace.  
+> "Here is Nexus IDE. Notice the left sidebar with our active review queue, our central Composer Agent, and our interactive live workspace.  
 > 
 > Let's run that exact same prompt: *'Add expiration check to validateToken and update callers'*. Watch the bottom drawer."
 
@@ -93,7 +93,7 @@ const DEMO_VIDEO_SCRIPT = `# 🎬 GraphiCode — 3-Minute Hackathon Winning Demo
 > - \`processInvoice\` in \`billing.ts\` at Hop 1
 > - \`auditAccount\` in \`finance.ts\` at Hop 2  
 > 
-> GraphiCode knows the exact blast radius *before* writing a single line of code."
+> Nexus IDE knows the exact blast radius *before* writing a single line of code."
 
 ---
 
@@ -101,11 +101,11 @@ const DEMO_VIDEO_SCRIPT = `# 🎬 GraphiCode — 3-Minute Hackathon Winning Demo
 **[Visual]**: Zoom in slightly on the graph nodes (Blue, Red, Yellow, Green) and the Composer active context pills.
 
 **[Narrator]**:
-> "This is where GraphiCode hits **all three FalkorDB tracks** simultaneously:
+> "This is where Nexus IDE hits **all three FalkorDB tracks** simultaneously:
 > 
 > 1. **Track 1 (Connected Data)**: The blue focus node \`validateToken\` is connected directly to its multi-hop AST call tree via Tree-sitter and FalkorDB GraphBLAS queries.
 > 
-> 2. **Track 2 (Agent Memory & Coordination)**: Look at this amber node. GraphiCode queried procedural memory and surfaced a rule from a past incident: *'Must check exp claim with clock skew <= 60s'*. The agent is physically prevented from generating a naive patch.
+> 2. **Track 2 (Agent Memory & Coordination)**: Look at this amber node. Nexus IDE queried procedural memory and surfaced a rule from a past incident: *'Must check exp claim with clock skew <= 60s'*. The agent is physically prevented from generating a naive patch.
 > 
 > 3. **Track 3 (Company Brain)**: Notice the emerald node. FalkorDB correlated the code syntax with Git commit history and Jira tickets—surfacing \`PR #104\` authored by \`@alex.chen\` (\`SEC-402\`), giving the AI the original author's intent."
 
@@ -115,7 +115,7 @@ const DEMO_VIDEO_SCRIPT = `# 🎬 GraphiCode — 3-Minute Hackathon Winning Demo
 **[Visual]**: Monaco Diff view activates side-by-side with additions in green and deletions in red. Show the floating action bar.
 
 **[Narrator]**:
-> "Now look at the editor. GraphiCode toggled Monaco's side-by-side Diff view.  
+> "Now look at the editor. Nexus IDE toggled Monaco's side-by-side Diff view.  
 > It injected the fail-closed null checks, respected the 60-second skew tolerance from procedural memory, and avoided any signature breaking changes.  
 > 
 > I can review the patch, press **\`Cmd+Y\`** to accept... and notice what happens in the graph: FalkorDB re-indexes the AST in real-time.  
@@ -127,9 +127,9 @@ const DEMO_VIDEO_SCRIPT = `# 🎬 GraphiCode — 3-Minute Hackathon Winning Demo
 **[Visual]**: Flash the terminal running \`./run.sh\` and the architectural flow diagram.
 
 **[Narrator]**:
-> "Best of all: GraphiCode is a **one-command deployment**. A single \`./run.sh\` builds FalkorDB, the FastAPI backend, and the Next.js frontend, seeding all AST and PR data with zero configuration.  
+> "Best of all: Nexus IDE is a **one-command deployment**. A single \`./run.sh\` builds FalkorDB, the FastAPI backend, and the Next.js frontend, seeding all AST and PR data with zero configuration.  
 > 
-> By replacing flat vector embeddings with FalkorDB's sub-millisecond graph intelligence, GraphiCode turns AI from a dangerous code guesser into an enterprise-grade software engineer.  
+> By replacing flat vector embeddings with FalkorDB's sub-millisecond graph intelligence, Nexus IDE turns AI from a dangerous code guesser into an enterprise-grade software engineer.  
 > 
 > Thank you, and welcome to the graph-native future of software development."
 `;
@@ -176,17 +176,17 @@ export async function auditAccount(accountId: string, adminToken: string) {
   return { accountId, auditStatus: "COMPLIANT", auditedAt: new Date().toISOString() };
 }
 `,
-  "blog_post.md": `# GraphiCode: Replacing Vector RAG with FalkorDB AST Knowledge Graphs
+  "blog_post.md": `# Nexus IDE: Replacing Vector RAG with FalkorDB AST Knowledge Graphs
 
 AI coding assistants are broken in enterprise codebases. They suffer from topological blindness.
 When refactoring critical functions, standard embeddings fail to identify multi-hop callers.
 
-GraphiCode uses FalkorDB to maintain real-time AST graphs, procedural memory constraints, and organizational history.
+Nexus IDE uses FalkorDB to maintain real-time AST graphs, procedural memory constraints, and organizational history.
 `,
   "docker-compose.yml": `services:
   falkordb:
     image: falkordb/falkordb:latest
-    container_name: graphicode-falkordb
+    container_name: nexus-falkordb
     ports:
       - "6379:6379"
     volumes:
@@ -203,7 +203,7 @@ GraphiCode uses FalkorDB to maintain real-time AST graphs, procedural memory con
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: graphicode-backend
+    container_name: nexus-backend
     ports:
       - "8000:8000"
     environment:
@@ -212,33 +212,33 @@ GraphiCode uses FalkorDB to maintain real-time AST graphs, procedural memory con
 `,
   "launch-mac.sh": `#!/usr/bin/env bash
 # ==============================================================================
-# GraphiCode — Apple Silicon (M1/M2/M3/M4) Optimized Native Launch Script
+# Nexus IDE — Apple Silicon (M1/M2/M3/M4) Optimized Native Launch Script
 # ==============================================================================
 set -euo pipefail
 
-echo "🚀 Launching GraphiCode on Apple Silicon..."
-docker run -d --name graphicode-falkordb -p 6379:6379 --rm falkordb/falkordb:latest
+echo "Launching Nexus IDE on Apple Silicon..."
+docker run -d --name nexus-falkordb -p 6379:6379 --rm falkordb/falkordb:latest
 `,
-  "README.md": `# ⚡ GraphiCode: The Graph-Native Agentic IDE Powered by FalkorDB
+  "README.md": `# Nexus IDE: The Graph-Native Agentic IDE Powered by FalkorDB
 
 Context-aware code refactoring with zero blast-radius hallucinations.
 Built with FalkorDB AST Graph Intelligence.
 `,
   "run.sh": `#!/usr/bin/env bash
-echo "Starting GraphiCode full stack..."
+echo "Starting Nexus IDE full stack..."
 ./launch-mac.sh
 `,
   "setup.sh": `#!/usr/bin/env bash
-echo "Setting up GraphiCode environment..."
+echo "Setting up Nexus IDE environment..."
 pnpm install
 `,
-  "Scratchpad": `# GraphiCode Agent Scratchpad
+  "Scratchpad": `# Nexus IDE Agent Scratchpad
 
-- Task: GraphiCode agentic workspace with graph as context.
+- Task: Nexus IDE agentic workspace with graph as context.
 - FalkorDB Status: 69 AST nodes indexed, 42 call edges traversed.
 - Rules Verified: 'Must check exp claim (skew <= 60s)'.
 `,
-  "Cursor Desktop Architecture": `# GraphiCode Architecture Reference
+  "Cursor Desktop Architecture": `# Nexus IDE Architecture Reference
 
 - Integrated FalkorDB Cypher Engine at localhost:6379.
 - Monaco Editor with multi-tab split view and side-by-side diffing.
@@ -390,7 +390,7 @@ const OPEN_SOURCE_EXTENSIONS = [
   },
 ];
 
-export default function GraphiCode() {
+export default function NexusIDE() {
   const [files, setFiles] = useState<Record<string, string>>(INITIAL_FILES);
   const [activeTab, setActiveTab] = useState<string>("demo_video_script.md");
   const [openTabs, setOpenTabs] = useState<string[]>(["demo_video_script.md"]);
@@ -473,12 +473,12 @@ export default function GraphiCode() {
   const [messages, setMessages] = useState<Array<{ role: "user" | "agent"; text: string; time: string }>>([
     {
       role: "user",
-      text: "clear all unnecessary and mock data, prepare it as GRAPHICODE - AGENTIC IDE BUT WITH GRAPH AS CONTEXT",
+      text: "clear all unnecessary and mock data, prepare it as NEXUS IDE - AGENTIC IDE BUT WITH GRAPH AS CONTEXT",
       time: "23:55"
     },
     {
       role: "agent",
-      text: "GraphiCode environment initialized. Left activity bar strictly configured with Explorer, Code Search, Graphed Data, and Open VSX Extensions.",
+      text: "Nexus IDE environment initialized. Left activity bar strictly configured with Explorer, Code Search, Graphed Data, and Open VSX Extensions.",
       time: "23:56"
     }
   ]);
@@ -1075,11 +1075,18 @@ function decodePayload(token: string) {
 
   // Title calculation matching screenshots
   const windowTitle = activeTab === "Review" 
-    ? "graphicode — Review" 
-    : `graphicode — ${activeTab}`;
+    ? "nexus-ide — Review" 
+    : `nexus-ide — ${activeTab}`;
 
   return (
-    <div className="w-screen h-screen bg-[#141414] text-[#cccccc] font-sans antialiased overflow-hidden flex flex-col select-none">
+    <div className="w-screen h-screen min-h-dvh bg-[#141414] text-[#cccccc] font-sans antialiased overflow-hidden flex flex-col select-none">
+      {/* Hidden skip-to-content link for keyboard accessibility per redesign-skill */}
+      <a 
+        href="#main-editor" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1 focus:bg-[#3b82f6] focus:text-white focus:rounded-md focus:text-xs font-mono"
+      >
+        Skip to main content
+      </a>
       
       {/* 1. TOP TITLE BAR (Native macOS Controls + Centered 'nexus-ide — filename' + Layout Icons) */}
       <div className="h-9 bg-[#161616] border-b border-[#242424] px-3 flex items-center justify-between shrink-0 select-none z-30">
@@ -1339,7 +1346,7 @@ function decodePayload(token: string) {
                 playUiSound("switch");
                 setIsSettingsOpen(true);
               }}
-              title="GraphiCode Settings (⌘,)"
+              title="Nexus IDE Settings (⌘,)"
               className="w-9 h-9 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-[#1e1e1e] transition-colors cursor-pointer"
             >
               <Settings size={16} />
@@ -1362,15 +1369,15 @@ function decodePayload(token: string) {
                   <span className="text-neutral-500 hover:text-white cursor-pointer">•••</span>
                 </div>
 
-                {/* Workspace Folder Tree (graphicode) */}
+                {/* Workspace Folder Tree (nexus-ide) */}
                 <div className="py-1 text-xs font-mono">
-                  {/* Root Folder: graphicode */}
+                  {/* Root Folder: nexus-ide */}
                   <div 
                     onClick={() => setNexusFolderExpanded(!nexusFolderExpanded)}
                     className="h-6 px-3 flex items-center gap-1.5 text-neutral-200 hover:text-white cursor-pointer hover:bg-[#1f1f1f]"
                   >
                     {nexusFolderExpanded ? <ChevronDown size={13} className="text-[#f43f5e]" /> : <ChevronRight size={13} />}
-                    <span className="font-semibold text-neutral-100">graphicode</span>
+                    <span className="font-semibold text-neutral-100">nexus-ide</span>
                   </div>
 
                   {nexusFolderExpanded && (
@@ -1882,10 +1889,10 @@ function decodePayload(token: string) {
 
                 {/* Open VSX / Microsoft Open Source Marketplace Info Banner */}
                 <div className="p-3 bg-[#191919] border-b border-[#242424] text-[11px] text-neutral-400 leading-relaxed">
-                  By default, GraphiCode uses{" "}
+                  By default, Nexus IDE uses{" "}
                   <a href="https://open-vsx.org" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Open VSX</a>{" "}
                   as a marketplace. This can be changed in{" "}
-                  <span onClick={() => setIsSettingsOpen(true)} className="text-blue-400 hover:underline cursor-pointer">GraphiCode settings</span>.
+                  <span onClick={() => setIsSettingsOpen(true)} className="text-blue-400 hover:underline cursor-pointer">Nexus IDE settings</span>.
                 </div>
 
                 {/* Installed Accordion Section (26) */}
@@ -2058,14 +2065,14 @@ function decodePayload(token: string) {
             </div>
           </div>
 
-          {/* BREADCRUMB BAR (Screenshot 1: M↓ demo_video_script.md › # 🎬 NexusIDE...) */}
+          {/* BREADCRUMB BAR (Screenshot 1: M↓ demo_video_script.md › # Nexus IDE...) */}
           <div className="h-6 bg-[#141414] border-b border-[#242424] px-4 flex items-center gap-1.5 text-xs font-mono text-neutral-400 shrink-0 select-none">
             {activeTab === "demo_video_script.md" ? (
               <>
                 <span className="text-blue-400 font-bold text-[10px]">M↓</span>
                 <span className="text-white">demo_video_script.md</span>
                 <ChevronRight size={11} className="text-neutral-600" />
-                <span className="text-neutral-500 truncate"># 🎬 GraphiCode — 3-Minute Hackathon Winning Demo Script</span>
+                <span className="text-neutral-500 truncate"># Nexus IDE — 3-Minute Hackathon Winning Demo Script</span>
               </>
             ) : activeTab === "Review" ? (
               <>
@@ -2077,7 +2084,7 @@ function decodePayload(token: string) {
             ) : (
               <>
                 <FolderGit2 size={12} className="text-neutral-500" />
-                <span>graphicode</span>
+                <span>nexus-ide</span>
                 <ChevronRight size={11} className="text-neutral-600" />
                 <span>frontend</span>
                 <ChevronRight size={11} className="text-neutral-600" />
@@ -2491,7 +2498,7 @@ function decodePayload(token: string) {
                     <span className="w-2 h-2 rounded-full bg-[#38bdf8] inline-block animate-pulse"></span>
                     {showTerminalTooltip && (
                       <div className="absolute right-0 bottom-6 bg-[#202020] border border-[#333] shadow-xl px-2.5 py-1 rounded text-[11px] font-mono text-white whitespace-nowrap z-50">
-                        GraphiCode Engine (Active)
+                        Nexus Engine (Active)
                       </div>
                     )}
                   </div>
@@ -2512,14 +2519,14 @@ function decodePayload(token: string) {
                 <div className="flex-1 p-3 overflow-y-auto font-mono text-xs">
                   {activeBottomPanelTab === "terminal" && (
                     <div className="text-neutral-300 font-mono text-xs space-y-1">
-                      <div className="text-neutral-500">((.venv)) pratham@PRATHAMs-MacBook-Air graphicode % ./launch-mac.sh</div>
+                      <div className="text-neutral-500">((.venv)) pratham@PRATHAMs-MacBook-Air nexus-ide % ./launch-mac.sh</div>
                       <div className="text-blue-400 pt-1">
-                        ▶ [5/5] Opening GraphiCode in Default Browser...<br />
+                        ▶ [5/5] Opening Nexus IDE in Default Browser...<br />
                         <span className="text-emerald-400">✓ Opened http://localhost:3000 via macOS &apos;open&apos;</span>
                       </div>
                       <div className="text-[#e2b340] pt-2">
                         =====================================================<br />
-                        🚀 <span className="text-white font-bold">GraphiCode is live and ready on Apple Silicon!</span><br />
+                        <span className="text-emerald-400 font-bold">Nexus IDE is live and ready on Apple Silicon</span><br />
                         🌐 UI Application: <span className="text-blue-400 underline">http://localhost:3000</span><br />
                         ⚡ API Backend:    <span className="text-blue-400 underline">http://localhost:8000</span><br />
                         📊 FalkorDB Graph: <span className="text-emerald-400">localhost:6379</span><br />
@@ -2529,7 +2536,7 @@ function decodePayload(token: string) {
                         Press [Ctrl+C] to stop all services and terminate cleanly.
                       </div>
                       <div className="text-neutral-400 pt-1">
-                        pratham@PRATHAMs-MacBook-Air graphicode % <span className="w-2 h-4 bg-white inline-block animate-pulse align-middle ml-1"></span>
+                        pratham@PRATHAMs-MacBook-Air nexus-ide % <span className="w-2 h-4 bg-white inline-block animate-pulse align-middle ml-1"></span>
                       </div>
                     </div>
                   )}
@@ -3223,9 +3230,9 @@ function decodePayload(token: string) {
               playUiSound("switch");
               setIsSettingsOpen(true);
             }}
-            className="hover:text-white cursor-pointer"
+            className="hover:text-white cursor-pointer active:scale-[0.98] transition-transform"
           >
-            GraphiCode - Settings
+            Nexus - Settings
           </button>
         </div>
       </div>

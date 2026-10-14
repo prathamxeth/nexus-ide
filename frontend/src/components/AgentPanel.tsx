@@ -108,7 +108,7 @@ export function AgentPanel({
         <div className="flex items-center gap-2">
           <Bot className="w-4 h-4 text-[#3b82f6]" />
           <span className="text-xs font-semibold tracking-wide text-[#e5e5e5]">
-            GraphiCode Agent
+            Nexus Agent
           </span>
           <span className="text-[10px] font-mono text-[#888888] px-1.5 py-0.5 rounded bg-[#222222] border border-[#2a2a2a]">
             claude-3.5-sonnet
@@ -264,14 +264,14 @@ export function AgentPanel({
             <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={onAcceptDiff}
-                className="flex-1 flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-[#22c55e] hover:bg-[#16a34a] text-[#ffffff] font-semibold text-[11px] transition-colors"
+                className="flex-1 flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-[#22c55e] hover:bg-[#16a34a] text-[#ffffff] font-semibold text-[11px] transition-colors active:scale-[0.98]"
               >
                 <Check className="w-3 h-3 stroke-[2.5]" />
                 <span>Accept (Cmd+Y)</span>
               </button>
               <button
                 onClick={onRejectDiff}
-                className="flex items-center justify-center gap-1 py-1 px-3 rounded bg-[#2a2a2a] hover:bg-[#333333] text-[#cccccc] text-[11px] transition-colors"
+                className="flex items-center justify-center gap-1 py-1 px-3 rounded bg-[#2a2a2a] hover:bg-[#333333] text-[#cccccc] text-[11px] transition-colors active:scale-[0.98]"
               >
                 <X className="w-3 h-3" />
                 <span>Reject</span>
@@ -311,7 +311,7 @@ export function AgentPanel({
           <button
             onClick={onTriggerRefactor}
             disabled={isStreaming || !prompt.trim()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#3b82f6] hover:bg-[#2563eb] text-[#ffffff] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(59,130,246,0.3)]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#3b82f6] hover:bg-[#2563eb] text-[#ffffff] font-medium transition-colors active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-[0_0_12px_rgba(59,130,246,0.3)]"
           >
             {isStreaming ? (
               <>

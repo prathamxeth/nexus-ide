@@ -385,7 +385,7 @@ export function CommandPalette({
             <span>↵ Select</span>
             <span>ESC Close</span>
           </div>
-          <span className="text-neutral-400">GraphiCode Command Palette</span>
+          <span className="text-neutral-400">Nexus IDE Command Palette</span>
         </div>
       </div>
     </div>
