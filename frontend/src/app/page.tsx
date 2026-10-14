@@ -13,7 +13,7 @@ import {
   Activity, Radio, HelpCircle, PanelRight, PanelBottom, PanelLeft,
   ChevronUp, CornerDownLeft, FileText, Send, Mic, ThumbsUp, ThumbsDown,
   Camera, Globe, Eye, History, MoreHorizontal, Sliders, CheckSquare,
-  Compass, Workflow, ArrowUp, Code2
+  Compass, Workflow, ArrowUp, Code2, AlertTriangle
 } from "lucide-react";
 
 import dynamic from "next/dynamic";
@@ -1090,21 +1090,21 @@ function decodePayload(token: string) {
             <button 
               onClick={() => playUiSound("reject")}
               title="Close"
-              className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]/40 flex items-center justify-center text-[8px] font-bold text-black/0 group-hover:text-black/80 transition-all cursor-pointer"
+              className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]/40 flex items-center justify-center text-[8px] font-bold text-black/0 group-hover:text-black/80 transition-colors duration-150 cursor-pointer"
             >
               ✕
             </button>
             <button 
               onClick={() => playUiSound("click")}
               title="Minimize"
-              className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]/40 flex items-center justify-center text-[8px] font-bold text-black/0 group-hover:text-black/80 transition-all cursor-pointer"
+              className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]/40 flex items-center justify-center text-[8px] font-bold text-black/0 group-hover:text-black/80 transition-colors duration-150 cursor-pointer"
             >
               −
             </button>
             <button 
               onClick={() => playUiSound("toggle")}
               title="Zoom"
-              className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]/40 flex items-center justify-center text-[7px] font-bold text-black/0 group-hover:text-black/80 transition-all cursor-pointer"
+              className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]/40 flex items-center justify-center text-[7px] font-bold text-black/0 group-hover:text-black/80 transition-colors duration-150 cursor-pointer"
             >
               ⤢
             </button>
@@ -1132,7 +1132,7 @@ function decodePayload(token: string) {
                 setIdeViewMode("code-first");
               }}
               title="Code-First Mode: 70% Monaco Editor, 30% Graph Canvas"
-              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-[color,background-color,border-color,box-shadow] duration-150 cursor-pointer ${
                 ideViewMode === "code-first"
                   ? "bg-[#1E293B] text-white font-medium shadow-md border border-blue-500/30"
                   : "text-neutral-400 hover:text-white hover:bg-[#1E293B]/40"
@@ -1148,7 +1148,7 @@ function decodePayload(token: string) {
                 setIdeViewMode("split");
               }}
               title="Split Mode: 50% Monaco Editor, 50% Graph Canvas"
-              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-[color,background-color,border-color,box-shadow] duration-150 cursor-pointer ${
                 ideViewMode === "split"
                   ? "bg-[#1E293B] text-white font-medium shadow-md border border-amber-500/30"
                   : "text-neutral-400 hover:text-white hover:bg-[#1E293B]/40"
@@ -1164,7 +1164,7 @@ function decodePayload(token: string) {
                 setIdeViewMode("graph-first");
               }}
               title="Graph-First Mode: 75% Graph Canvas, 25% Inline Code Preview & Agent Drawer"
-              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-[color,background-color,border-color,box-shadow] duration-150 cursor-pointer ${
                 ideViewMode === "graph-first"
                   ? "bg-[#1E293B] text-white font-medium shadow-md border border-rose-500/30"
                   : "text-neutral-400 hover:text-white hover:bg-[#1E293B]/40"
@@ -1259,7 +1259,7 @@ function decodePayload(token: string) {
                 }
               }}
               title="Explorer (⇧⌘E)"
-              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                 activeActivityTab === "explorer" && isLeftSidebarVisible
                   ? "text-white bg-[#222222] border-l-2 border-[#f43f5e]"
                   : "text-neutral-400 hover:text-white hover:bg-[#1e1e1e]"
@@ -1280,7 +1280,7 @@ function decodePayload(token: string) {
                 }
               }}
               title="Code Search (⇧⌘F)"
-              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                 activeActivityTab === "search" && isLeftSidebarVisible
                   ? "text-white bg-[#222222] border-l-2 border-[#f43f5e]"
                   : "text-neutral-400 hover:text-white hover:bg-[#1e1e1e]"
@@ -1301,7 +1301,7 @@ function decodePayload(token: string) {
                 }
               }}
               title="Graphed Data & AST Context"
-              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                 activeActivityTab === "graph" && isLeftSidebarVisible
                   ? "text-[#f43f5e] bg-[#222222] border-l-2 border-[#f43f5e]"
                   : "text-neutral-400 hover:text-white hover:bg-[#1e1e1e]"
@@ -1322,7 +1322,7 @@ function decodePayload(token: string) {
                 }
               }}
               title="Extensions (⇧⌘X)"
-              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer relative ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer relative ${
                 activeActivityTab === "extensions" && isLeftSidebarVisible
                   ? "text-white bg-[#222222] border-l-2 border-[#f43f5e]"
                   : "text-neutral-400 hover:text-white hover:bg-[#1e1e1e]"
@@ -2160,7 +2160,7 @@ function decodePayload(token: string) {
 
                   <button
                     onClick={handleAcceptPatch}
-                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-medium transition-all shadow-[0_0_15px_rgba(16,185,129,0.35)] cursor-pointer"
+                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-medium transition-colors duration-150 shadow-[0_0_15px_rgba(16,185,129,0.35)] cursor-pointer"
                     title="Accept Patch (Cmd+Y)"
                   >
                     <Check size={13} className="stroke-[2.5]" />
@@ -2592,7 +2592,7 @@ function decodePayload(token: string) {
                           onClick={() => handleSelectTab("auth.ts")}
                           className="flex items-center gap-2 text-amber-400 hover:underline cursor-pointer"
                         >
-                          <span>⚠</span>
+                          <AlertTriangle size={12} className="text-amber-400 shrink-0" />
                           <span>auth.ts:2</span>
                           <span className="text-neutral-400">Function &apos;validateToken&apos; has 2 multi-hop dependent callers in blast radius</span>
                         </div>
@@ -2600,7 +2600,7 @@ function decodePayload(token: string) {
                           onClick={() => handleSelectTab("billing.ts")}
                           className="flex items-center gap-2 text-amber-400 hover:underline cursor-pointer"
                         >
-                          <span>⚠</span>
+                          <AlertTriangle size={12} className="text-amber-400 shrink-0" />
                           <span>billing.ts:6</span>
                           <span className="text-neutral-400">Caller &apos;processInvoice&apos; must enforce procedural clock skew &lt;= 60s</span>
                         </div>
@@ -2777,7 +2777,7 @@ function decodePayload(token: string) {
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={handleAcceptPatch}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-md transition-all cursor-pointer"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-md transition-colors duration-150 cursor-pointer"
                   >
                     <Check size={13} className="stroke-[2.5]" />
                     <span>Accept Changes (⌘Y)</span>
@@ -3017,7 +3017,7 @@ function decodePayload(token: string) {
                     <div className="flex items-center gap-2 flex-1">
                       <button
                         onClick={handleAcceptPatch}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-950/50 transition-all cursor-pointer text-xs"
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-950/50 transition-colors duration-150 cursor-pointer text-xs"
                       >
                         <Check size={13} className="stroke-[2.5]" />
                         <span>Accept Changes (⌘Y)</span>
@@ -3057,7 +3057,7 @@ function decodePayload(token: string) {
                       setShowChangesOverview(!showChangesOverview);
                       setShowTerminalProcesses(false);
                     }}
-                    className={`w-7 h-7 rounded-lg border flex items-center justify-center cursor-pointer transition-all shadow-sm relative group ${
+                    className={`w-7 h-7 rounded-lg border flex items-center justify-center cursor-pointer transition-colors duration-150 shadow-sm relative group ${
                       showChangesOverview 
                         ? "bg-[#282828] border-[#f43f5e] text-[#f43f5e]" 
                         : "bg-[#1c1c1c] hover:bg-[#242424] border-[#2e2e2e] text-neutral-400 hover:text-white"
@@ -3075,7 +3075,7 @@ function decodePayload(token: string) {
                       setShowTerminalProcesses(!showTerminalProcesses);
                       setShowChangesOverview(false);
                     }}
-                    className={`w-7 h-7 rounded-lg border flex items-center justify-center cursor-pointer transition-all shadow-sm relative group ${
+                    className={`w-7 h-7 rounded-lg border flex items-center justify-center cursor-pointer transition-colors duration-150 shadow-sm relative group ${
                       showTerminalProcesses 
                         ? "bg-[#282828] border-emerald-500 text-emerald-400" 
                         : "bg-[#1c1c1c] hover:bg-[#242424] border-[#2e2e2e] text-neutral-400 hover:text-white"
@@ -3090,15 +3090,15 @@ function decodePayload(token: string) {
                 {/* Option 3: Review Changes Icon (opens Review Changes pane) */}
                 <button
                   onClick={handleOpenReviewTab}
-                  className="w-7 h-7 rounded-lg bg-[#1c1c1c] hover:bg-[#242424] border border-[#2e2e2e] hover:border-[#444] text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer shadow-sm transition-all group"
+                  className="w-7 h-7 rounded-lg bg-[#1c1c1c] hover:bg-[#242424] border border-[#2e2e2e] hover:border-[#444] text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer shadow-sm transition-colors duration-150 group"
                   title="Review Changes (Click to open Review Changes pane)"
                 >
-                  <SplitSquareVertical size={14} className="text-[#f43f5e] group-hover:scale-110 transition-transform" />
+                  <SplitSquareVertical size={14} className="text-[#f43f5e] group-hover:text-rose-300 transition-colors duration-150" />
                 </button>
               </div>
 
               {/* Prompt Input Box */}
-              <div className="bg-[#1e1e1e] border border-[#2d2d2d] focus-within:border-[#444] rounded-xl p-2.5 transition-all shadow-inner">
+              <div className="bg-[#1e1e1e] border border-[#2d2d2d] focus-within:border-[#444] rounded-xl p-2.5 transition-colors duration-150 shadow-inner">
                 <textarea
                   rows={2}
                   value={agentInput}
@@ -3162,7 +3162,7 @@ function decodePayload(token: string) {
                     <button
                       onClick={() => handleExecutePrompt()}
                       disabled={isProcessing}
-                      className="w-6 h-6 rounded-full bg-[#f43f5e] hover:bg-[#e11d48] text-white flex items-center justify-center transition-all disabled:opacity-40 cursor-pointer shadow-md"
+                      className="w-6 h-6 rounded-full bg-[#f43f5e] hover:bg-[#e11d48] text-white flex items-center justify-center transition-colors duration-150 disabled:opacity-40 cursor-pointer shadow-md"
                     >
                       <ArrowUp size={12} className="stroke-[2.5]" />
                     </button>
@@ -3187,9 +3187,9 @@ function decodePayload(token: string) {
           </div>
 
           {/* Diagnostics: 0 errors, 2 warnings */}
-          <div className="flex items-center gap-2 text-neutral-400">
-            <span>0 ⊗</span>
-            <span>2 ⚠</span>
+          <div className="flex items-center gap-2.5 text-neutral-400">
+            <span className="flex items-center gap-1"><CheckCircle2 size={11} className="text-emerald-400" /> 0</span>
+            <span className="flex items-center gap-1"><AlertTriangle size={11} className="text-amber-400" /> 2</span>
           </div>
 
           {/* FalkorDB Live Status */}

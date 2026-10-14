@@ -220,7 +220,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
       {/* Cupertino Dark Glass Modal Container */}
       <div 
-        className="w-full max-w-2xl bg-[#1e1e1e]/90 backdrop-blur-md border border-[#333333] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden text-neutral-200 font-sans transition-all"
+        className="w-full max-w-2xl bg-[#1e1e1e]/90 backdrop-blur-md border border-[#333333] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden text-neutral-200 font-sans transition-[opacity,transform] duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* macOS Style Title Bar */}
@@ -256,7 +256,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
         <div className="px-5 pt-4 pb-2 border-b border-[#262626] bg-[#1a1a1a]/60 flex items-center gap-2">
           <button
             onClick={() => { playUiSound("switch"); setActiveTab("ollama"); }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 ${
               activeTab === "ollama"
                 ? "bg-[#2c2c2c] text-white shadow-sm border border-[#3d3d3d]"
                 : "text-neutral-400 hover:text-neutral-200 hover:bg-[#222]"
@@ -268,7 +268,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
 
           <button
             onClick={() => { playUiSound("switch"); setActiveTab("byok"); }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 ${
               activeTab === "byok"
                 ? "bg-[#2c2c2c] text-white shadow-sm border border-[#3d3d3d]"
                 : "text-neutral-400 hover:text-neutral-200 hover:bg-[#222]"
@@ -280,7 +280,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
 
           <button
             onClick={() => { playUiSound("switch"); setActiveTab("falkordb"); }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 ${
               activeTab === "falkordb"
                 ? "bg-[#2c2c2c] text-white shadow-sm border border-[#3d3d3d]"
                 : "text-neutral-400 hover:text-neutral-200 hover:bg-[#222]"
@@ -363,7 +363,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                       <div
                         key={model}
                         onClick={() => { playUiSound("click"); setSelectedOllamaModel(model); }}
-                        className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                        className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-[background-color,border-color,box-shadow] duration-150 ${
                           isSelected
                             ? "bg-[#252525] border-[#3b82f6] shadow-sm"
                             : "bg-[#161616] border-[#292929] hover:bg-[#1a1a1a]"
@@ -618,7 +618,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
                       <div
                         key={ns.id}
                         onClick={() => { playUiSound("click"); setGraphNamespace(ns.id); }}
-                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                        className={`p-3 rounded-lg border cursor-pointer transition-[background-color,border-color,box-shadow] duration-150 ${
                           isSelected
                             ? "bg-[#252525] border-amber-500/60 shadow-sm"
                             : "bg-[#161616] border-[#292929] hover:bg-[#1a1a1a]"

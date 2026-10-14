@@ -220,7 +220,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
             <button
               key={filter.key}
               onClick={() => setActiveFilter(filter.key)}
-              className={`px-2 py-1 rounded text-[10px] font-medium transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded text-[10px] font-medium transition-colors duration-150 cursor-pointer ${
                 isActive
                   ? "bg-[#1E293B] text-white shadow-sm border border-emerald-500/30"
                   : "text-neutral-400 hover:text-white hover:bg-[#1E293B]/50"
@@ -315,7 +315,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
           return (
             <div
               onClick={() => handleBlockClick(block)}
-              className={`p-3.5 rounded-xl border font-mono shadow-2xl transition-all duration-200 cursor-pointer select-none group relative overflow-hidden backdrop-blur-xl ${
+              className={`p-3.5 rounded-xl border font-mono shadow-2xl transition-[border-color,box-shadow] duration-150 cursor-pointer select-none group relative overflow-hidden backdrop-blur-xl ${
                 isSelected ? "ring-2 ring-white/30" : ""
               } ${
                 isBlast

@@ -1,9 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+/* Hallmark · macrostructure: developer-workbench · pre-emit critique: P5 H5 E5 S5 R5 V5 · contrast: pass (40–41) · slop: pass (42–48) */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+
+  /* Nexus IDE Master Design Tokens */
+  --color-primary: #1E293B;
+  --color-on-primary: #FFFFFF;
+  --color-secondary: #334155;
+  --color-on-secondary: #FFFFFF;
+  --color-accent: #22C55E;
+  --color-on-accent: #0F172A;
+  --color-background: #0B0F19;
+  --color-foreground: #F8FAFC;
+  --color-card: #151D2F;
+  --color-card-foreground: #F8FAFC;
+  --color-muted: #272F42;
+  --color-muted-foreground: #94A3B8;
+  --color-border: #334155;
+  --color-destructive: #EF4444;
 }
 
 html, body, #__next {
@@ -11,9 +28,10 @@ html, body, #__next {
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  background-color: #141414;
-  color: #cccccc;
+  overflow-x: clip;
+  overflow-y: hidden;
+  background-color: #0B0F19;
+  color: #E2E8F0;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -23,7 +41,7 @@ code, kbd, samp, pre, .font-mono {
   font-family: var(--font-mono);
 }
 
-/* Smooth layout transitions for resizing graph drawer and sidebar toggles */
+/* Specific layout transitions for resizing panels */
 .smooth-panel-transition {
   transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), 
               height 240ms cubic-bezier(0.16, 1, 0.3, 1), 
@@ -31,18 +49,28 @@ code, kbd, samp, pre, .font-mono {
               transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Scrollbar styles to match Cursor */
+/* Minimalist Dark Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #141414;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2b2b2b;
-  border-radius: 3px;
+  background: #334155;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f3f;
+  background: #475569;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

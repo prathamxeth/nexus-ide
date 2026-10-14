@@ -41,7 +41,7 @@ export function AstGraphDrawer({
 
   return (
     <div
-      className={`border-t border-[#282828] bg-[#141414] transition-all duration-200 flex flex-col shrink-0 ${
+      className={`border-t border-[#282828] bg-[#141414] transition-[height] duration-200 ease-out flex flex-col shrink-0 ${
         isFullscreen
           ? "fixed inset-0 z-50 bg-[#141414]"
           : isOpen
