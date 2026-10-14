@@ -83,6 +83,8 @@ class ASTParser:
 
         imports: List[Dict[str, Any]] = []
         imported_symbols: Dict[str, str] = {}  # symbol_name -> target_file_path
+        imported_namespaces: Dict[str, str] = {}  # namespace_name -> target_file_path (* as Auth)
+        imported_symbol_aliases: Dict[str, Tuple[str, str]] = {}  # alias -> (target_file, orig_name)
         functions: List[Dict[str, Any]] = []
         classes: List[Dict[str, Any]] = []
         methods: List[Dict[str, Any]] = []
@@ -94,7 +96,7 @@ class ASTParser:
         def resolve_import_path(specifier: str) -> str:
             if specifier.startswith("."):
                 resolved = os.path.normpath(os.path.join(os.path.dirname(norm_file_path), specifier))
-                if not (resolved.endswith(".ts") or resolved.endswith(".tsx") or resolved.endswith(".js")):
+                if not any(resolved.endswith(ext) for ext in (".ts", ".tsx", ".js", ".jsx", ".mjs")):
                     # Conventional TypeScript resolution
                     resolved += ".ts"
                 return resolved
@@ -117,7 +119,7 @@ class ASTParser:
                         walk_declarations(child, is_exported_context=True)
                 return
 
-            # 1. Imports
+            # 1. Imports (Named, Namespace, Default, and Aliased)
             if node_type == "import_statement":
                 specifier = ""
                 for child in node.children:
@@ -133,22 +135,33 @@ class ASTParser:
                         "specifier": specifier,
                     })
 
-                    # Map imported symbols to target file
+                    # Map imported symbols and namespaces to target file
                     for child in node.children:
                         if child.type == "import_clause":
                             for clause_child in child.children:
+                                # Default import: import Auth from "./auth"
                                 if clause_child.type == "identifier":
                                     imported_symbols[get_text(clause_child)] = target_file
+                                # Namespace import: import * as Auth from "./auth"
+                                elif clause_child.type == "namespace_import":
+                                    for ns_child in clause_child.children:
+                                        if ns_child.type == "identifier":
+                                            imported_namespaces[get_text(ns_child)] = target_file
+                                # Named imports: import { validateToken, formatCurrency as fmt }
                                 elif clause_child.type == "named_imports":
                                     for imp_spec in clause_child.children:
                                         if imp_spec.type == "import_specifier":
-                                            # handle "import { orig as alias }" or "import { orig }"
                                             spec_children = [
                                                 c for c in imp_spec.children if c.type == "identifier"
                                             ]
-                                            if spec_children:
-                                                imported_name = get_text(spec_children[-1])
-                                                imported_symbols[imported_name] = target_file
+                                            if len(spec_children) == 1:
+                                                orig_name = get_text(spec_children[0])
+                                                imported_symbols[orig_name] = target_file
+                                            elif len(spec_children) >= 2:
+                                                orig_name = get_text(spec_children[0])
+                                                alias_name = get_text(spec_children[1])
+                                                imported_symbols[alias_name] = target_file
+                                                imported_symbol_aliases[alias_name] = (target_file, orig_name)
                 return
 
             # 2. Function Declarations
@@ -264,22 +277,31 @@ class ASTParser:
         # Second pass: Extract Calls within function bodies
         for caller_name, caller_file, body_node in callable_bodies:
             def walk_calls(n: Node) -> None:
+                # 1. Standard function call or method call: e.g. validateToken(), Auth.validateToken(), this.validateToken()
                 if n.type == "call_expression":
                     target_name = ""
+                    target_obj = ""
                     for child in n.children:
                         if child.type == "identifier":
                             target_name = get_text(child)
                             break
                         elif child.type == "member_expression":
-                            # e.g., Logger.log() or this.save() -> 'log' or 'save'
+                            # e.g., Auth.validateToken() or this.save() or Logger.log()
                             for sub in child.children:
-                                if sub.type == "property_identifier":
+                                if sub.type == "identifier":
+                                    target_obj = get_text(sub)
+                                elif sub.type == "property_identifier":
                                     target_name = get_text(sub)
                             break
 
                     if target_name and target_name != caller_name:
-                        # Determine if cross-file (imported) or intra-file
-                        if target_name in imported_symbols:
+                        # Determine if cross-file (imported), namespace-imported, or intra-file
+                        if target_name in imported_symbol_aliases:
+                            target_file, real_target_name = imported_symbol_aliases[target_name]
+                            target_name = real_target_name
+                        elif target_obj and target_obj in imported_namespaces:
+                            target_file = imported_namespaces[target_obj]
+                        elif target_name in imported_symbols:
                             target_file = imported_symbols[target_name]
                         elif target_name in declared_fn_names:
                             target_file = caller_file
@@ -292,6 +314,28 @@ class ASTParser:
                             "target_name": target_name,
                             "target_file": target_file,
                         })
+
+                # 2. JSX / TSX Component Invocations: <AuthGuard /> or <ValidateToken user={u} />
+                elif n.type in ("jsx_element", "jsx_self_closing_element"):
+                    for child in n.children:
+                        if child.type in ("jsx_opening_element", "jsx_self_closing_element"):
+                            for tag_child in child.children:
+                                if tag_child.type == "identifier":
+                                    comp_name = get_text(tag_child)
+                                    if comp_name and comp_name[0].isupper() and comp_name != caller_name:
+                                        if comp_name in imported_symbols:
+                                            target_file = imported_symbols[comp_name]
+                                        elif comp_name in declared_fn_names:
+                                            target_file = caller_file
+                                        else:
+                                            target_file = "external"
+                                        calls.append({
+                                            "caller_name": caller_name,
+                                            "caller_file": caller_file,
+                                            "target_name": comp_name,
+                                            "target_file": target_file,
+                                        })
+                                    break
 
                 for child in n.children:
                     walk_calls(child)
