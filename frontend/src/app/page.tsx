@@ -35,7 +35,8 @@ import {
   RefreshCw,
   Database,
   Sliders,
-  FileText
+  FileText,
+  Plus
 } from "lucide-react";
 import NetworkGraphCanvas, { NodeItem, EdgeItem } from "@/components/NetworkGraphCanvas";
 import { MCP_CODEBASE_REGISTRY } from "@/lib/mcp-codebase";
@@ -113,33 +114,127 @@ interface ChatMessage {
 }
 
 function FormattedMessageContent({ text }: { text: string }) {
-  const lines = text.split("\n");
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const handleCopy = (code: string, idx: number) => {
+    navigator.clipboard.writeText(code);
+    setCopiedIndex(idx);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const segments = useMemo(() => {
+    const regex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+    const parts: Array<{ type: "text" | "code"; content: string; language?: string }> = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: "text", content: text.slice(lastIndex, match.index) });
+      }
+      parts.push({
+        type: "code",
+        language: match[1] || "typescript",
+        content: match[2].trim(),
+      });
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push({ type: "text", content: text.slice(lastIndex) });
+    }
+
+    return parts;
+  }, [text]);
+
   return (
-    <div className="space-y-1">
-      {lines.map((line, idx) => {
-        if (!line.trim()) return <div key={idx} className="h-1" />;
-        const parts = line.split(/(\*\*.*?\*\*|`.*?`)/g);
+    <div className="space-y-2 text-xs">
+      {segments.map((seg, segIdx) => {
+        if (seg.type === "code") {
+          const isCopied = copiedIndex === segIdx;
+          return (
+            <div
+              key={segIdx}
+              className="my-2 rounded-[8px] border border-[#1e2436] bg-[#0b0e16] overflow-hidden"
+            >
+              <div className="h-7 px-3 bg-[#111520] border-b border-[#1b2130] flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                <span className="text-sky-400 font-semibold">{seg.language || "code"}</span>
+                <button
+                  onClick={() => handleCopy(seg.content, segIdx)}
+                  className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  title="Copy code to clipboard"
+                >
+                  {isCopied ? (
+                    <>
+                      <Check size={11} className="text-emerald-400" />
+                      <span className="text-emerald-400 font-medium">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={11} />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <pre className="p-3 font-mono text-[11px] text-neutral-200 overflow-x-auto leading-relaxed select-text">
+                <code>{seg.content}</code>
+              </pre>
+            </div>
+          );
+        }
+
+        const lines = seg.content.split("\n");
         return (
-          <div key={idx} className="leading-relaxed">
-            {parts.map((part, pIdx) => {
-              if (part.startsWith("**") && part.endsWith("**")) {
-                return (
-                  <strong key={pIdx} className="text-white font-semibold mr-1">
-                    {part.slice(2, -2)}
-                  </strong>
-                );
+          <div key={segIdx} className="space-y-1">
+            {lines.map((line, idx) => {
+              const trimmed = line.trim();
+              if (!trimmed) return <div key={idx} className="h-1" />;
+
+              if (trimmed === "---") {
+                return <div key={idx} className="my-2 border-t border-[#1e2436]" />;
               }
-              if (part.startsWith("`") && part.endsWith("`")) {
-                return (
-                  <code
-                    key={pIdx}
-                    className="px-1.5 py-0.5 mx-0.5 rounded bg-[#161d2b] border border-[#263248] text-sky-300 font-mono text-[11px]"
-                  >
-                    {part.slice(1, -1)}
-                  </code>
-                );
-              }
-              return <span key={pIdx}>{part}</span>;
+
+              const isBullet = trimmed.startsWith("- ") || trimmed.startsWith("* ");
+              const displayText = isBullet ? trimmed.slice(2) : trimmed;
+              const parts = displayText.split(/(\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
+
+              return (
+                <div key={idx} className={`leading-relaxed ${isBullet ? "flex items-start gap-1.5 pl-1" : ""}`}>
+                  {isBullet && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#f54e00] shrink-0 mt-1.5" />
+                  )}
+                  <div className="flex-1">
+                    {parts.map((part, pIdx) => {
+                      if (part.startsWith("**") && part.endsWith("**")) {
+                        return (
+                          <strong key={pIdx} className="text-white font-semibold mr-0.5">
+                            {part.slice(2, -2)}
+                          </strong>
+                        );
+                      }
+                      if (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**")) {
+                        return (
+                          <em key={pIdx} className="text-neutral-300 italic mr-0.5">
+                            {part.slice(1, -1)}
+                          </em>
+                        );
+                      }
+                      if (part.startsWith("`") && part.endsWith("`")) {
+                        return (
+                          <code
+                            key={pIdx}
+                            className="px-1.5 py-0.5 mx-0.5 rounded bg-[#161d2b] border border-[#263248] text-sky-300 font-mono text-[11px]"
+                          >
+                            {part.slice(1, -1)}
+                          </code>
+                        );
+                      }
+                      return <span key={pIdx}>{part}</span>;
+                    })}
+                  </div>
+                </div>
+              );
             })}
           </div>
         );
@@ -162,6 +257,13 @@ export default function NexusIDE() {
   const [modifiedCodeForDiff, setModifiedCodeForDiff] = useState<string>("");
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [activeActivityTab, setActiveActivityTab] = useState<"files" | "search" | "git">("files");
+
+  // New File Creation State
+  const [isCreatingFile, setIsCreatingFile] = useState<boolean>(false);
+  const [newFileNameInput, setNewFileNameInput] = useState<string>("");
+
+  // Live Monaco Editor Cursor Position
+  const [cursorPosition, setCursorPosition] = useState<{ lineNumber: number; column: number }>({ lineNumber: 1, column: 1 });
 
   // Model & Settings State
   const [selectedModel, setSelectedModel] = useState<string>("claude-3-5-sonnet");
@@ -381,6 +483,39 @@ export default function NexusIDE() {
     if (activeFileName === tabToClose && remaining.length > 0) {
       setActiveFileName(remaining[remaining.length - 1]);
     }
+  };
+
+  // Create New File
+  const handleCreateNewFile = () => {
+    const raw = newFileNameInput.trim();
+    if (!raw) {
+      setIsCreatingFile(false);
+      return;
+    }
+    const cleanName = raw.includes(".") ? raw : `${raw}.ts`;
+    const isPy = cleanName.endsWith(".py");
+    const defaultCode = isPy
+      ? `# Module: ${cleanName}\n\ndef main():\n    pass\n`
+      : `// Module: ${cleanName}\n\nexport function run(): void {\n  console.log("${cleanName} active");\n}\n`;
+
+    setWorkspaceFiles((prev) => ({
+      ...prev,
+      [cleanName]: {
+        name: cleanName,
+        path: `src/${cleanName}`,
+        language: isPy ? "python" : "typescript",
+        code: defaultCode,
+      },
+    }));
+
+    if (!openTabs.includes(cleanName)) {
+      setOpenTabs((prev) => [...prev, cleanName]);
+    }
+    setActiveFileName(cleanName);
+    setIsCreatingFile(false);
+    setNewFileNameInput("");
+    setToastMessage(`✓ Created ${cleanName}`);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   // Node Selection on Graph Canvas
@@ -849,10 +984,57 @@ export default function NexusIDE() {
                 <>
                   <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#181c28]">
                     <span>Explorer</span>
-                    <span className="text-[10px] text-neutral-500 font-mono">src</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsCreatingFile(true)}
+                        title="New File"
+                        className="p-1 rounded hover:bg-[#181d2e] text-neutral-400 hover:text-[#f54e00] transition-colors cursor-pointer"
+                      >
+                        <Plus size={13} />
+                      </button>
+                      <span className="text-[10px] text-neutral-500 font-mono">src</span>
+                    </div>
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 font-mono text-xs">
+                    {isCreatingFile && (
+                      <div className="p-1.5 flex items-center gap-1.5 bg-[#121622] rounded-[6px] border border-[#f54e00]/60 mb-1">
+                        <FileCode size={13} className="text-sky-400 shrink-0" />
+                        <input
+                          type="text"
+                          value={newFileNameInput}
+                          onChange={(e) => setNewFileNameInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleCreateNewFile();
+                            if (e.key === "Escape") {
+                              setIsCreatingFile(false);
+                              setNewFileNameInput("");
+                            }
+                          }}
+                          placeholder="filename.ts"
+                          autoFocus
+                          className="w-full bg-transparent outline-none text-xs text-white font-mono placeholder-neutral-500"
+                        />
+                        <button
+                          onClick={handleCreateNewFile}
+                          className="p-0.5 text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                          title="Create"
+                        >
+                          <Check size={11} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsCreatingFile(false);
+                            setNewFileNameInput("");
+                          }}
+                          className="p-0.5 text-neutral-500 hover:text-white cursor-pointer"
+                          title="Cancel"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    )}
+
                     {Object.keys(workspaceFiles).map((fileName) => {
                       const isCurrent = activeFileName === fileName;
                       return (
@@ -994,23 +1176,35 @@ export default function NexusIDE() {
                   <div
                     key={tab}
                     onClick={() => handleSelectFile(tab)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-t-md text-xs font-mono border-t border-x cursor-pointer transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-t-md text-xs font-mono border-t border-x cursor-pointer transition-colors shrink-0 max-w-[160px] ${
                       isActive
                         ? "bg-[#0c0e14] border-[#22293b] text-white font-medium"
                         : "bg-[#08090e] border-transparent text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
-                    <FileCode size={12} className={tab.endsWith(".ts") ? "text-sky-400" : "text-amber-400"} />
-                    <span>{tab}</span>
+                    <FileCode size={12} className={tab.endsWith(".ts") ? "text-sky-400 shrink-0" : "text-amber-400 shrink-0"} />
+                    <span className="truncate">{tab}</span>
                     <button
                       onClick={(e) => handleCloseTab(tab, e)}
-                      className="p-0.5 rounded hover:bg-neutral-800 text-neutral-500 hover:text-white"
+                      className="p-0.5 rounded hover:bg-neutral-800 text-neutral-500 hover:text-white shrink-0"
+                      title="Close Tab"
                     >
                       <X size={10} />
                     </button>
                   </div>
                 );
               })}
+              <button
+                onClick={() => {
+                  setActiveActivityTab("files");
+                  setIsSidebarOpen(true);
+                  setIsCreatingFile(true);
+                }}
+                title="New File"
+                className="p-1.5 rounded hover:bg-[#141824] text-neutral-500 hover:text-[#f54e00] transition-colors cursor-pointer shrink-0 ml-1"
+              >
+                <Plus size={13} />
+              </button>
             </div>
 
             {/* MONACO CODE EDITOR (OR SPLIT DIFF EDITOR) */}
@@ -1018,21 +1212,23 @@ export default function NexusIDE() {
               {isDiffMode && modifiedCodeForDiff ? (
                 <div className="w-full h-full flex flex-col">
                   <div className="h-7 px-3 bg-[#111420] border-b border-[#20273a] flex items-center justify-between text-[11px] font-mono text-neutral-300">
-                    <span className="text-amber-300">Monaco Split Diff: Original (Left) vs FalkorDB Patched (Right)</span>
-                    <div className="flex items-center gap-2">
+                    <span className="text-amber-300 truncate">Monaco Split Diff: Original (Left) vs Patched (Right)</span>
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => {
                           handleCodeChange(modifiedCodeForDiff);
                           setIsDiffMode(false);
+                          setToastMessage(`✓ Applied patch to ${activeFileName}!`);
+                          setTimeout(() => setToastMessage(null), 3000);
                         }}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-600/40"
+                        className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-600/40 cursor-pointer text-[10px]"
                       >
                         <Check size={11} />
                         <span>Accept Patch</span>
                       </button>
                       <button
                         onClick={() => setIsDiffMode(false)}
-                        className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 hover:text-white"
+                        className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer text-[10px]"
                       >
                         Cancel
                       </button>
@@ -1064,6 +1260,12 @@ export default function NexusIDE() {
                   onChange={handleCodeChange}
                   onMount={(editor) => {
                     monacoEditorRef.current = editor;
+                    editor.onDidChangeCursorPosition((e: any) => {
+                      setCursorPosition({
+                        lineNumber: e.position.lineNumber,
+                        column: e.position.column,
+                      });
+                    });
                   }}
                   options={{
                     minimap: { enabled: false },
@@ -1082,37 +1284,37 @@ export default function NexusIDE() {
             {/* AGENT COMPOSER / CHAT PANEL (BOTTOM DOCK) */}
             <div className="h-64 border-t border-[#1b202c] bg-[#080a0f] flex flex-col shrink-0">
               {/* COMPOSER HEADER */}
-              <div className="h-8 px-3 bg-[#0d0f17] border-b border-[#1b202c] flex items-center justify-between text-xs font-mono text-neutral-400">
-                <div className="flex items-center gap-2">
-                  <Bot size={13} className="text-[#f54e00]" />
-                  <span className="text-white font-medium">Nexus Agent</span>
-                  <span className="text-neutral-600">•</span>
-                  <span className="text-neutral-400">Target:</span>
-                  <span className="font-semibold px-2 py-0.5 rounded-full bg-[#9fbbe0]/15 border border-[#9fbbe0]/40 text-[#9fbbe0] text-[10px]">
+              <div className="h-8 px-3 bg-[#0d0f17] border-b border-[#1b202c] flex items-center justify-between text-xs font-mono text-neutral-400 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Bot size={13} className="text-[#f54e00] shrink-0" />
+                  <span className="text-white font-medium shrink-0">Nexus Agent</span>
+                  <span className="text-neutral-600 shrink-0">•</span>
+                  <span className="text-neutral-400 shrink-0">Target:</span>
+                  <span className="font-semibold px-2 py-0.5 rounded-full bg-[#9fbbe0]/15 border border-[#9fbbe0]/40 text-[#9fbbe0] text-[10px] truncate max-w-[130px]">
                     @{selectedNode ? selectedNode.label : "validateToken"}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-[10px]">
+                <div className="flex items-center gap-2 text-[10px] shrink-0">
                   {/* Cursor DESIGN.md AI Timeline Stage Pills */}
                   {isGenerating ? (
-                    <span className="px-2 py-0.5 rounded-full bg-[#dfa88f]/20 border border-[#dfa88f]/50 text-[#dfa88f] font-mono text-[10px] font-medium flex items-center gap-1">
+                    <span className="px-2 py-0.5 rounded-full bg-[#dfa88f]/20 border border-[#dfa88f]/50 text-[#dfa88f] font-mono text-[10px] font-medium flex items-center gap-1 shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#dfa88f] animate-pulse" />
                       Thinking
                     </span>
                   ) : visitedBlockIds.length > 0 ? (
-                    <span className="px-2 py-0.5 rounded-full bg-[#9fc9a2]/20 border border-[#9fc9a2]/50 text-[#9fc9a2] font-mono text-[10px] font-medium flex items-center gap-1">
+                    <span className="px-2 py-0.5 rounded-full bg-[#9fc9a2]/20 border border-[#9fc9a2]/50 text-[#9fc9a2] font-mono text-[10px] font-medium flex items-center gap-1 shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#9fc9a2]" />
                       Grepping ({visitedBlockIds.length})
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full bg-[#9fbbe0]/15 border border-[#9fbbe0]/35 text-[#9fbbe0] font-mono text-[10px]">
+                    <span className="px-2 py-0.5 rounded-full bg-[#9fbbe0]/15 border border-[#9fbbe0]/35 text-[#9fbbe0] font-mono text-[10px] shrink-0">
                       Reading
                     </span>
                   )}
 
                   {/* Interactive Model Selector Dropdown */}
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     <button
                       onClick={() => setIsModelPickerOpen(!isModelPickerOpen)}
                       className="px-2 py-0.5 rounded-[8px] bg-[#161a25] hover:bg-[#1e2436] border border-[#23293c] text-neutral-200 text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
@@ -1291,27 +1493,28 @@ export default function NexusIDE() {
     {/* 4. CURSOR BOTTOM STATUS BAR (FULL WIDTH, ZERO OVERLAPS, MATCHING MASTER.MD) */}
     {/* ========================================================================= */}
     <div className="h-6 bg-[#07090e] border-t border-[#1b202c] px-3 flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 z-30 select-none">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={() => {
             setActiveActivityTab("git");
             setIsSidebarOpen(true);
           }}
-          className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer shrink-0"
         >
           <GitBranch size={11} className="text-[#f54e00]" />
           <span>main</span>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className="flex items-center gap-1 text-emerald-400">
             <CheckCircle2 size={11} />
-            <span>0 errors, 0 warnings</span>
+            <span className="hidden sm:inline">0 errors, 0 warnings</span>
           </span>
         </div>
-        <span className="text-neutral-600">•</span>
+        <span className="text-neutral-600 shrink-0">•</span>
         <button
           onClick={handlePingHealth}
-          className="flex items-center gap-1.5 text-neutral-400 hover:text-white cursor-pointer transition-colors"
+          className="flex items-center gap-1.5 text-neutral-400 hover:text-white cursor-pointer transition-colors shrink-0"
+          title="Click to test FalkorDB connection"
         >
           <span
             className={`w-1.5 h-1.5 rounded-full ${
@@ -1320,15 +1523,23 @@ export default function NexusIDE() {
                 : "bg-amber-400"
             }`}
           />
-          <span>FalkorDB: {backendStatus === "connected" ? "Live (0.8ms)" : "Connecting..."}</span>
+          <span className="hidden md:inline">FalkorDB:</span>
+          <span className={backendStatus === "connected" ? "text-emerald-400" : "text-amber-400"}>
+            {backendStatus === "connected" ? "Live (0.8ms)" : "Connecting..."}
+          </span>
         </button>
       </div>
 
-      <div className="flex items-center gap-4 text-neutral-500">
+      <div className="flex items-center gap-3 text-neutral-500 shrink-0">
+        <span className="hidden sm:inline">{activeFile.code.split("\n").length} lines</span>
         <span className="hidden sm:inline">UTF-8</span>
-        <span className="hidden sm:inline">{activeFile.language}</span>
-        <span className="text-neutral-400">Ln 14, Col 1</span>
-        <span className="text-[#f54e00] font-medium">Nexus IDE</span>
+        <span className="text-neutral-400 uppercase text-[10px] px-1.5 py-0.2 rounded bg-[#121622] border border-[#1e2538]">
+          {activeFile.language}
+        </span>
+        <span className="text-neutral-300 font-medium">
+          Ln {cursorPosition.lineNumber}, Col {cursorPosition.column}
+        </span>
+        <span className="text-[#f54e00] font-medium hidden md:inline">Nexus IDE</span>
       </div>
     </div>
 

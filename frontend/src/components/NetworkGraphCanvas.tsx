@@ -203,17 +203,17 @@ export default function NetworkGraphCanvas({
       {/* ======================================================== */}
       {/* 1. TOP HEADER TOOLBAR: STATUS & SEARCH DROPDOWN */}
       {/* ======================================================== */}
-      <div className="h-10 px-3 border-b border-[#1b202c] bg-[#0c0e14] flex items-center justify-between shrink-0 z-20">
+      <div className="h-10 px-3 border-b border-[#1b202c] bg-[#0c0e14] flex items-center justify-between shrink-0 z-20 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {hasHighlighted ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-950/90 border border-red-500/60 text-[10px] font-mono text-red-200 animate-pulse truncate shadow-sm">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-950/90 border border-red-500/60 text-[10px] font-mono text-red-200 animate-pulse truncate shadow-sm shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 shadow-[0_0_6px_#ef4444]" />
-              <span className="truncate">Blast Radius: Traversal Active</span>
+              <span className="truncate max-w-[110px] font-medium">Blast Radius</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400">
-              <Network size={13} className="text-sky-400" />
-              <span className="text-white font-medium">Topology Canvas</span>
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400 min-w-0 truncate">
+              <Network size={13} className="text-sky-400 shrink-0" />
+              <span className="text-white font-medium truncate">Topology Canvas</span>
             </div>
           )}
         </div>
@@ -222,11 +222,11 @@ export default function NetworkGraphCanvas({
         <div className="relative shrink-0">
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="flex items-center gap-1.5 text-xs font-mono text-neutral-200 hover:text-white cursor-pointer px-2.5 py-1 rounded-lg bg-[#141824] hover:bg-[#1a1f2e] border border-[#232838] transition-colors"
+            className="flex items-center gap-1.5 text-xs font-mono text-neutral-200 hover:text-white cursor-pointer px-2 py-1 rounded-lg bg-[#141824] hover:bg-[#1a1f2e] border border-[#232838] transition-colors"
           >
-            <span className="text-[10px] text-neutral-400 uppercase">Node:</span>
-            <span className="max-w-[100px] truncate text-sky-300 font-semibold">{selectedNodeId || "Search"}</span>
-            <ChevronDown size={12} className="text-neutral-400" />
+            <span className="text-[10px] text-neutral-400 uppercase hidden sm:inline">Node:</span>
+            <span className="max-w-[70px] sm:max-w-[100px] truncate text-sky-300 font-semibold">{selectedNodeId || "Search"}</span>
+            <ChevronDown size={11} className="text-neutral-400 shrink-0" />
           </button>
 
           {/* Dropdown Popover */}
@@ -432,13 +432,13 @@ export default function NetworkGraphCanvas({
       {/* ======================================================== */}
       {/* 3. INTEGRATED BOTTOM TOOLBAR (ZERO COLLISION / ZERO OVERLAP) */}
       {/* ======================================================== */}
-      <div className="h-10 px-3 border-t border-[#1b202c] bg-[#0c0e14] flex items-center justify-between shrink-0 z-20">
-        <div className="flex items-center gap-1.5">
+      <div className="h-10 px-2 sm:px-3 border-t border-[#1b202c] bg-[#0c0e14] flex items-center justify-between shrink-0 z-20 gap-1.5 overflow-hidden">
+        <div className="flex items-center gap-1 shrink-0">
           {/* Layout Mode Pill: Tree vs Cluster */}
           <div className="flex items-center bg-[#141824] border border-[#232838] rounded-lg p-0.5 shadow-sm">
             <button
               onClick={() => setLayoutMode("tree")}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                 layoutMode === "tree"
                   ? "bg-sky-500/25 text-sky-200 border border-sky-500/40"
                   : "text-neutral-400 hover:text-white"
@@ -446,11 +446,11 @@ export default function NetworkGraphCanvas({
               title="Tree Graph Layout (Structured Hierarchical)"
             >
               <GitFork size={11} className="text-sky-400" />
-              <span>Tree</span>
+              <span className={dimensions.width < 320 ? "hidden" : "inline"}>Tree</span>
             </button>
             <button
               onClick={() => setLayoutMode("cluster")}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                 layoutMode === "cluster"
                   ? "bg-sky-500/25 text-sky-200 border border-sky-500/40"
                   : "text-neutral-400 hover:text-white"
@@ -458,28 +458,29 @@ export default function NetworkGraphCanvas({
               title="Compact Cluster Layout (Force Bounded)"
             >
               <Network size={11} className="text-emerald-400" />
-              <span>Cluster</span>
+              <span className={dimensions.width < 320 ? "hidden" : "inline"}>Cluster</span>
             </button>
           </div>
 
           {/* Fit to View Button */}
           <button
             onClick={() => fgRef.current?.zoomToFit(300, 24)}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#141824] hover:bg-[#1e2436] border border-[#232838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#141824] hover:bg-[#1e2436] border border-[#232838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
             title="Fit all nodes inside view"
           >
             <Maximize2 size={11} className="text-neutral-400" />
-            <span>Fit</span>
+            <span className={dimensions.width < 300 ? "hidden" : "inline"}>Fit</span>
           </button>
 
           {/* Filter Node Types Pill */}
           <div className="relative">
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#141824] hover:bg-[#1e2436] border border-[#232838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#141824] hover:bg-[#1e2436] border border-[#232838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              title="Filter node layers"
             >
               <Filter size={11} className="text-neutral-400" />
-              <span>Filter</span>
+              <span className={dimensions.width < 340 ? "hidden" : "inline"}>Filter</span>
             </button>
 
             {isFilterOpen && (
@@ -515,19 +516,22 @@ export default function NetworkGraphCanvas({
         </div>
 
         {/* RIGHT SIDE: SHORTCUT HINTS & RUN BUTTON */}
-        <div className="flex items-center gap-2.5">
-          <div className="hidden md:flex items-center gap-1.5 text-[10px] font-sans text-neutral-500 select-none">
-            <span>Click: Focus</span>
-            <span>•</span>
-            <span>⌘+Click: Fold</span>
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {dimensions.width >= 420 && (
+            <div className="flex items-center gap-1.5 text-[10px] font-sans text-neutral-500 select-none">
+              <span>Click: Focus</span>
+              <span>•</span>
+              <span>⌘+Click: Fold</span>
+            </div>
+          )}
 
           <button
             onClick={() => {
               const target = graphData.nodes.find((n) => n.id === selectedNodeId) || null;
               onRunAction?.(target);
             }}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white text-xs font-mono font-medium transition-colors cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white text-xs font-mono font-medium transition-colors cursor-pointer shadow-sm shrink-0"
+            title="Refactor selected node with AI Agent"
           >
             <Play size={11} className="text-white fill-white" />
             <span>Run</span>
