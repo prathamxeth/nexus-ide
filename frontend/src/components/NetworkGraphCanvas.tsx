@@ -362,12 +362,12 @@ export default function NetworkGraphCanvas({
           {hasHighlighted ? (
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-950/90 border border-red-500/60 text-[11px] font-mono text-red-200 animate-pulse truncate shadow-sm shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 shadow-[0_0_6px_#ef4444]" />
-              <span className="truncate max-w-[110px] font-medium">Blast Radius</span>
+              <span className="truncate max-w-[110px] font-medium">What Breaks ({highlightedCount})</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400 min-w-0 truncate">
               <Network size={13} className="text-[#f54e00] shrink-0" />
-              <span className="text-neutral-100 font-medium truncate">Topology Canvas</span>
+              <span className="text-neutral-100 font-medium truncate">Code Graph</span>
             </div>
           )}
         </div>
@@ -378,7 +378,7 @@ export default function NetworkGraphCanvas({
             onClick={() => setIsSearchOpen(!isSearchOpen)}
             className="flex items-center gap-1.5 text-xs font-mono text-neutral-300 hover:text-white cursor-pointer px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] transition-colors"
           >
-            <span className="text-[11px] text-neutral-400 uppercase hidden sm:inline">Node:</span>
+            <span className="text-[11px] text-neutral-400 uppercase hidden sm:inline">Item:</span>
             <span className="max-w-[70px] sm:max-w-[100px] truncate text-neutral-100 font-semibold">{selectedNodeId || "Search"}</span>
             <ChevronDown size={11} className="text-neutral-400 shrink-0" />
           </button>
@@ -392,7 +392,7 @@ export default function NetworkGraphCanvas({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter nodes..."
+                  placeholder="Filter functions & files..."
                   autoFocus
                   className="bg-transparent outline-none w-full text-xs text-white placeholder-neutral-500 font-mono"
                 />
@@ -484,23 +484,23 @@ export default function NetworkGraphCanvas({
           {realtimeChangedSet.size > 0 && (
             <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-mono text-[#e5c07b] bg-[#e5c07b]/15 border border-[#e5c07b]/40 shrink-0 animate-pulse font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-[#e5c07b]" />
-              <span>Real-time Edit</span>
+              <span>Edited Just Now</span>
             </span>
           )}
 
-          {/* BLAST RADIUS HUD */}
+          {/* WHAT BREAKS HUD */}
           {hasHighlighted && (
             <>
               <ChevronRight size={10} className="text-neutral-600 shrink-0" />
               <span className="px-1.5 py-0.5 rounded text-red-300 bg-red-950/70 border border-red-500/40 shrink-0 animate-pulse font-medium flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                <span>{highlightedCount} Callers</span>
+                <span>{highlightedCount} Affected</span>
               </span>
             </>
           )}
         </div>
 
-        {/* FLOWCHART OVERVIEW TOGGLE BUTTON */}
+        {/* CODE MAP OVERVIEW TOGGLE BUTTON */}
         <button
           id="hierarchy-toggle-btn"
           onClick={() => setIsHierarchyOpen(!isHierarchyOpen)}
@@ -509,10 +509,10 @@ export default function NetworkGraphCanvas({
               ? "bg-[#1f1f1f] border-[#f54e00] text-white"
               : "bg-transparent border-[#262626] hover:border-[#383838] text-neutral-400 hover:text-white"
           }`}
-          title="Toggle Flowchart & AST Hierarchy Overview"
+          title="Toggle Code Flow & Structure"
         >
           <Workflow size={11} className={isHierarchyOpen ? "text-[#f54e00]" : "text-neutral-400"} />
-          <span className="hidden sm:inline">Flowchart Map</span>
+          <span className="hidden sm:inline">Code Map</span>
         </button>
       </div>
 
@@ -527,7 +527,7 @@ export default function NetworkGraphCanvas({
           <div className="flex items-center justify-between pb-1.5 border-b border-[#202020]">
             <div className="flex items-center gap-1.5 text-neutral-200 font-semibold">
               <Workflow size={13} className="text-[#f54e00]" />
-              <span>AST Flowchart & Hierarchy</span>
+              <span>Code Flow & Structure</span>
             </div>
             <button
               onClick={() => setIsHierarchyOpen(false)}
@@ -540,7 +540,7 @@ export default function NetworkGraphCanvas({
           {/* Section 1: Heading - Modules */}
           <div>
             <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-semibold mb-1">
-              1. Heading (Modules)
+              1. Folders
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {hierarchyGroups.modules.map((m) => (
@@ -565,7 +565,7 @@ export default function NetworkGraphCanvas({
           {/* Section 2: Topic - Source Files */}
           <div>
             <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-semibold mb-1">
-              2. Topic (Files)
+              2. Files
             </div>
             <div className="grid grid-cols-2 gap-1">
               {hierarchyGroups.files.map((f) => {
@@ -596,7 +596,7 @@ export default function NetworkGraphCanvas({
           {/* Section 3: Subtopics - Functions & Callers */}
           <div>
             <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-semibold mb-1">
-              3. Subtopics (Functions & Callers)
+              3. Functions & Connections
             </div>
             <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
               {hierarchyGroups.functions.map((fn) => {
@@ -626,9 +626,9 @@ export default function NetworkGraphCanvas({
                       <span className="truncate">{fn.label}</span>
                     </div>
                     {isBlastRadius ? (
-                      <span className="text-[11px] text-red-400 font-semibold">BLAST</span>
+                      <span className="text-[11px] text-red-400 font-semibold">BREAKS</span>
                     ) : isRealtime ? (
-                      <span className="text-[11px] text-[#e5c07b] font-semibold">EDIT</span>
+                      <span className="text-[11px] text-[#e5c07b] font-semibold">EDITED</span>
                     ) : (
                       <span className="text-[11px] text-neutral-500">{fn.type}</span>
                     )}
@@ -888,7 +888,7 @@ export default function NetworkGraphCanvas({
             {isFilterOpen && (
               <div className="absolute bottom-9 left-0 w-44 bg-[#111111] border border-[#282828] rounded-xl shadow-2xl p-2 z-40 flex flex-col gap-1">
                 <div className="text-[11px] uppercase font-sans text-neutral-400 font-semibold px-2 py-1 border-b border-[#222222]">
-                  Toggle Visible Layers
+                  Filter Code Types
                 </div>
                 {Object.keys(activeTypes).map((typeKey) => {
                   const isActive = activeTypes[typeKey];
@@ -933,7 +933,7 @@ export default function NetworkGraphCanvas({
               onRunAction?.(target);
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-xs font-mono font-medium transition-colors cursor-pointer shadow-xs shrink-0"
-            title="Refactor selected node with AI Agent"
+            title="Update selected code with AI Agent"
           >
             <Play size={11} className="text-[#f54e00] fill-[#f54e00]" />
             <span>Run</span>

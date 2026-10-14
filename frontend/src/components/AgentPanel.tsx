@@ -144,8 +144,8 @@ export function AgentPanel({
           >
             <ShieldAlert className="w-3 h-3 text-[#ef4444]" />
             <span>
-              Blast: <strong className="font-bold">{targetFunction}</strong> (
-              {blastInfo.count} callers)
+              What Breaks: <strong className="font-bold">{targetFunction}</strong> (
+              {blastInfo.count} affected)
             </span>
           </div>
 
@@ -210,7 +210,7 @@ export function AgentPanel({
             <div className="flex items-center justify-between text-[11px] text-[#e5e5e5] font-semibold">
               <span className="flex items-center gap-1.5">
                 <ShieldAlert className="w-3 h-3 text-[#ef4444]" />
-                FalkorDB Call Graph Traversal
+                Connected Code Traversal
               </span>
               <span className="text-[10px] text-[#ef4444] font-mono">
                 {blastInfo.dependents.length} Affected
@@ -238,7 +238,7 @@ export function AgentPanel({
           <div className="p-3 rounded border border-[#282828] bg-[#181818] text-[#cccccc] space-y-2">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#3b82f6]">
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span>Dual-Agent Reasoning Stream</span>
+              <span>Agent Reasoning</span>
             </div>
             <div className="text-[12px] leading-relaxed whitespace-pre-wrap font-sans text-[#d4d4d4]">
               {reasoningText}
@@ -252,14 +252,14 @@ export function AgentPanel({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#22c55e]">
                 <SplitSquareVertical className="w-3.5 h-3.5" />
-                <span>Side-by-Side Diff Active</span>
+                <span>Code Comparison Active</span>
               </div>
               <span className="text-[10px] font-mono text-[#22c55e] bg-[#22c55e]/15 px-1.5 py-0.5 rounded">
                 Pending Acceptance
               </span>
             </div>
             <p className="text-[11px] text-[#a7f3d0] font-sans">
-              Review modifications in Monaco DiffEditor. Accept or reject the patch.
+              Review modifications in the comparison editor. Accept or cancel the changes.
             </p>
             <div className="flex items-center gap-2 pt-1">
               <button
@@ -290,7 +290,7 @@ export function AgentPanel({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask agent to refactor with blast radius awareness... (Cmd+Enter to run)"
+            placeholder="Ask: What code breaks if I change this function, or what rules to follow... (Cmd+Enter)"
             rows={3}
             className="w-full bg-[#141414] border border-[#2c2c2c] focus:border-[#3b82f6] rounded p-2.5 text-xs text-[#e5e5e5] placeholder-[#555555] font-mono resize-none outline-none transition-colors"
           />

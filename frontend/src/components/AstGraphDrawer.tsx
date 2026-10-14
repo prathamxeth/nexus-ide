@@ -60,14 +60,14 @@ export function AstGraphDrawer({
           ) : (
             <ChevronUp className="w-3.5 h-3.5 text-[#888888]" />
           )}
-          <span className="font-semibold tracking-wide">FalkorDB Live AST Graph</span>
+          <span className="font-semibold tracking-wide">FalkorDB Code Graph</span>
           <span className="text-[11px] text-[#888888] px-1.5 py-0.5 rounded bg-[#222222]">
-            {graphData.nodes.length} nodes • {graphData.edges.length} edges
+            {graphData.nodes.length} items • {graphData.edges.length} connections
           </span>
           {blastCount > 0 && (
             <span className="text-[10px] text-[#ef4444] px-1.5 py-0.5 rounded bg-[#3b1219] border border-[#ef4444]/30 flex items-center gap-1">
               <ShieldAlert className="w-3 h-3" />
-              Blast Radius: {blastCount} nodes
+              What Breaks: {blastCount} items
             </span>
           )}
         </div>

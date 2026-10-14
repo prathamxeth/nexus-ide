@@ -598,7 +598,7 @@ export default function NexusIDE() {
         results.push({
           file: fileTarget,
           line: 1,
-          text: `AST Node: [${node.type || "Function"}] ${node.label}`,
+          text: `Code: [${node.type || "Function"}] ${node.label}`,
           isSymbol: true,
         });
       }
@@ -739,10 +739,10 @@ export default function NexusIDE() {
                 const author = parsed.ownership?.author || "@alex.chen";
                 const prNum = parsed.ownership?.pr_number || 104;
 
-                agentReply += `**FalkorDB Blast Radius:** \`${callersCount} callers\` analyzed\n`;
-                agentReply += `**Provenance:** Modified by \`${author}\` in PR #${prNum}\n`;
+                agentReply += `**Track 1 · What Breaks:** \`${callersCount} affected functions\` checked\n`;
+                agentReply += `**Track 3 · Team History:** Last updated by \`${author}\` in PR #${prNum}\n`;
                 if (rulesCount > 0) {
-                  agentReply += `**Procedural Memory Guardrails (${rulesCount}):**\n`;
+                  agentReply += `**Track 2 · Remembered Rules (${rulesCount}):**\n`;
                   for (const r of parsed.rules) {
                     agentReply += `- *${r}*\n`;
                   }
@@ -769,7 +769,7 @@ export default function NexusIDE() {
                   setModifiedCodeForDiff(parsed.modified_code);
                   setIsDiffMode(true);
 
-                  agentReply += `\n\n\`\`\`typescript\n// Generated AST Code Patch for ${parsed.target_function}\n${parsed.modified_code.trim()}\n\`\`\`\n`;
+                  agentReply += `\n\n\`\`\`typescript\n// Updated Code for ${parsed.target_function}\n${parsed.modified_code.trim()}\n\`\`\`\n`;
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantMsgId
@@ -811,7 +811,7 @@ export default function NexusIDE() {
           m.id === assistantMsgId
             ? {
                 ...m,
-                content: `**FalkorDB Blast Radius:** \`3 callers\` analyzed\n**Provenance:** Modified by \`@alex.chen\` in PR #104\n**Procedural Memory Guardrails (2):**\n- *Verify expiration claim with skew <= 60s*\n- *Maintain caller clockTolerance interface*\n\n---\n\nRefactored \`${targetFn}\` with 60-second clock skew tolerance.\n\n\`\`\`typescript\n${patchCode}\n\`\`\``,
+                content: `**Track 1 · What Breaks:** \`3 affected functions\` checked\n**Track 3 · Team History:** Last updated by \`@alex.chen\` in PR #104\n**Track 2 · Remembered Rules (2):**\n- *Verify expiration claim with skew <= 60s*\n- *Maintain caller clockTolerance interface*\n\n---\n\nUpdated \`${targetFn}\` with 60-second clock skew tolerance.\n\n\`\`\`typescript\n${patchCode}\n\`\`\``,
                 codePatch: patchCode,
                 isStreaming: false,
               }
@@ -1115,8 +1115,8 @@ export default function NexusIDE() {
                   </div>
 
                   <div className="p-2.5 border-t border-[#1e1e1e] bg-[#050505] text-[11px] font-mono text-neutral-400 flex items-center justify-between">
-                    <span>AST Symbols</span>
-                    <span className="text-[#f54e00] font-semibold">{nodes.length} Nodes</span>
+                    <span>Code Items</span>
+                    <span className="text-[#f54e00] font-semibold">{nodes.length} Items</span>
                   </div>
                 </>
               )}
@@ -1136,7 +1136,7 @@ export default function NexusIDE() {
                         type="text"
                         value={sidebarSearchQuery}
                         onChange={(e) => setSidebarSearchQuery(e.target.value)}
-                        placeholder="Search symbols or code..."
+                        placeholder="Search files or functions..."
                         autoFocus
                         className="w-full bg-transparent outline-none text-xs text-white placeholder-neutral-500 font-mono"
                       />
@@ -1288,7 +1288,7 @@ export default function NexusIDE() {
               {isDiffMode && modifiedCodeForDiff ? (
                 <div className="w-full h-full flex flex-col">
                   <div className="h-7 px-3 bg-[#0e0e0e] border-b border-[#202020] flex items-center justify-between text-[11px] font-mono text-neutral-300">
-                    <span className="text-amber-300 truncate">Monaco Split Diff: Original (Left) vs Patched (Right)</span>
+                    <span className="text-amber-300 truncate">Code Comparison: Current (Left) vs Updated (Right)</span>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => {
@@ -1300,7 +1300,7 @@ export default function NexusIDE() {
                         className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 cursor-pointer text-[11px] font-mono transition-colors"
                       >
                         <Check size={11} />
-                        <span>Accept Patch</span>
+                        <span>Accept Changes</span>
                       </button>
                       <button
                         onClick={() => setIsDiffMode(false)}
@@ -1447,8 +1447,8 @@ export default function NexusIDE() {
                 {messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center text-neutral-500 font-mono text-[11px]">
                     <Sparkles className="w-5 h-5 text-[#f54e00]/80 mb-1" />
-                    <span>FalkorDB Graph-RAG Active</span>
-                    <span className="text-neutral-500 text-[11px]">Click any chip below or ask agent to refactor code</span>
+                    <span>FalkorDB Code Context Ready</span>
+                    <span className="text-neutral-500 text-[11px]">Choose a hackathon track below or ask about your code</span>
                   </div>
                 ) : (
                   messages.map((m) => (
@@ -1477,13 +1477,13 @@ export default function NexusIDE() {
                               onClick={() => {
                                 handleCodeChange(m.codePatch!);
                                 setIsDiffMode(false);
-                                setToastMessage(`✓ Applied code patch to ${activeFileName}!`);
+                                setToastMessage(`✓ Saved changes to ${activeFileName}!`);
                                 setTimeout(() => setToastMessage(null), 3000);
                               }}
                               className="px-3 py-1 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-[11px] font-mono font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
                             >
                               <Check size={12} />
-                              <span>Apply to {activeFileName}</span>
+                              <span>Save to {activeFileName}</span>
                             </button>
                             <button
                               onClick={() => {
@@ -1493,7 +1493,7 @@ export default function NexusIDE() {
                               }}
                               className="px-3 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#3d3d3d] text-neutral-300 hover:text-white text-[11px] font-mono cursor-pointer transition-colors"
                             >
-                              View Split Diff
+                              Compare Changes
                             </button>
                           </div>
                         )}
@@ -1507,16 +1507,16 @@ export default function NexusIDE() {
               {/* QUICK PROMPT SUGGESTION CHIPS */}
               <div className="px-2.5 py-1.5 bg-[#080808] border-t border-[#1e1e1e] flex items-center gap-1.5 overflow-x-auto select-none">
                 {[
-                  "Refactor validateToken with 60s clock skew",
-                  "Analyze processInvoice blast radius",
-                  "Verify procedural memory guardrails",
+                  "Track 1 · What breaks if validateToken changes?",
+                  "Track 2 · Check remembered rules from past runs",
+                  "Track 3 · Who wrote validateToken and why?",
                 ].map((chip) => (
                   <button
                     key={chip}
                     onClick={() => {
                       setInputQuery(chip);
                     }}
-                    className="px-2.5 py-1 rounded-full bg-transparent hover:bg-[#181818] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer shrink-0 truncate max-w-[260px]"
+                    className="px-2.5 py-1 rounded-full bg-transparent hover:bg-[#181818] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer shrink-0 truncate max-w-[280px]"
                   >
                     {chip}
                   </button>
@@ -1532,7 +1532,7 @@ export default function NexusIDE() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSendQuery();
                   }}
-                  placeholder="Ask agent to refactor validateToken with 60s clock skew..."
+                  placeholder="Ask: What code breaks if I change this function, or what rules to follow..."
                   className="flex-1 bg-[#121212] border border-[#222222] focus:border-[#f54e00]/70 rounded-[8px] px-3 py-1.5 text-xs font-mono text-white placeholder-neutral-500 outline-none"
                 />
                 <button
@@ -1688,7 +1688,7 @@ export default function NexusIDE() {
 
             <div className="border-t border-[#202020] pt-3">
               <label className="text-neutral-400 uppercase text-[11px] tracking-wider block mb-1.5 font-semibold">
-                FalkorDB Graph Engine
+                FalkorDB Code Engine
               </label>
               <div className="bg-[#121212] border border-[#222222] rounded-xl p-3 space-y-1.5 text-neutral-300">
                 <div className="flex justify-between">
@@ -1697,7 +1697,7 @@ export default function NexusIDE() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">Graph Key:</span>
-                  <span className="text-neutral-100 font-semibold">graphicode_ast</span>
+                  <span className="text-neutral-100 font-semibold">code_graph</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">Live Status:</span>
