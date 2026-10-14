@@ -1125,17 +1125,17 @@ function decodePayload(token: string) {
           </div>
 
           {/* Segmented View Mode Toggle: Code-First (70/30) | Split (50/50) | Graph-First (75/25) */}
-          <div className="flex items-center bg-[#1c1c1c] border border-[#2d2d2d] rounded-md p-0.5 text-xs font-mono select-none shadow-inner">
+          <div className="flex items-center bg-[#0B0F19] border border-[#334155]/60 rounded-lg p-0.5 text-xs font-mono select-none shadow-inner">
             <button
               onClick={() => {
                 playUiSound("switch");
                 setIdeViewMode("code-first");
               }}
               title="Code-First Mode: 70% Monaco Editor, 30% Graph Canvas"
-              className={`px-2.5 py-0.5 rounded flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
                 ideViewMode === "code-first"
-                  ? "bg-[#2c2c2c] text-white font-medium shadow-sm border border-white/10"
-                  : "text-neutral-400 hover:text-neutral-200"
+                  ? "bg-[#1E293B] text-white font-medium shadow-md border border-blue-500/30"
+                  : "text-neutral-400 hover:text-white hover:bg-[#1E293B]/40"
               }`}
             >
               <Code2 size={12} className={ideViewMode === "code-first" ? "text-blue-400" : ""} />
@@ -1148,10 +1148,10 @@ function decodePayload(token: string) {
                 setIdeViewMode("split");
               }}
               title="Split Mode: 50% Monaco Editor, 50% Graph Canvas"
-              className={`px-2.5 py-0.5 rounded flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
                 ideViewMode === "split"
-                  ? "bg-[#2c2c2c] text-white font-medium shadow-sm border border-white/10"
-                  : "text-neutral-400 hover:text-neutral-200"
+                  ? "bg-[#1E293B] text-white font-medium shadow-md border border-amber-500/30"
+                  : "text-neutral-400 hover:text-white hover:bg-[#1E293B]/40"
               }`}
             >
               <Columns2 size={12} className={ideViewMode === "split" ? "text-amber-400" : ""} />
@@ -1164,10 +1164,10 @@ function decodePayload(token: string) {
                 setIdeViewMode("graph-first");
               }}
               title="Graph-First Mode: 75% Graph Canvas, 25% Inline Code Preview & Agent Drawer"
-              className={`px-2.5 py-0.5 rounded flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
                 ideViewMode === "graph-first"
-                  ? "bg-[#2c2c2c] text-white font-medium shadow-sm border border-white/10"
-                  : "text-neutral-400 hover:text-neutral-200"
+                  ? "bg-[#1E293B] text-white font-medium shadow-md border border-rose-500/30"
+                  : "text-neutral-400 hover:text-white hover:bg-[#1E293B]/40"
               }`}
             >
               <Network size={12} className={ideViewMode === "graph-first" ? "text-[#f43f5e]" : ""} />
@@ -2240,15 +2240,15 @@ function decodePayload(token: string) {
                       )}
                     </div>
 
-                    <div className="w-[30%] h-full min-h-0 relative bg-[#121212] flex flex-col">
-                      <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
-                        <span className="flex items-center gap-1.5 text-neutral-300 font-semibold truncate">
-                          <Network size={12} className="text-amber-400 shrink-0" />
+                    <div className="w-[30%] h-full min-h-0 relative bg-[#090D16] flex flex-col border-l border-[#1E293B]">
+                      <div className="h-7 px-3 bg-[#0D1525] border-b border-[#1E293B] flex items-center justify-between text-[11px] font-mono text-neutral-300 shrink-0 select-none">
+                        <span className="flex items-center gap-1.5 font-semibold truncate">
+                          <Network size={12} className="text-emerald-400 shrink-0" />
                           <span>Graph Canvas (30%)</span>
                         </span>
                         <button
                           onClick={() => graphCanvasRef.current?.zoomToCenter(150)}
-                          className="hover:text-white px-1.5 py-0.5 rounded bg-[#222] border border-white/5 text-[10px] cursor-pointer"
+                          className="hover:text-white px-2 py-0.5 rounded bg-[#1E293B] hover:bg-[#334155] border border-[#334155]/60 text-[10px] transition-colors cursor-pointer"
                           title="Zoom to Center"
                         >
                           Center
@@ -2268,7 +2268,7 @@ function decodePayload(token: string) {
 
                 {ideViewMode === "split" && (
                   <>
-                    <div className="w-[50%] h-full min-h-0 relative border-r border-[#242424]">
+                    <div className="w-[50%] h-full min-h-0 relative border-r border-[#1E293B]">
                       {isMounted ? (
                         <Editor
                           height="100%"
@@ -2303,15 +2303,15 @@ function decodePayload(token: string) {
                       )}
                     </div>
 
-                    <div className="w-[50%] h-full min-h-0 relative bg-[#121212] flex flex-col">
-                      <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
-                        <span className="flex items-center gap-1.5 text-neutral-300 font-semibold truncate">
-                          <Network size={12} className="text-amber-400 shrink-0" />
+                    <div className="w-[50%] h-full min-h-0 relative bg-[#090D16] flex flex-col">
+                      <div className="h-7 px-3 bg-[#0D1525] border-b border-[#1E293B] flex items-center justify-between text-[11px] font-mono text-neutral-300 shrink-0 select-none">
+                        <span className="flex items-center gap-1.5 font-semibold truncate">
+                          <Network size={12} className="text-emerald-400 shrink-0" />
                           <span>Interactive AST Canvas (50%)</span>
                         </span>
                         <button
                           onClick={() => graphCanvasRef.current?.zoomToCenter(150)}
-                          className="hover:text-white px-1.5 py-0.5 rounded bg-[#222] border border-white/5 text-[10px] cursor-pointer"
+                          className="hover:text-white px-2 py-0.5 rounded bg-[#1E293B] hover:bg-[#334155] border border-[#334155]/60 text-[10px] transition-colors cursor-pointer"
                           title="Zoom to Center"
                         >
                           Center (150px)
@@ -2331,17 +2331,17 @@ function decodePayload(token: string) {
 
                 {ideViewMode === "graph-first" && (
                   <>
-                    <div className="w-[75%] h-full min-h-0 relative bg-[#121212] flex flex-col border-r border-[#242424]">
-                      <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
-                        <span className="flex items-center gap-1.5 text-neutral-300 font-semibold truncate">
+                    <div className="w-[75%] h-full min-h-0 relative bg-[#090D16] flex flex-col border-r border-[#1E293B]">
+                      <div className="h-7 px-3 bg-[#0D1525] border-b border-[#1E293B] flex items-center justify-between text-[11px] font-mono text-neutral-300 shrink-0 select-none">
+                        <span className="flex items-center gap-1.5 font-semibold truncate">
                           <Network size={12} className="text-[#f43f5e] shrink-0" />
                           <span>Graph-First Architectural Canvas (75%)</span>
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">Click block to jump</span>
+                          <span className="text-[10px] text-neutral-400 font-mono hidden sm:inline">Click any block to inspect declaration</span>
                           <button
                             onClick={() => graphCanvasRef.current?.zoomToCenter(150)}
-                            className="hover:text-white px-1.5 py-0.5 rounded bg-[#222] border border-white/5 text-[10px] cursor-pointer"
+                            className="hover:text-white px-2 py-0.5 rounded bg-[#1E293B] hover:bg-[#334155] border border-[#334155]/60 text-[10px] transition-colors cursor-pointer"
                             title="Zoom to Center"
                           >
                             Center
@@ -2358,8 +2358,8 @@ function decodePayload(token: string) {
                       </div>
                     </div>
 
-                    <div className="w-[25%] h-full min-h-0 relative flex flex-col bg-[#141414]">
-                      <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
+                    <div className="w-[25%] h-full min-h-0 relative flex flex-col bg-[#0F172A]">
+                      <div className="h-7 px-3 bg-[#0D1525] border-b border-[#1E293B] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
                         <span className="text-white font-medium truncate flex items-center gap-1">
                           <FileCode size={12} className="text-blue-400" />
                           <span>{activeTab}</span>
@@ -2406,15 +2406,15 @@ function decodePayload(token: string) {
 
             {/* VIEW D: STRATIFIED FALKORDB KNOWLEDGE GRAPH (Dedicated Tab) */}
             {activeTab === "FalkorDB Graph" && (
-              <div className="flex-1 w-full h-full min-h-0 bg-[#0e0e0e] relative flex flex-col">
-                <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
-                  <span className="flex items-center gap-1.5 text-neutral-300 font-semibold">
-                    <Network size={12} className="text-amber-400" />
-                    FalkorDB Fullscreen Graph Canvas
+              <div className="flex-1 w-full h-full min-h-0 bg-[#090D16] relative flex flex-col">
+                <div className="h-7 px-3 bg-[#0D1525] border-b border-[#1E293B] flex items-center justify-between text-[11px] font-mono text-neutral-300 shrink-0 select-none">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <Network size={12} className="text-emerald-400" />
+                    <span>FalkorDB Fullscreen Graph Canvas</span>
                   </span>
                   <button
                     onClick={() => graphCanvasRef.current?.zoomToCenter(150)}
-                    className="hover:text-white px-2 py-0.5 rounded bg-[#222] border border-white/5 text-[10px] cursor-pointer"
+                    className="hover:text-white px-2 py-0.5 rounded bg-[#1E293B] hover:bg-[#334155] border border-[#334155]/60 text-[10px] transition-colors cursor-pointer"
                     title="Zoom to Center"
                   >
                     Center (150px)
