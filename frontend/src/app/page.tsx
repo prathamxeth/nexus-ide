@@ -68,6 +68,7 @@ interface WorkspaceFile {
   path: string;
   language: string;
   code: string;
+  modified?: boolean;
 }
 
 const INITIAL_WORKSPACE_FILES: Record<string, WorkspaceFile> = {
@@ -75,30 +76,35 @@ const INITIAL_WORKSPACE_FILES: Record<string, WorkspaceFile> = {
     name: "auth.ts",
     path: "src/auth.ts",
     language: "typescript",
+    modified: true,
     code: `export function validateToken(token: string): boolean {\n  if (!token) return false;\n  return decodePayload(token) !== null;\n}\n\nexport function verifyToken(token: string): boolean {\n  return validateToken(token);\n}\n\nfunction decodePayload(token: string) {\n  try {\n    return JSON.parse(atob(token.split('.')[1] || '{}'));\n  } catch {\n    return null;\n  }\n}\n`,
   },
   "billing.ts": {
     name: "billing.ts",
     path: "src/billing.ts",
     language: "typescript",
+    modified: false,
     code: `import { validateToken } from './auth';\n\nexport async function processInvoice(invoiceId: string, userToken: string) {\n  const isAuthorized = validateToken(userToken);\n  if (!isAuthorized) {\n    throw new Error("Unauthorized invoice processing");\n  }\n  return { invoiceId, status: "PROCESSED", timestamp: Date.now() };\n}\n`,
   },
   "finance.ts": {
     name: "finance.ts",
     path: "src/finance.ts",
     language: "typescript",
+    modified: false,
     code: `import { validateToken } from './auth';\n\nexport async function auditAccount(accountId: string, adminToken: string) {\n  const isAuthorized = validateToken(adminToken);\n  if (!isAuthorized) {\n    throw new Error("Audit authorization failed: invalid security credentials");\n  }\n  return { accountId, auditStatus: "COMPLIANT", auditedAt: new Date().toISOString() };\n}\n\nexport async function calculateTax(amount: number) {\n  return amount * 0.08;\n}\n`,
   },
   "asgi.py": {
     name: "asgi.py",
     path: "src/asgi.py",
     language: "python",
+    modified: false,
     code: `# FastAPI ASGI Worker Lifecycle Management\nimport asyncio\nfrom typing import Dict, Any\n\nclass ASGI:\n    def __init__(self, app):\n        self.app = app\n        self.connections = {}\n\n    async def start_application(self):\n        print("Initializing FastMCPServer worker daemon...")\n\n    async def process_websocket(self, scope, receive, send):\n        connection_id = scope.get("client", ["default"])[0]\n        await self.onopen(connection_id, send)\n        await self.acquire_ws_buffer(connection_id)\n        try:\n            while True:\n                msg = await self.ws_receive(receive)\n                if msg["type"] == "websocket.disconnect":\n                    break\n                await self.onmessage(connection_id, msg, send)\n        finally:\n            await self.onclose(connection_id)\n\n    async def onopen(self, conn_id, send):\n        await send({"type": "websocket.accept"})\n\n    async def onclose(self, conn_id):\n        self.connections.pop(conn_id, None)\n\n    async def acquire_ws_buffer(self, conn_id):\n        self.connections[conn_id] = bytearray(65536)\n\n    async def ws_receive(self, receive):\n        return await receive()\n\n    async def ws_send(self, send, data):\n        await send({"type": "websocket.send", "text": data})\n\n    async def shutdown(self):\n        print("Clean ASGI shutdown complete.")\n`,
   },
   "worker.py": {
     name: "worker.py",
     path: "src/worker.py",
     language: "python",
+    modified: false,
     code: `from asgi import ASGI\n\nclass FastMCPServer:\n    def __init__(self):\n        self.asgi = ASGI(self)\n\n    def setup_server(self):\n        print("Server listening on port 8000")\n\n    def on_fetch(self, request):\n        return {"status": "ok", "worker": "active"}\n`,
   },
 };
@@ -224,7 +230,7 @@ function FormattedMessageContent({ text }: { text: string }) {
                         return (
                           <code
                             key={pIdx}
-                            className="px-1.5 py-0.5 mx-0.5 rounded bg-[#141414] border border-[#262626] text-neutral-200 font-mono text-[11px]"
+                            className="inline-code-token"
                           >
                             {part.slice(1, -1)}
                           </code>
@@ -288,6 +294,7 @@ export default function NexusIDE() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const monacoEditorRef = useRef<any>(null);
+  const modelPickerRef = useRef<HTMLDivElement>(null);
 
   // Active file helpers
   const activeFile = workspaceFiles[activeFileName] || INITIAL_WORKSPACE_FILES["auth.ts"];
@@ -426,11 +433,13 @@ export default function NexusIDE() {
   // Real-time Code Editor Change -> Updates AST and Workspace
   const handleCodeChange = useCallback((newCode: string | undefined) => {
     if (newCode === undefined) return;
+    const isModified = newCode !== INITIAL_WORKSPACE_FILES[activeFileName]?.code;
     setWorkspaceFiles((prev) => ({
       ...prev,
       [activeFileName]: {
         ...prev[activeFileName],
         code: newCode,
+        modified: isModified,
       },
     }));
 
@@ -476,8 +485,8 @@ export default function NexusIDE() {
   }, [workspaceFiles, openTabs]);
 
   // Close Tab
-  const handleCloseTab = (tabToClose: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCloseTab = (tabToClose: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const remaining = openTabs.filter((t) => t !== tabToClose);
     setOpenTabs(remaining);
     if (activeFileName === tabToClose && remaining.length > 0) {
@@ -822,6 +831,21 @@ export default function NexusIDE() {
     };
   }, [isResizing]);
 
+  // Close model picker dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modelPickerRef.current && !modelPickerRef.current.contains(e.target as Node)) {
+        setIsModelPickerOpen(false);
+      }
+    };
+    if (isModelPickerOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isModelPickerOpen]);
+
   // Scroll messages to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -854,7 +878,7 @@ export default function NexusIDE() {
                 setActiveActivityTab("git");
                 setIsSidebarOpen(true);
               }}
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-[#141414] hover:bg-[#1f1f1f] text-[10px] font-mono text-neutral-300 hover:text-white border border-[#262626] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] text-[10px] font-mono text-neutral-300 hover:text-white border border-[#262626] hover:border-[#383838] transition-colors cursor-pointer"
               title="Open Source Control"
             >
               <GitBranch size={11} className="text-[#f54e00]" />
@@ -867,7 +891,7 @@ export default function NexusIDE() {
             <button
               onClick={handlePingHealth}
               title="Ping FalkorDB Health"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] text-[10px] font-mono transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[10px] font-mono transition-colors cursor-pointer"
             >
               <span className={`w-1.5 h-1.5 rounded-full ${backendStatus === "connected" ? "bg-emerald-400 shadow-[0_0_6px_#22c55e]" : "bg-amber-400"}`} />
               <span className="text-neutral-400">FalkorDB:</span>
@@ -892,10 +916,10 @@ export default function NexusIDE() {
                 }
                 setIsDiffMode(!isDiffMode);
               }}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-[8px] text-[10px] font-mono border transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] text-[10px] font-mono border transition-colors cursor-pointer ${
                 isDiffMode
-                  ? "bg-[#f54e00]/20 border-[#f54e00]/50 text-[#f54e00]"
-                  : "bg-[#141414] border-[#262626] text-neutral-300 hover:text-white"
+                  ? "bg-transparent border-[#f54e00] text-[#f54e00]"
+                  : "bg-transparent border-[#262626] hover:border-[#383838] text-neutral-300 hover:text-white"
               }`}
             >
               <SplitSquareVertical size={11} />
@@ -905,7 +929,7 @@ export default function NexusIDE() {
             <button
               onClick={fetchGraphData}
               title="Refresh FalkorDB Graph"
-              className="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1c1c1c] transition-colors cursor-pointer"
+              className="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1a1a1a] border border-transparent hover:border-[#262626] transition-colors cursor-pointer"
             >
               <RotateCw size={13} className={isLoadingGraph ? "animate-spin text-[#f54e00]" : ""} />
             </button>
@@ -1035,20 +1059,39 @@ export default function NexusIDE() {
                       </div>
                     )}
 
-                    {Object.keys(workspaceFiles).map((fileName) => {
+                    {Object.entries(workspaceFiles).map(([fileName, fileObj]) => {
                       const isCurrent = activeFileName === fileName;
+                      const isFileModified = fileObj.modified;
                       return (
                         <div
                           key={fileName}
                           onClick={() => handleSelectFile(fileName)}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] cursor-pointer transition-colors ${
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-[6px] cursor-pointer transition-colors ${
                             isCurrent
-                              ? "bg-[#f54e00]/15 text-[#f54e00] border border-[#f54e00]/30 font-medium"
-                              : "text-neutral-400 hover:bg-[#161616] hover:text-white"
+                              ? "bg-[#181818] text-white border border-[#2a2a2a] font-medium shadow-xs"
+                              : isFileModified
+                              ? "text-[#e5c07b] hover:bg-[#161616] hover:text-[#f3d38c]"
+                              : "text-neutral-500 hover:bg-[#141414] hover:text-neutral-300"
                           }`}
                         >
-                          <FileCode size={13} className={fileName.endsWith(".ts") ? "text-neutral-200" : "text-amber-400"} />
-                          <span className="truncate">{fileName}</span>
+                          <div className="flex items-center gap-2 truncate">
+                            <FileCode
+                              size={13}
+                              className={
+                                isCurrent
+                                  ? "text-white"
+                                  : isFileModified
+                                  ? "text-[#e5c07b]"
+                                  : "text-neutral-500"
+                              }
+                            />
+                            <span className="truncate">{fileName}</span>
+                          </div>
+                          {isFileModified ? (
+                            <span className="text-[10px] text-[#e5c07b] font-mono px-1 rounded bg-[#e5c07b]/10 shrink-0">M</span>
+                          ) : (
+                            <span className="text-[10px] text-neutral-600 font-mono shrink-0">U</span>
+                          )}
                         </div>
                       );
                     })}
@@ -1137,7 +1180,7 @@ export default function NexusIDE() {
                     <button
                       onClick={handleGitCommit}
                       disabled={!gitCommitMessage.trim()}
-                      className="w-full py-1.5 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] disabled:opacity-40 text-white text-xs font-mono font-medium cursor-pointer transition-colors shadow-sm"
+                      className="w-full py-1.5 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] disabled:opacity-40 text-xs font-mono font-medium cursor-pointer transition-colors"
                     >
                       Commit to main ({committedCount})
                     </button>
@@ -1172,21 +1215,37 @@ export default function NexusIDE() {
             <div className="h-9 px-2 bg-[#080808] border-b border-[#1e1e1e] flex items-center gap-1 overflow-x-auto select-none">
               {openTabs.map((tab) => {
                 const isActive = activeFileName === tab;
+                const fileObj = workspaceFiles[tab];
+                const isFileModified = fileObj?.modified;
                 return (
                   <div
                     key={tab}
                     onClick={() => handleSelectFile(tab)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-t-md text-xs font-mono border-t border-x cursor-pointer transition-colors shrink-0 max-w-[160px] ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t-md text-xs font-mono border-t border-x cursor-pointer transition-colors shrink-0 max-w-[170px] ${
                       isActive
-                        ? "bg-[#000000] border-[#262626] text-white font-medium"
-                        : "bg-[#080808] border-transparent text-neutral-400 hover:text-neutral-200"
+                        ? "bg-[#000000] border-[#262626] text-white font-medium shadow-xs"
+                        : isFileModified
+                        ? "bg-[#080808] border-transparent text-[#e5c07b] hover:text-[#f3d38c]"
+                        : "bg-[#080808] border-transparent text-neutral-500 hover:text-neutral-300"
                     }`}
                   >
-                    <FileCode size={12} className={tab.endsWith(".ts") ? "text-neutral-200 shrink-0" : "text-amber-400 shrink-0"} />
+                    <FileCode
+                      size={12}
+                      className={
+                        isActive
+                          ? "text-white shrink-0"
+                          : isFileModified
+                          ? "text-[#e5c07b] shrink-0"
+                          : "text-neutral-500 shrink-0"
+                      }
+                    />
                     <span className="truncate">{tab}</span>
+                    {isFileModified && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#e5c07b] shrink-0" title="Modified" />
+                    )}
                     <button
                       onClick={(e) => handleCloseTab(tab, e)}
-                      className="p-0.5 rounded hover:bg-neutral-800 text-neutral-500 hover:text-white shrink-0"
+                      className="p-0.5 rounded hover:bg-[#1f1f1f] text-neutral-500 hover:text-white shrink-0 ml-auto"
                       title="Close Tab"
                     >
                       <X size={10} />
@@ -1201,7 +1260,7 @@ export default function NexusIDE() {
                   setIsCreatingFile(true);
                 }}
                 title="New File"
-                className="p-1.5 rounded hover:bg-[#161616] text-neutral-500 hover:text-[#f54e00] transition-colors cursor-pointer shrink-0 ml-1"
+                className="p-1 rounded hover:bg-[#1a1a1a] text-neutral-500 hover:text-neutral-200 border border-transparent hover:border-[#262626] transition-colors cursor-pointer shrink-0 ml-1"
               >
                 <Plus size={13} />
               </button>
@@ -1221,14 +1280,14 @@ export default function NexusIDE() {
                           setToastMessage(`✓ Applied patch to ${activeFileName}!`);
                           setTimeout(() => setToastMessage(null), 3000);
                         }}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-600/40 cursor-pointer text-[10px]"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 cursor-pointer text-[10px] font-mono transition-colors"
                       >
                         <Check size={11} />
                         <span>Accept Patch</span>
                       </button>
                       <button
                         onClick={() => setIsDiffMode(false)}
-                        className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer text-[10px]"
+                        className="px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#383838] text-neutral-400 hover:text-white cursor-pointer text-[10px] font-mono transition-colors"
                       >
                         Cancel
                       </button>
@@ -1240,13 +1299,15 @@ export default function NexusIDE() {
                       original={originalCodeForDiff}
                       modified={modifiedCodeForDiff}
                       language={activeFile.language}
-                      theme="vs-dark"
+                      theme="nexus-dark-clean"
                       options={{
                         readOnly: true,
                         minimap: { enabled: false },
                         fontSize: 12,
                         fontFamily: "'JetBrains Mono', monospace",
                         automaticLayout: true,
+                        cursorBlinking: "smooth",
+                        cursorStyle: "line",
                       }}
                     />
                   </div>
@@ -1255,11 +1316,27 @@ export default function NexusIDE() {
                 <Editor
                   height="100%"
                   language={activeFile.language}
-                  theme="vs-dark"
+                  theme="nexus-dark-clean"
                   value={activeFile.code}
                   onChange={handleCodeChange}
-                  onMount={(editor) => {
+                  onMount={(editor, monaco) => {
                     monacoEditorRef.current = editor;
+                    if (monaco) {
+                      monaco.editor.defineTheme("nexus-dark-clean", {
+                        base: "vs-dark",
+                        inherit: true,
+                        rules: [],
+                        colors: {
+                          "editor.background": "#000000",
+                          "editorCursor.foreground": "#888888",
+                          "editor.lineHighlightBackground": "#0a0a0a",
+                          "editorLineNumber.foreground": "#444444",
+                          "editorLineNumber.activeForeground": "#888888",
+                          "editor.selectionBackground": "#222222",
+                        },
+                      });
+                      monaco.editor.setTheme("nexus-dark-clean");
+                    }
                     editor.onDidChangeCursorPosition((e: any) => {
                       setCursorPosition({
                         lineNumber: e.position.lineNumber,
@@ -1275,6 +1352,9 @@ export default function NexusIDE() {
                     scrollBeyondLastLine: false,
                     automaticLayout: true,
                     renderLineHighlight: "all",
+                    cursorBlinking: "smooth",
+                    cursorStyle: "line",
+                    cursorWidth: 2,
                     padding: { top: 8, bottom: 8 },
                   }}
                 />
@@ -1314,10 +1394,10 @@ export default function NexusIDE() {
                   )}
 
                   {/* Interactive Model Selector Dropdown */}
-                  <div className="relative shrink-0">
+                  <div ref={modelPickerRef} className="relative shrink-0">
                     <button
                       onClick={() => setIsModelPickerOpen(!isModelPickerOpen)}
-                      className="px-2 py-0.5 rounded-[8px] bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] text-neutral-200 text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-neutral-300 hover:text-white text-[11px] font-mono flex items-center gap-1.5 cursor-pointer transition-colors"
                     >
                       <span>{selectedModel}</span>
                       <ChevronDown size={10} className="text-neutral-400" />
@@ -1383,7 +1463,7 @@ export default function NexusIDE() {
                                 setToastMessage(`✓ Applied code patch to ${activeFileName}!`);
                                 setTimeout(() => setToastMessage(null), 3000);
                               }}
-                              className="px-2.5 py-1 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white text-[11px] font-mono font-medium flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                              className="px-3 py-1 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-[11px] font-mono font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
                             >
                               <Check size={12} />
                               <span>Apply to {activeFileName}</span>
@@ -1394,7 +1474,7 @@ export default function NexusIDE() {
                                 setModifiedCodeForDiff(m.codePatch!);
                                 setIsDiffMode(true);
                               }}
-                              className="px-2.5 py-1 rounded-[8px] bg-[#161616] hover:bg-[#202020] border border-[#2a2a2a] text-neutral-300 text-[11px] font-mono cursor-pointer transition-colors"
+                              className="px-3 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#3d3d3d] text-neutral-300 hover:text-white text-[11px] font-mono cursor-pointer transition-colors"
                             >
                               View Split Diff
                             </button>
@@ -1419,7 +1499,7 @@ export default function NexusIDE() {
                     onClick={() => {
                       setInputQuery(chip);
                     }}
-                    className="px-2.5 py-1 rounded-full bg-[#141414] hover:bg-[#1e1e1e] border border-[#262626] hover:border-[#f54e00]/60 text-[10px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer shrink-0 truncate max-w-[260px]"
+                    className="px-2.5 py-1 rounded-full bg-transparent hover:bg-[#181818] border border-[#262626] hover:border-[#383838] text-[10px] font-mono text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer shrink-0 truncate max-w-[260px]"
                   >
                     {chip}
                   </button>
@@ -1441,7 +1521,7 @@ export default function NexusIDE() {
                 <button
                   onClick={handleSendQuery}
                   disabled={!inputQuery.trim() || isGenerating}
-                  className="px-3.5 py-1.5 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white disabled:opacity-40 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono font-medium shadow-sm"
+                  className="px-3.5 py-1.5 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] disabled:opacity-40 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono font-medium"
                 >
                   {isGenerating ? (
                     <RotateCw size={13} className="animate-spin" />
@@ -1461,10 +1541,10 @@ export default function NexusIDE() {
       {/* ========================================================================= */}
       <div
         onMouseDown={handleMouseDown}
-        className="w-1.5 hover:w-2 bg-[#141414] hover:bg-[#f54e00]/50 cursor-col-resize transition-all duration-150 flex items-center justify-center relative group select-none z-30"
+        className="w-1.5 hover:w-2 bg-[#141414] hover:bg-[#2c2c2c] cursor-col-resize transition-all duration-150 flex items-center justify-center relative group select-none z-30"
       >
-        <div className="w-1 h-6 rounded-full bg-neutral-600 group-hover:bg-white flex items-center justify-center">
-          <span className="text-[8px] font-mono text-neutral-400 select-none pointer-events-none">||</span>
+        <div className="w-1 h-6 rounded-full bg-[#666666] group-hover:bg-[#999999] flex items-center justify-center">
+          <span className="text-[8px] font-mono text-[#888888] select-none pointer-events-none">||</span>
         </div>
       </div>
 

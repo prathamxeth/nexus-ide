@@ -78,6 +78,24 @@ export default function NetworkGraphCanvas({
     Function: true,
   });
 
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(target)) {
+        setIsSearchOpen(false);
+      }
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(target)) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Track canvas container dimensions dynamically with ResizeObserver
   useEffect(() => {
     if (!canvasContainerRef.current) return;
@@ -219,10 +237,10 @@ export default function NetworkGraphCanvas({
         </div>
 
         {/* NODES SEARCH DROPDOWN */}
-        <div className="relative shrink-0">
+        <div ref={searchDropdownRef} className="relative shrink-0">
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="flex items-center gap-1.5 text-xs font-mono text-neutral-200 hover:text-white cursor-pointer px-2 py-1 rounded-lg bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] transition-colors"
+            className="flex items-center gap-1.5 text-xs font-mono text-neutral-300 hover:text-white cursor-pointer px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] transition-colors"
           >
             <span className="text-[10px] text-neutral-400 uppercase hidden sm:inline">Node:</span>
             <span className="max-w-[70px] sm:max-w-[100px] truncate text-neutral-100 font-semibold">{selectedNodeId || "Search"}</span>
@@ -290,6 +308,14 @@ export default function NetworkGraphCanvas({
           dagMode={layoutMode === "tree" ? "td" : undefined}
           dagLevelDistance={55}
           onNodeClick={handleNodeClick}
+          onNodeHover={(node: any) => {
+            if (canvasContainerRef.current) {
+              const canvas = canvasContainerRef.current.querySelector("canvas");
+              if (canvas) {
+                canvas.style.cursor = node ? "pointer" : "default";
+              }
+            }
+          }}
           onBackgroundClick={() => onSelectNode(null)}
           cooldownTicks={120}
           warmupTicks={50}
@@ -465,7 +491,7 @@ export default function NetworkGraphCanvas({
           {/* Fit to View Button */}
           <button
             onClick={() => fgRef.current?.zoomToFit(300, 24)}
-            className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
             title="Fit all nodes inside view"
           >
             <Maximize2 size={11} className="text-neutral-400" />
@@ -473,10 +499,10 @@ export default function NetworkGraphCanvas({
           </button>
 
           {/* Filter Node Types Pill */}
-          <div className="relative">
+          <div ref={filterDropdownRef} className="relative">
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#141414] hover:bg-[#1f1f1f] border border-[#262626] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
               title="Filter node layers"
             >
               <Filter size={11} className="text-neutral-400" />
@@ -530,10 +556,10 @@ export default function NetworkGraphCanvas({
               const target = graphData.nodes.find((n) => n.id === selectedNodeId) || null;
               onRunAction?.(target);
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white text-xs font-mono font-medium transition-colors cursor-pointer shadow-sm shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-xs font-mono font-medium transition-colors cursor-pointer shadow-xs shrink-0"
             title="Refactor selected node with AI Agent"
           >
-            <Play size={11} className="text-white fill-white" />
+            <Play size={11} className="text-[#f54e00] fill-[#f54e00]" />
             <span>Run</span>
           </button>
         </div>
