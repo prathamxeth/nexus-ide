@@ -244,7 +244,7 @@ def inspect_graph(file: Optional[str] = Query(None, description="Optional file p
             cypher = "MATCH (f:File {path: $file})-[r]->(target) RETURN f, type(r) AS rel, target LIMIT 100"
             params = {"file": file}
         else:
-            cypher = "MATCH (f:File)-[r]->(target) RETURN f, type(r) AS rel, target LIMIT 100"
+            cypher = "MATCH (f)-[r]->(target) RETURN f, type(r) AS rel, target LIMIT 250"
             params = {}
 
         raw_results = falkor.query(cypher, params)
@@ -258,20 +258,22 @@ def inspect_graph(file: Optional[str] = Query(None, description="Optional file p
             src_node, rel_type, tgt_node = row[0], row[1], row[2]
 
             for node in (src_node, tgt_node):
-                nid = f"node_{node.id}" if hasattr(node, "id") else str(node)
+                props = getattr(node, "properties", {})
+                nid = str(props.get("id") or (f"node_{node.id}" if hasattr(node, "id") else str(node)))
                 if nid not in nodes_map:
-                    ntype = node.labels[0] if (hasattr(node, "labels") and node.labels) else "Node"
-                    props = getattr(node, "properties", {})
-                    nlabel = props.get("name") or props.get("path") or nid
+                    ntype = str(props.get("type") or (node.labels[0] if (hasattr(node, "labels") and node.labels) else "Node"))
+                    nlabel = str(props.get("name") or props.get("path") or props.get("label") or nid)
                     nodes_map[nid] = GraphNode(
                         id=nid,
-                        label=str(nlabel),
+                        label=nlabel,
                         type=ntype,
                         properties=props,
                     )
 
-            src_id = f"node_{src_node.id}" if hasattr(src_node, "id") else str(src_node)
-            tgt_id = f"node_{tgt_node.id}" if hasattr(tgt_node, "id") else str(tgt_node)
+            src_props = getattr(src_node, "properties", {})
+            tgt_props = getattr(tgt_node, "properties", {})
+            src_id = str(src_props.get("id") or (f"node_{src_node.id}" if hasattr(src_node, "id") else str(src_node)))
+            tgt_id = str(tgt_props.get("id") or (f"node_{tgt_node.id}" if hasattr(tgt_node, "id") else str(tgt_node)))
             edges.append(
                 GraphEdge(
                     source=src_id,
