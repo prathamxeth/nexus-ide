@@ -645,11 +645,12 @@ export default function NexusIDE() {
   };
 
   // Submit Query to Agent via SSE POST /api/agent/stream
-  const handleSendQuery = async () => {
-    if (!inputQuery.trim() || isGenerating) return;
+  const handleSendQuery = async (queryOverride?: string) => {
+    const textToSend = queryOverride || inputQuery;
+    if (!textToSend.trim() || isGenerating) return;
 
-    const query = inputQuery.trim();
-    setInputQuery("");
+    const query = textToSend.trim();
+    if (!queryOverride) setInputQuery("");
 
     const newMsg: ChatMessage = {
       id: String(Date.now()),
@@ -1505,20 +1506,21 @@ export default function NexusIDE() {
               </div>
 
               {/* QUICK PROMPT SUGGESTION CHIPS */}
-              <div className="px-2.5 py-1.5 bg-[#080808] border-t border-[#1e1e1e] flex items-center gap-1.5 overflow-x-auto select-none">
+              <div className="px-2.5 py-1.5 bg-[#080808] border-t border-[#1e1e1e] flex items-center gap-1.5 overflow-x-auto select-none scrollbar-none">
                 {[
-                  "Track 1 · What breaks if validateToken changes?",
-                  "Track 2 · Check remembered rules from past runs",
-                  "Track 3 · Who wrote validateToken and why?",
+                  { label: "Track 1 · What Breaks", prompt: "Track 1 · What breaks if validateToken changes?" },
+                  { label: "Track 2 · Remembered Rules", prompt: "Track 2 · Check remembered rules from past runs" },
+                  { label: "Track 3 · Team History", prompt: "Track 3 · Who wrote validateToken and why?" },
                 ].map((chip) => (
                   <button
-                    key={chip}
+                    key={chip.label}
                     onClick={() => {
-                      setInputQuery(chip);
+                      setInputQuery(chip.prompt);
+                      handleSendQuery(chip.prompt);
                     }}
-                    className="px-2.5 py-1 rounded-full bg-transparent hover:bg-[#181818] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer shrink-0 truncate max-w-[280px]"
+                    className="px-2.5 py-1 rounded-full bg-transparent hover:bg-[#181818] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer shrink-0 whitespace-nowrap"
                   >
-                    {chip}
+                    {chip.label}
                   </button>
                 ))}
               </div>
@@ -1536,7 +1538,7 @@ export default function NexusIDE() {
                   className="flex-1 bg-[#121212] border border-[#222222] focus:border-[#f54e00]/70 rounded-[8px] px-3 py-1.5 text-xs font-mono text-white placeholder-neutral-500 outline-none"
                 />
                 <button
-                  onClick={handleSendQuery}
+                  onClick={() => handleSendQuery()}
                   disabled={!inputQuery.trim() || isGenerating}
                   className="px-3.5 py-1.5 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] disabled:opacity-40 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono font-medium"
                 >
@@ -1581,7 +1583,9 @@ export default function NexusIDE() {
             onSelectNode={handleSelectNode}
             onRunAction={(node) => {
               const target = node ? node.label : "validateToken";
-              setInputQuery(`Refactor ${target} with 60-second clock skew tolerance and add error telemetry`);
+              const promptText = `Track 1 · What breaks if ${target} changes?`;
+              setInputQuery(promptText);
+              handleSendQuery(promptText);
             }}
           />
         </div>

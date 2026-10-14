@@ -370,6 +370,21 @@ export default function NetworkGraphCanvas({
               <span className="text-neutral-100 font-medium truncate">Code Graph</span>
             </div>
           )}
+
+          {/* CODE MAP OVERVIEW BUTTON */}
+          <button
+            id="hierarchy-toggle-btn"
+            onClick={() => setIsHierarchyOpen(!isHierarchyOpen)}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-[6px] border text-[11px] font-mono transition-colors cursor-pointer shrink-0 ${
+              isHierarchyOpen
+                ? "bg-[#1f1f1f] border-[#f54e00] text-white"
+                : "bg-transparent border-[#262626] hover:border-[#383838] text-neutral-300 hover:text-white"
+            }`}
+            title="Toggle Code Flow & Structure Map"
+          >
+            <Workflow size={11} className={isHierarchyOpen ? "text-[#f54e00]" : "text-neutral-400"} />
+            <span>Map</span>
+          </button>
         </div>
 
         {/* NODES SEARCH DROPDOWN */}
@@ -749,8 +764,16 @@ export default function NetworkGraphCanvas({
 
             // 3. Label text with clean backdrop pill
             const label = String(node.label || node.id);
-            const fontSize = Math.max(8.5 / globalScale, 2.6);
-            ctx.font = `${(isBig || isHighlighted || isRealtimeChanged) ? "600 " : "400 "}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
+            const isImportant = isBig || isSelected || isHighlighted || isRealtimeChanged;
+
+            // Avoid label collision / visual smear when zoomed far out
+            if (!isImportant && globalScale < 0.65) {
+              ctx.restore();
+              return;
+            }
+
+            const fontSize = Math.min(Math.max(6.5 / globalScale, 2.5), 8.5);
+            ctx.font = `${isImportant ? "600 " : "400 "}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
@@ -758,13 +781,14 @@ export default function NetworkGraphCanvas({
               ctx.fillStyle = "#ffffff";
               ctx.fillText(label, node.x, node.y);
             } else {
-              const textWidth = ctx.measureText(label).width;
-              const pillHeight = fontSize + 4 / globalScale;
-              const pillY = node.y + radius + 2.5 / globalScale;
-              const pillWidth = textWidth + 8 / globalScale;
+              const displayLabel = (!isImportant && label.length > 13) ? `${label.slice(0, 11)}…` : label;
+              const textWidth = ctx.measureText(displayLabel).width;
+              const pillHeight = fontSize + 3.5 / globalScale;
+              const pillY = node.y + radius + 2 / globalScale;
+              const pillWidth = textWidth + 6 / globalScale;
 
               // Crisp backdrop pill in dark black
-              ctx.fillStyle = "rgba(10, 10, 10, 0.92)";
+              ctx.fillStyle = "rgba(8, 8, 8, 0.94)";
               ctx.beginPath();
               if (typeof ctx.roundRect === "function") {
                 ctx.roundRect(
@@ -780,17 +804,17 @@ export default function NetworkGraphCanvas({
               ctx.fill();
 
               ctx.strokeStyle = isHighlighted
-                ? "rgba(239, 68, 68, 0.5)"
+                ? "rgba(239, 68, 68, 0.6)"
                 : isRealtimeChanged
                 ? "rgba(229, 192, 123, 0.7)"
                 : isSelected
-                ? "rgba(245, 78, 0, 0.5)"
-                : "rgba(255, 255, 255, 0.1)";
+                ? "rgba(245, 78, 0, 0.7)"
+                : "rgba(255, 255, 255, 0.12)";
               ctx.lineWidth = 0.7 / globalScale;
               ctx.stroke();
 
               ctx.fillStyle = isHighlighted ? "#fca5a5" : isRealtimeChanged ? "#e5c07b" : isSelected ? "#f54e00" : "#d4d4d8";
-              ctx.fillText(label, node.x, pillY + pillHeight / 2);
+              ctx.fillText(displayLabel, node.x, pillY + pillHeight / 2);
             }
 
             ctx.restore();
@@ -827,13 +851,13 @@ export default function NetworkGraphCanvas({
       {/* ======================================================== */}
       {/* 5. INTEGRATED BOTTOM TOOLBAR (ZERO COLLISION / ZERO OVERLAP) */}
       {/* ======================================================== */}
-      <div className="h-10 px-2 sm:px-3 border-t border-[#1e1e1e] bg-[#080808] flex items-center justify-between shrink-0 z-20 gap-1.5 overflow-hidden">
-        <div className="flex items-center gap-1 shrink-0">
+      <div className="h-10 px-2 sm:px-3 border-t border-[#1e1e1e] bg-[#080808] flex items-center justify-between shrink-0 z-20 gap-1.5">
+        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
           {/* Layout Mode Pill: Tree vs Cluster */}
-          <div className="flex items-center bg-[#141414] border border-[#262626] rounded-lg p-0.5 shadow-sm">
+          <div className="flex items-center bg-[#141414] border border-[#262626] rounded-lg p-0.5 shadow-sm shrink-0">
             <button
               onClick={() => handleSwitchLayout("tree")}
-              className={`flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                 layoutMode === "tree"
                   ? "bg-[#242424] text-white border border-[#383838]"
                   : "text-neutral-400 hover:text-white"
@@ -841,11 +865,11 @@ export default function NetworkGraphCanvas({
               title="Tree Graph Layout (Structured Hierarchical Top-Down)"
             >
               <GitFork size={11} className="text-neutral-300" />
-              <span className={dimensions.width < 320 ? "hidden" : "inline"}>Tree</span>
+              <span className={dimensions.width < 340 ? "hidden" : "inline"}>Tree</span>
             </button>
             <button
               onClick={() => handleSwitchLayout("cluster")}
-              className={`flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                 layoutMode === "cluster"
                   ? "bg-[#242424] text-white border border-[#383838]"
                   : "text-neutral-400 hover:text-white"
@@ -853,29 +877,29 @@ export default function NetworkGraphCanvas({
               title="Compact Cluster Layout (Force Bounded Physics)"
             >
               <Network size={11} className="text-neutral-300" />
-              <span className={dimensions.width < 320 ? "hidden" : "inline"}>Cluster</span>
+              <span className={dimensions.width < 340 ? "hidden" : "inline"}>Cluster</span>
             </button>
           </div>
 
           {/* Fit to View Button */}
           <button
             onClick={handleFit}
-            className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-1.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer shrink-0"
             title="Center and fit all nodes inside view"
           >
             <Maximize2 size={11} className="text-neutral-400" />
-            <span className={dimensions.width < 300 ? "hidden" : "inline"}>Fit</span>
+            <span className={dimensions.width < 360 ? "hidden" : "inline"}>Fit</span>
           </button>
 
           {/* Filter Node Types Pill */}
-          <div ref={filterDropdownRef} className="relative">
+          <div ref={filterDropdownRef} className="relative shrink-0">
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-1.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
               title="Filter node layers"
             >
               <Filter size={11} className="text-neutral-400" />
-              <span className={dimensions.width < 340 ? "hidden" : "inline"}>Filter</span>
+              <span className={dimensions.width < 380 ? "hidden" : "inline"}>Filter</span>
             </button>
 
             {isFilterOpen && (
@@ -908,42 +932,20 @@ export default function NetworkGraphCanvas({
               </div>
             )}
           </div>
-
-          {/* Code Map Toggle Button */}
-          <button
-            id="hierarchy-toggle-btn"
-            onClick={() => setIsHierarchyOpen(!isHierarchyOpen)}
-            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[11px] font-mono transition-colors cursor-pointer ${
-              isHierarchyOpen
-                ? "bg-[#1f1f1f] border-[#f54e00] text-white"
-                : "bg-transparent border-[#262626] hover:border-[#383838] text-neutral-300 hover:text-white"
-            }`}
-            title="Toggle Code Flow & Structure Map"
-          >
-            <Workflow size={11} className={isHierarchyOpen ? "text-[#f54e00]" : "text-neutral-400"} />
-            <span className={dimensions.width < 380 ? "hidden" : "inline"}>Code Map</span>
-          </button>
         </div>
 
-        {/* RIGHT SIDE: SHORTCUT HINTS & RUN BUTTON */}
-        <div className="flex items-center gap-2 shrink-0">
-          {dimensions.width >= 420 && (
-            <div className="flex items-center gap-1.5 text-[11px] font-sans text-neutral-500 select-none">
-              <span>Click: Focus</span>
-              <span>•</span>
-              <span>⌘+Click: Fold</span>
-            </div>
-          )}
-
+        {/* RIGHT SIDE: RUN BUTTON (ALWAYS FULLY VISIBLE, NEVER CUT OFF, SHRINK-0) */}
+        <div className="flex items-center gap-1.5 shrink-0 z-10 pl-1">
           <button
+            id="graph-run-btn"
             onClick={() => {
               const target = graphData.nodes.find((n) => n.id === selectedNodeId) || null;
               onRunAction?.(target);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-xs font-mono font-medium transition-colors cursor-pointer shadow-xs shrink-0"
-            title="Update selected code with AI Agent"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-xs font-mono font-medium transition-colors cursor-pointer shadow-xs shrink-0 whitespace-nowrap min-w-[64px]"
+            title="Run analysis on selected function with AI Agent"
           >
-            <Play size={11} className="text-[#f54e00] fill-[#f54e00]" />
+            <Play size={11} className="text-[#f54e00] fill-[#f54e00] shrink-0" />
             <span>Run</span>
           </button>
         </div>
