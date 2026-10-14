@@ -431,11 +431,19 @@ export default function NetworkGraphCanvas({
       </div>
 
       {/* ======================================================== */}
+      {/* ======================================================== */}
       {/* 2. HIERARCHY FLOWCHART BREADCRUMBS BAR (HEADING - TOPIC - SUBTOPICS) */}
       {/* ======================================================== */}
-      <div className="h-8 px-3 border-b border-[#181818] bg-[#050505] flex items-center justify-between text-[11px] font-mono text-neutral-400 select-none overflow-x-auto gap-2 shrink-0">
-        <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto scrollbar-none py-1">
-          <span className="text-[11px] text-neutral-500 uppercase tracking-wider font-semibold shrink-0">Hierarchy:</span>
+      <div className="h-7 px-2.5 border-b border-[#181818] bg-[#050505] flex items-center text-[10.5px] font-mono text-neutral-400 select-none overflow-x-auto scrollbar-none gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto scrollbar-none py-0.5">
+          <button
+            onClick={() => setIsHierarchyOpen(!isHierarchyOpen)}
+            className="text-[10px] text-neutral-500 hover:text-[#f54e00] uppercase tracking-wider font-semibold shrink-0 cursor-pointer flex items-center gap-1 transition-colors"
+            title="Toggle Code Flow & Structure Map"
+          >
+            <Workflow size={10} className="text-[#f54e00]" />
+            <span>Hierarchy:</span>
+          </button>
           
           {/* HEADING (Module) */}
           <span
@@ -443,12 +451,12 @@ export default function NetworkGraphCanvas({
               const rootNode = graphData.nodes.find((n) => n.id === "src" || n.id === "root");
               if (rootNode) onSelectNode(rootNode);
             }}
-            className="text-neutral-400 hover:text-white cursor-pointer px-1.5 py-0.5 rounded bg-[#101010] border border-[#222222] shrink-0 transition-colors"
+            className="text-neutral-400 hover:text-white cursor-pointer px-1 py-0.5 rounded bg-[#101010] border border-[#222222] shrink-0 transition-colors text-[10px]"
             title="Module Root (Heading)"
           >
             src/
           </span>
-          <ChevronRight size={10} className="text-neutral-600 shrink-0" />
+          <ChevronRight size={9} className="text-neutral-600 shrink-0" />
 
           {/* TOPIC (File) */}
           <span
@@ -456,17 +464,17 @@ export default function NetworkGraphCanvas({
               const fileNode = graphData.nodes.find((n) => n.id === activeFileName);
               if (fileNode) onSelectNode(fileNode);
             }}
-            className={`px-1.5 py-0.5 rounded shrink-0 flex items-center gap-1 cursor-pointer transition-colors ${
+            className={`px-1 py-0.5 rounded shrink-0 flex items-center gap-1 cursor-pointer transition-colors text-[10px] ${
               realtimeChangedSet.size > 0
                 ? "text-[#e5c07b] bg-[#e5c07b]/10 border border-[#e5c07b]/30"
                 : "text-neutral-300 bg-[#141414] border border-[#242424] hover:text-white"
             }`}
             title="Source File (Topic)"
           >
-            <FileCode size={11} className={realtimeChangedSet.size > 0 ? "text-[#e5c07b]" : "text-neutral-400"} />
+            <FileCode size={10} className={realtimeChangedSet.size > 0 ? "text-[#e5c07b]" : "text-neutral-400"} />
             <span>{activeFileName || "auth.ts"}</span>
           </span>
-          <ChevronRight size={10} className="text-neutral-600 shrink-0" />
+          <ChevronRight size={9} className="text-neutral-600 shrink-0" />
 
           {/* SUBTOPICS (Function / Call Target) */}
           <span
@@ -474,7 +482,7 @@ export default function NetworkGraphCanvas({
               const activeNode = graphData.nodes.find((n) => n.id === (selectedNodeId || "validateToken"));
               if (activeNode) onSelectNode(activeNode);
             }}
-            className="px-1.5 py-0.5 rounded text-[#f54e00] bg-[#f54e00]/10 border border-[#f54e00]/30 shrink-0 font-medium cursor-pointer truncate max-w-[120px]"
+            className="px-1.5 py-0.5 rounded text-[#f54e00] bg-[#f54e00]/10 border border-[#f54e00]/30 shrink-0 font-medium cursor-pointer text-[10px]"
             title="Active Function (Subtopic)"
           >
             {selectedNodeId || "validateToken"}
@@ -482,38 +490,23 @@ export default function NetworkGraphCanvas({
 
           {/* REAL-TIME EDITED PULSE BADGE */}
           {realtimeChangedSet.size > 0 && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-mono text-[#e5c07b] bg-[#e5c07b]/15 border border-[#e5c07b]/40 shrink-0 animate-pulse font-medium">
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono text-[#e5c07b] bg-[#e5c07b]/15 border border-[#e5c07b]/40 shrink-0 animate-pulse font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-[#e5c07b]" />
-              <span>Edited Just Now</span>
+              <span>Edited</span>
             </span>
           )}
 
           {/* WHAT BREAKS HUD */}
           {hasHighlighted && (
             <>
-              <ChevronRight size={10} className="text-neutral-600 shrink-0" />
-              <span className="px-1.5 py-0.5 rounded text-red-300 bg-red-950/70 border border-red-500/40 shrink-0 animate-pulse font-medium flex items-center gap-1">
+              <ChevronRight size={9} className="text-neutral-600 shrink-0" />
+              <span className="px-1.5 py-0.5 rounded text-red-300 bg-red-950/70 border border-red-500/40 shrink-0 animate-pulse font-medium flex items-center gap-1 text-[10px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 <span>{highlightedCount} Affected</span>
               </span>
             </>
           )}
         </div>
-
-        {/* CODE MAP OVERVIEW TOGGLE BUTTON */}
-        <button
-          id="hierarchy-toggle-btn"
-          onClick={() => setIsHierarchyOpen(!isHierarchyOpen)}
-          className={`flex items-center gap-1 px-2 py-0.5 rounded-[6px] border text-[11px] font-mono transition-colors cursor-pointer shrink-0 ${
-            isHierarchyOpen
-              ? "bg-[#1f1f1f] border-[#f54e00] text-white"
-              : "bg-transparent border-[#262626] hover:border-[#383838] text-neutral-400 hover:text-white"
-          }`}
-          title="Toggle Code Flow & Structure"
-        >
-          <Workflow size={11} className={isHierarchyOpen ? "text-[#f54e00]" : "text-neutral-400"} />
-          <span className="hidden sm:inline">Code Map</span>
-        </button>
       </div>
 
       {/* ======================================================== */}
@@ -522,7 +515,7 @@ export default function NetworkGraphCanvas({
       {isHierarchyOpen && (
         <div
           ref={hierarchyDrawerRef}
-          className="absolute top-20 left-3 right-3 sm:right-auto sm:w-80 bg-[#0a0a0a]/95 backdrop-blur-md border border-[#262626] rounded-xl shadow-2xl z-30 p-3 font-mono text-[11px] flex flex-col gap-2.5 max-h-[75%] overflow-y-auto animate-in fade-in zoom-in-95"
+          className="absolute bottom-12 left-3 right-3 sm:right-auto sm:w-80 bg-[#0a0a0a]/95 backdrop-blur-md border border-[#262626] rounded-xl shadow-2xl z-30 p-3 font-mono text-[11px] flex flex-col gap-2.5 max-h-[70%] overflow-y-auto animate-in fade-in zoom-in-95"
         >
           <div className="flex items-center justify-between pb-1.5 border-b border-[#202020]">
             <div className="flex items-center gap-1.5 text-neutral-200 font-semibold">
@@ -915,6 +908,21 @@ export default function NetworkGraphCanvas({
               </div>
             )}
           </div>
+
+          {/* Code Map Toggle Button */}
+          <button
+            id="hierarchy-toggle-btn"
+            onClick={() => setIsHierarchyOpen(!isHierarchyOpen)}
+            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[11px] font-mono transition-colors cursor-pointer ${
+              isHierarchyOpen
+                ? "bg-[#1f1f1f] border-[#f54e00] text-white"
+                : "bg-transparent border-[#262626] hover:border-[#383838] text-neutral-300 hover:text-white"
+            }`}
+            title="Toggle Code Flow & Structure Map"
+          >
+            <Workflow size={11} className={isHierarchyOpen ? "text-[#f54e00]" : "text-neutral-400"} />
+            <span className={dimensions.width < 380 ? "hidden" : "inline"}>Code Map</span>
+          </button>
         </div>
 
         {/* RIGHT SIDE: SHORTCUT HINTS & RUN BUTTON */}
