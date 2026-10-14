@@ -284,6 +284,7 @@ export default function NexusIDE() {
   const [nodes, setNodes] = useState<NodeItem[]>([]);
   const [edges, setEdges] = useState<EdgeItem[]>([]);
   const [visitedBlockIds, setVisitedBlockIds] = useState<string[]>([]);
+  const [realtimeChangedNodeIds, setRealtimeChangedNodeIds] = useState<string[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeItem | null>(null);
   const [isLoadingGraph, setIsLoadingGraph] = useState<boolean>(false);
   const [backendStatus, setBackendStatus] = useState<"connected" | "connecting" | "offline">("connecting");
@@ -472,6 +473,10 @@ export default function NexusIDE() {
         return newNodes;
       });
     }
+
+    // Reflect real-time modified symbols in graph highlights
+    const changedIds = isModified ? [activeFileName, ...foundSymbols] : [];
+    setRealtimeChangedNodeIds(changedIds);
   }, [activeFileName]);
 
   // Select File in Explorer or Tabs
@@ -482,6 +487,18 @@ export default function NexusIDE() {
       setOpenTabs((prev) => [...prev, fileName]);
     }
     setIsDiffMode(false);
+
+    // Sync real-time changed symbols for the selected file if modified
+    const fileObj = workspaceFiles[fileName];
+    if (fileObj?.modified) {
+      const functionRegex = /(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_]+)/g;
+      const syms: string[] = [];
+      let m;
+      while ((m = functionRegex.exec(fileObj.code)) !== null) syms.push(m[1]);
+      setRealtimeChangedNodeIds([fileName, ...syms]);
+    } else {
+      setRealtimeChangedNodeIds([]);
+    }
   }, [workspaceFiles, openTabs]);
 
   // Close Tab
@@ -1559,6 +1576,8 @@ export default function NexusIDE() {
             edges={edges}
             selectedNodeId={selectedNode ? selectedNode.id : null}
             highlightedNodeIds={visitedBlockIds}
+            realtimeChangedNodeIds={realtimeChangedNodeIds}
+            activeFileName={activeFileName}
             onSelectNode={handleSelectNode}
             onRunAction={(node) => {
               const target = node ? node.label : "validateToken";
