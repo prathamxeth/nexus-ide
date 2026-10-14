@@ -167,7 +167,7 @@ function FormattedMessageContent({ text }: { text: string }) {
                 <span className="text-neutral-200 font-semibold">{seg.language || "code"}</span>
                 <button
                   onClick={() => handleCopy(seg.content, segIdx)}
-                  className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-[11px] text-neutral-400 hover:text-white transition-colors cursor-pointer"
                   title="Copy code to clipboard"
                 >
                   {isCopied ? (
@@ -878,7 +878,7 @@ export default function NexusIDE() {
                 setActiveActivityTab("git");
                 setIsSidebarOpen(true);
               }}
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] text-[10px] font-mono text-neutral-300 hover:text-white border border-[#262626] hover:border-[#383838] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] text-[11px] font-mono text-neutral-300 hover:text-white border border-[#262626] hover:border-[#383838] transition-colors cursor-pointer"
               title="Open Source Control"
             >
               <GitBranch size={11} className="text-[#f54e00]" />
@@ -891,7 +891,7 @@ export default function NexusIDE() {
             <button
               onClick={handlePingHealth}
               title="Ping FalkorDB Health"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[10px] font-mono transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono transition-colors cursor-pointer"
             >
               <span className={`w-1.5 h-1.5 rounded-full ${backendStatus === "connected" ? "bg-emerald-400 shadow-[0_0_6px_#22c55e]" : "bg-amber-400"}`} />
               <span className="text-neutral-400">FalkorDB:</span>
@@ -916,7 +916,7 @@ export default function NexusIDE() {
                 }
                 setIsDiffMode(!isDiffMode);
               }}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] text-[10px] font-mono border transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] text-[11px] font-mono border transition-colors cursor-pointer ${
                 isDiffMode
                   ? "bg-transparent border-[#f54e00] text-[#f54e00]"
                   : "bg-transparent border-[#262626] hover:border-[#383838] text-neutral-300 hover:text-white"
@@ -1016,7 +1016,7 @@ export default function NexusIDE() {
                       >
                         <Plus size={13} />
                       </button>
-                      <span className="text-[10px] text-neutral-500 font-mono">src</span>
+                      <span className="text-[11px] text-neutral-500 font-mono">src</span>
                     </div>
                   </div>
 
@@ -1088,16 +1088,16 @@ export default function NexusIDE() {
                             <span className="truncate">{fileName}</span>
                           </div>
                           {isFileModified ? (
-                            <span className="text-[10px] text-[#e5c07b] font-mono px-1 rounded bg-[#e5c07b]/10 shrink-0">M</span>
+                            <span className="text-[11px] text-[#e5c07b] font-mono px-1 rounded bg-[#e5c07b]/10 shrink-0">M</span>
                           ) : (
-                            <span className="text-[10px] text-neutral-600 font-mono shrink-0">U</span>
+                            <span className="text-[11px] text-neutral-600 font-mono shrink-0">U</span>
                           )}
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="p-2.5 border-t border-[#1e1e1e] bg-[#050505] text-[10px] font-mono text-neutral-400 flex items-center justify-between">
+                  <div className="p-2.5 border-t border-[#1e1e1e] bg-[#050505] text-[11px] font-mono text-neutral-400 flex items-center justify-between">
                     <span>AST Symbols</span>
                     <span className="text-[#f54e00] font-semibold">{nodes.length} Nodes</span>
                   </div>
@@ -1109,7 +1109,7 @@ export default function NexusIDE() {
                 <>
                   <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#1e1e1e]">
                     <span>Search</span>
-                    <span className="text-[10px] text-neutral-500 font-mono">{searchResults.length} matches</span>
+                    <span className="text-[11px] text-neutral-500 font-mono">{searchResults.length} matches</span>
                   </div>
 
                   <div className="p-2 border-b border-[#1e1e1e]">
@@ -1143,7 +1143,7 @@ export default function NexusIDE() {
                       >
                         <div className="flex items-center justify-between text-neutral-400 group-hover:text-[#f54e00]">
                           <span className="font-semibold text-xs">{res.file}</span>
-                          <span className="text-[10px] text-neutral-500">Ln {res.line}</span>
+                          <span className="text-[11px] text-neutral-500">Ln {res.line}</span>
                         </div>
                         <div className="text-neutral-300 truncate text-[11px] mt-0.5">{res.text}</div>
                       </div>
@@ -1163,7 +1163,7 @@ export default function NexusIDE() {
                 <>
                   <div className="h-8 px-3 flex items-center justify-between text-[11px] font-sans font-semibold uppercase tracking-wider text-neutral-400 border-b border-[#1e1e1e]">
                     <span>Source Control</span>
-                    <span className="text-[10px] text-[#f54e00] font-mono">main</span>
+                    <span className="text-[11px] text-[#f54e00] font-mono">main</span>
                   </div>
 
                   <div className="p-2 border-b border-[#1e1e1e] space-y-2">
@@ -1187,7 +1187,7 @@ export default function NexusIDE() {
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 font-mono text-xs">
-                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-2 py-1">
+                    <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider px-2 py-1">
                       Changes ({isDiffMode ? "2" : "1"})
                     </div>
                     {Object.keys(workspaceFiles).slice(0, 3).map((fileName) => (
@@ -1200,7 +1200,7 @@ export default function NexusIDE() {
                           <FileCode size={13} className="text-neutral-200 shrink-0" />
                           <span className="truncate">{fileName}</span>
                         </div>
-                        <span className="text-[10px] text-amber-400 font-semibold">M</span>
+                        <span className="text-[11px] text-amber-400 font-semibold">M</span>
                       </div>
                     ))}
                   </div>
@@ -1280,14 +1280,14 @@ export default function NexusIDE() {
                           setToastMessage(`✓ Applied patch to ${activeFileName}!`);
                           setTimeout(() => setToastMessage(null), 3000);
                         }}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 cursor-pointer text-[10px] font-mono transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 cursor-pointer text-[11px] font-mono transition-colors"
                       >
                         <Check size={11} />
                         <span>Accept Patch</span>
                       </button>
                       <button
                         onClick={() => setIsDiffMode(false)}
-                        className="px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#383838] text-neutral-400 hover:text-white cursor-pointer text-[10px] font-mono transition-colors"
+                        className="px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#383838] text-neutral-400 hover:text-white cursor-pointer text-[11px] font-mono transition-colors"
                       >
                         Cancel
                       </button>
@@ -1370,25 +1370,25 @@ export default function NexusIDE() {
                   <span className="text-white font-medium shrink-0">Nexus Agent</span>
                   <span className="text-neutral-600 shrink-0">•</span>
                   <span className="text-neutral-400 shrink-0">Target:</span>
-                  <span className="font-semibold px-2 py-0.5 rounded-full bg-[#1a1a1a] border border-[#2c2c2c] text-neutral-200 text-[10px] truncate max-w-[130px]">
+                  <span className="font-semibold px-2 py-0.5 rounded-full bg-[#1a1a1a] border border-[#2c2c2c] text-neutral-200 text-[11px] truncate max-w-[130px]">
                     @{selectedNode ? selectedNode.label : "validateToken"}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-[10px] shrink-0">
+                <div className="flex items-center gap-2 text-[11px] shrink-0">
                   {/* Cursor DESIGN.md AI Timeline Stage Pills */}
                   {isGenerating ? (
-                    <span className="px-2 py-0.5 rounded-full bg-[#dfa88f]/20 border border-[#dfa88f]/50 text-[#dfa88f] font-mono text-[10px] font-medium flex items-center gap-1 shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-[#dfa88f]/20 border border-[#dfa88f]/50 text-[#dfa88f] font-mono text-[11px] font-medium flex items-center gap-1 shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#dfa88f] animate-pulse" />
                       Thinking
                     </span>
                   ) : visitedBlockIds.length > 0 ? (
-                    <span className="px-2 py-0.5 rounded-full bg-[#9fc9a2]/20 border border-[#9fc9a2]/50 text-[#9fc9a2] font-mono text-[10px] font-medium flex items-center gap-1 shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-[#9fc9a2]/20 border border-[#9fc9a2]/50 text-[#9fc9a2] font-mono text-[11px] font-medium flex items-center gap-1 shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#9fc9a2]" />
                       Grepping ({visitedBlockIds.length})
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full bg-[#1a1a1a] border border-[#2c2c2c] text-neutral-300 font-mono text-[10px] shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-[#1a1a1a] border border-[#2c2c2c] text-neutral-300 font-mono text-[11px] shrink-0">
                       Reading
                     </span>
                   )}
@@ -1431,7 +1431,7 @@ export default function NexusIDE() {
                   <div className="h-full flex flex-col items-center justify-center text-center text-neutral-500 font-mono text-[11px]">
                     <Sparkles className="w-5 h-5 text-[#f54e00]/80 mb-1" />
                     <span>FalkorDB Graph-RAG Active</span>
-                    <span className="text-neutral-600 text-[10px]">Click any chip below or ask agent to refactor code</span>
+                    <span className="text-neutral-500 text-[11px]">Click any chip below or ask agent to refactor code</span>
                   </div>
                 ) : (
                   messages.map((m) => (
@@ -1439,7 +1439,7 @@ export default function NexusIDE() {
                       key={m.id}
                       className={`flex flex-col gap-1 ${m.role === "user" ? "items-end" : "items-start"}`}
                     >
-                      <div className="text-[10px] text-neutral-500 font-mono">
+                      <div className="text-[11px] text-neutral-500 font-mono">
                         {m.role === "user" ? "You" : "Nexus Agent"} • {m.timestamp}
                       </div>
                       <div
@@ -1499,7 +1499,7 @@ export default function NexusIDE() {
                     onClick={() => {
                       setInputQuery(chip);
                     }}
-                    className="px-2.5 py-1 rounded-full bg-transparent hover:bg-[#181818] border border-[#262626] hover:border-[#383838] text-[10px] font-mono text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer shrink-0 truncate max-w-[260px]"
+                    className="px-2.5 py-1 rounded-full bg-transparent hover:bg-[#181818] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer shrink-0 truncate max-w-[260px]"
                   >
                     {chip}
                   </button>
@@ -1544,7 +1544,7 @@ export default function NexusIDE() {
         className="w-1.5 hover:w-2 bg-[#141414] hover:bg-[#2c2c2c] cursor-col-resize transition-all duration-150 flex items-center justify-center relative group select-none z-30"
       >
         <div className="w-1 h-6 rounded-full bg-[#666666] group-hover:bg-[#999999] flex items-center justify-center">
-          <span className="text-[8px] font-mono text-[#888888] select-none pointer-events-none">||</span>
+          <span className="text-[11px] font-mono text-[#888888] select-none pointer-events-none">||</span>
         </div>
       </div>
 
@@ -1613,7 +1613,7 @@ export default function NexusIDE() {
       <div className="flex items-center gap-3 text-neutral-500 shrink-0">
         <span className="hidden sm:inline">{activeFile.code.split("\n").length} lines</span>
         <span className="hidden sm:inline">UTF-8</span>
-        <span className="text-neutral-400 uppercase text-[10px] px-1.5 py-0.2 rounded bg-[#141414] border border-[#242424]">
+        <span className="text-neutral-400 uppercase text-[11px] px-1.5 py-0.2 rounded bg-[#141414] border border-[#242424]">
           {activeFile.language}
         </span>
         <span className="text-neutral-300 font-medium">
@@ -1644,7 +1644,7 @@ export default function NexusIDE() {
 
           <div className="p-5 space-y-4 text-xs font-mono">
             <div>
-              <label className="text-neutral-400 uppercase text-[10px] tracking-wider block mb-1.5 font-semibold">
+              <label className="text-neutral-400 uppercase text-[11px] tracking-wider block mb-1.5 font-semibold">
                 Default AI Model
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -1659,7 +1659,7 @@ export default function NexusIDE() {
                     }`}
                   >
                     <div className="font-semibold">{m}</div>
-                    <div className="text-[10px] text-neutral-500">
+                    <div className="text-[11px] text-neutral-500">
                       {m.includes("claude") ? "Anthropic" : m.includes("gpt") ? "OpenAI" : "DeepSeek"}
                     </div>
                   </button>
@@ -1668,7 +1668,7 @@ export default function NexusIDE() {
             </div>
 
             <div className="border-t border-[#202020] pt-3">
-              <label className="text-neutral-400 uppercase text-[10px] tracking-wider block mb-1.5 font-semibold">
+              <label className="text-neutral-400 uppercase text-[11px] tracking-wider block mb-1.5 font-semibold">
                 FalkorDB Graph Engine
               </label>
               <div className="bg-[#121212] border border-[#222222] rounded-xl p-3 space-y-1.5 text-neutral-300">
@@ -1690,16 +1690,16 @@ export default function NexusIDE() {
             </div>
 
             <div className="border-t border-[#202020] pt-3">
-              <label className="text-neutral-400 uppercase text-[10px] tracking-wider block mb-1.5 font-semibold">
+              <label className="text-neutral-400 uppercase text-[11px] tracking-wider block mb-1.5 font-semibold">
                 Design Tokens (DESIGN.md)
               </label>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded bg-[#f54e00] text-white text-[10px]">#f54e00 CTA</span>
-                <span className="px-2 py-0.5 rounded bg-[#dfa88f] text-neutral-900 text-[10px]">Thinking</span>
-                <span className="px-2 py-0.5 rounded bg-[#9fc9a2] text-neutral-900 text-[10px]">Grep</span>
-                <span className="px-2 py-0.5 rounded bg-[#9fbbe0] text-neutral-900 text-[10px]">Read</span>
-                <span className="px-2 py-0.5 rounded bg-[#c0a8dd] text-neutral-900 text-[10px]">Edit</span>
-                <span className="px-2 py-0.5 rounded bg-[#c08532] text-white text-[10px]">Done</span>
+                <span className="px-2 py-0.5 rounded bg-[#f54e00] text-white text-[11px]">#f54e00 CTA</span>
+                <span className="px-2 py-0.5 rounded bg-[#dfa88f] text-neutral-900 text-[11px]">Thinking</span>
+                <span className="px-2 py-0.5 rounded bg-[#9fc9a2] text-neutral-900 text-[11px]">Grep</span>
+                <span className="px-2 py-0.5 rounded bg-[#9fbbe0] text-neutral-900 text-[11px]">Read</span>
+                <span className="px-2 py-0.5 rounded bg-[#c0a8dd] text-neutral-900 text-[11px]">Edit</span>
+                <span className="px-2 py-0.5 rounded bg-[#c08532] text-white text-[11px]">Done</span>
               </div>
             </div>
           </div>

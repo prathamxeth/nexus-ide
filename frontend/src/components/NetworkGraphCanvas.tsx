@@ -224,7 +224,7 @@ export default function NetworkGraphCanvas({
       <div className="h-10 px-3 border-b border-[#1e1e1e] bg-[#080808] flex items-center justify-between shrink-0 z-20 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {hasHighlighted ? (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-950/90 border border-red-500/60 text-[10px] font-mono text-red-200 animate-pulse truncate shadow-sm shrink-0">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-950/90 border border-red-500/60 text-[11px] font-mono text-red-200 animate-pulse truncate shadow-sm shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 shadow-[0_0_6px_#ef4444]" />
               <span className="truncate max-w-[110px] font-medium">Blast Radius</span>
             </div>
@@ -242,7 +242,7 @@ export default function NetworkGraphCanvas({
             onClick={() => setIsSearchOpen(!isSearchOpen)}
             className="flex items-center gap-1.5 text-xs font-mono text-neutral-300 hover:text-white cursor-pointer px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] transition-colors"
           >
-            <span className="text-[10px] text-neutral-400 uppercase hidden sm:inline">Node:</span>
+            <span className="text-[11px] text-neutral-400 uppercase hidden sm:inline">Node:</span>
             <span className="max-w-[70px] sm:max-w-[100px] truncate text-neutral-100 font-semibold">{selectedNodeId || "Search"}</span>
             <ChevronDown size={11} className="text-neutral-400 shrink-0" />
           </button>
@@ -281,7 +281,7 @@ export default function NetworkGraphCanvas({
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: nodeColor }} />
                         <span className="truncate">{n.label}</span>
                       </div>
-                      <span className="text-[10px] text-neutral-500 uppercase ml-2">{n.type}</span>
+                      <span className="text-[11px] text-neutral-500 uppercase ml-2">{n.type}</span>
                     </div>
                   );
                 })}
@@ -511,7 +511,7 @@ export default function NetworkGraphCanvas({
 
             {isFilterOpen && (
               <div className="absolute bottom-9 left-0 w-44 bg-[#111111] border border-[#282828] rounded-xl shadow-2xl p-2 z-40 flex flex-col gap-1">
-                <div className="text-[10px] uppercase font-sans text-neutral-400 font-semibold px-2 py-1 border-b border-[#222222]">
+                <div className="text-[11px] uppercase font-sans text-neutral-400 font-semibold px-2 py-1 border-b border-[#222222]">
                   Toggle Visible Layers
                 </div>
                 {Object.keys(activeTypes).map((typeKey) => {
@@ -544,7 +544,7 @@ export default function NetworkGraphCanvas({
         {/* RIGHT SIDE: SHORTCUT HINTS & RUN BUTTON */}
         <div className="flex items-center gap-2 shrink-0">
           {dimensions.width >= 420 && (
-            <div className="flex items-center gap-1.5 text-[10px] font-sans text-neutral-500 select-none">
+            <div className="flex items-center gap-1.5 text-[11px] font-sans text-neutral-500 select-none">
               <span>Click: Focus</span>
               <span>•</span>
               <span>⌘+Click: Fold</span>

@@ -52,8 +52,13 @@ code, kbd, samp, pre, .font-mono {
   font-variant-numeric: tabular-nums;
 }
 
+::selection {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
 :focus-visible {
-  outline: 1.5px solid rgba(245, 78, 0, 0.8);
+  outline: 1.5px solid rgba(255, 255, 255, 0.25);
   outline-offset: 1px;
 }
 
