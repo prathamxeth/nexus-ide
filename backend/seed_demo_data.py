@@ -9,6 +9,10 @@ from __future__ import annotations
 
 import sys
 import time
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from services.falkor_client import get_falkor_service
 from services.memory_service import get_memory_service
 from services.ast_parser import get_ast_parser
