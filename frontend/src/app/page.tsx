@@ -22,7 +22,6 @@ import {
   Send, 
   RotateCw, 
   Filter, 
-  Layers, 
   Network, 
   Flame, 
   Bot, 
@@ -39,7 +38,6 @@ import {
   FileText
 } from "lucide-react";
 import NetworkGraphCanvas, { NodeItem, EdgeItem } from "@/components/NetworkGraphCanvas";
-import type { GraphBlock, GraphConnection } from "@/components/GraphCanvas";
 import { MCP_CODEBASE_REGISTRY } from "@/lib/mcp-codebase";
 
 // Dynamically import Monaco Editor and DiffEditor
@@ -63,17 +61,6 @@ const DiffEditor = dynamic(
     ),
   }
 );
-
-// Dynamically import Gravity UI Graph Canvas to avoid SSR issues
-const GraphCanvas = dynamic(() => import("@/components/GraphCanvas"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex flex-col items-center justify-center text-xs font-mono text-neutral-500 gap-2">
-      <RotateCw className="w-5 h-5 text-emerald-400 animate-spin" />
-      <span>Rendering Gravity UI 4-Lane Graph...</span>
-    </div>
-  ),
-});
 
 interface WorkspaceFile {
   name: string;
@@ -125,8 +112,8 @@ interface ChatMessage {
 }
 
 export default function NexusIDE() {
-  // Screen Split State: Default 60% IDE, 40% Live Graph
-  const [ideSplitPercent, setIdeSplitPercent] = useState<number>(60);
+  // Screen Split State: Default 75% IDE, 25% Live Graph
+  const [ideSplitPercent, setIdeSplitPercent] = useState<number>(75);
   const [isResizing, setIsResizing] = useState<boolean>(false);
 
   // IDE Workspace State
@@ -142,11 +129,8 @@ export default function NexusIDE() {
   // Graph Data State
   const [nodes, setNodes] = useState<NodeItem[]>([]);
   const [edges, setEdges] = useState<EdgeItem[]>([]);
-  const [gravityBlocks, setGravityBlocks] = useState<GraphBlock[]>([]);
-  const [gravityConnections, setGravityConnections] = useState<GraphConnection[]>([]);
   const [visitedBlockIds, setVisitedBlockIds] = useState<string[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeItem | null>(null);
-  const [canvasMode, setCanvasMode] = useState<"network" | "gravity">("network");
   const [isLoadingGraph, setIsLoadingGraph] = useState<boolean>(false);
   const [backendStatus, setBackendStatus] = useState<"connected" | "connecting" | "offline">("connecting");
 
@@ -165,23 +149,7 @@ export default function NexusIDE() {
     setIsLoadingGraph(true);
     let connected = false;
 
-    // 1. Fetch Gravity UI 4-Lane Graph Data (x=50, 350, 680, 1000)
-    try {
-      const targetFn = selectedNode?.label || "validateToken";
-      const gravRes = await fetch(`http://localhost:8000/api/graph/data?function_name=${encodeURIComponent(targetFn)}`);
-      if (gravRes.ok) {
-        const gravData = await gravRes.json();
-        if (gravData.blocks && gravData.blocks.length > 0) {
-          setGravityBlocks(gravData.blocks);
-          setGravityConnections(gravData.connections || []);
-          connected = true;
-        }
-      }
-    } catch {
-      // Backend starting up
-    }
-
-    // 2. Fetch Network Topology Data
+    // Fetch Network Topology Data from /api/graph/inspect
     try {
       const res = await fetch("http://localhost:8000/api/graph/inspect");
       if (res.ok) {
@@ -482,13 +450,6 @@ export default function NexusIDE() {
               if (eventName === "graph_traversal") {
                 const visited: string[] = parsed.visitedBlockIds || parsed.visited_block_ids || [];
                 setVisitedBlockIds(visited);
-
-                if (parsed.blocks && parsed.blocks.length > 0) {
-                  setGravityBlocks(parsed.blocks);
-                  if (parsed.connections) {
-                    setGravityConnections(parsed.connections);
-                  }
-                }
               } 
               // 2. Context Resolved: FalkorDB Brain & Provenance
               else if (eventName === "context_resolved") {
@@ -958,43 +919,16 @@ export default function NexusIDE() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. RIGHT 40% SCREEN: LIVE REAL-TIME GRAPH MACHINE MATCHING USER IMAGE */}
+      {/* 3. RIGHT 25% SCREEN: LIVE REAL-TIME NETWORK GRAPH MATCHING USER IMAGE */}
       {/* ========================================================================= */}
-      <div className="flex-1 h-full min-w-[300px] relative bg-[#080a0f] overflow-hidden flex flex-col">
-        {/* TOP CANVAS CONTROLLER: VIEW TOGGLE (FORCE vs 4-LANE SWIMLANES) */}
-        <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-          <div className="flex items-center bg-[#12151e]/90 backdrop-blur-md border border-[#232838] rounded-xl p-1 shadow-2xl">
-            <button
-              onClick={() => setCanvasMode("network")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
-                canvasMode === "network"
-                  ? "bg-sky-500/20 text-sky-300 border border-sky-500/40"
-                  : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              <Network size={13} />
-              <span>Topology Graph</span>
-            </button>
-            <button
-              onClick={() => setCanvasMode("gravity")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
-                canvasMode === "gravity"
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                  : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              <Layers size={13} />
-              <span>4-Lane Swimlanes</span>
-            </button>
+      <div className="flex-1 h-full min-w-[260px] relative bg-[#080a0f] overflow-hidden flex flex-col">
+        {/* TOP STATUS PILL (IF TRAVERSAL ACTIVE) */}
+        {visitedBlockIds.length > 0 && (
+          <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/80 border border-red-500/60 text-xs font-mono text-red-200 shadow-2xl animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
+            <span>Blast Radius: {visitedBlockIds.length} Nodes (Red)</span>
           </div>
-
-          {visitedBlockIds.length > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/80 border border-red-500/60 text-xs font-mono text-red-200 shadow-2xl animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
-              <span>Blast Radius Traversal: {visitedBlockIds.length} Nodes</span>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* BOTTOM KEYBOARD LEGEND MATCHING SCREENSHOT */}
         <div className="absolute bottom-5 right-5 z-20 flex items-center gap-4 text-[11px] font-sans text-neutral-400 select-none bg-[#12151e]/90 backdrop-blur-md border border-[#232838] px-3.5 py-1.5 rounded-xl shadow-2xl">
@@ -1014,34 +948,17 @@ export default function NexusIDE() {
 
         {/* GRAPH CANVAS ENGINE */}
         <div className="flex-1 w-full h-full min-h-0 relative">
-          {canvasMode === "network" ? (
-            <NetworkGraphCanvas
-              nodes={nodes}
-              edges={edges}
-              selectedNodeId={selectedNode ? selectedNode.id : null}
-              highlightedNodeIds={visitedBlockIds}
-              onSelectNode={handleSelectNode}
-              onRunAction={(node) => {
-                const target = node ? node.label : "validateToken";
-                setInputQuery(`Refactor ${target} with 60-second clock skew tolerance and add error telemetry`);
-              }}
-            />
-          ) : (
-            <GraphCanvas
-              blocks={gravityBlocks}
-              connections={gravityConnections}
-              highlightedBlockIds={visitedBlockIds}
-              onSelectBlock={(block) => {
-                const title = block.title || block.id;
-                const matchedNode = nodes.find((n) => n.id === block.id || n.label === title);
-                if (matchedNode) {
-                  handleSelectNode(matchedNode);
-                } else {
-                  handleSelectNode({ id: block.id, label: title, type: block.type });
-                }
-              }}
-            />
-          )}
+          <NetworkGraphCanvas
+            nodes={nodes}
+            edges={edges}
+            selectedNodeId={selectedNode ? selectedNode.id : null}
+            highlightedNodeIds={visitedBlockIds}
+            onSelectNode={handleSelectNode}
+            onRunAction={(node) => {
+              const target = node ? node.label : "validateToken";
+              setInputQuery(`Refactor ${target} with 60-second clock skew tolerance and add error telemetry`);
+            }}
+          />
         </div>
       </div>
     </div>
