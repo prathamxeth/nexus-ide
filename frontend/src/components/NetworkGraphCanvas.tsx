@@ -412,6 +412,27 @@ export default function NetworkGraphCanvas({
     return set;
   }, [selectedNodeId, currentGraphData.links]);
 
+  // Centroid-based camera centering and fit
+  const handleFit = useCallback(() => {
+    if (!fgRef.current || currentGraphData.nodes.length === 0) return;
+    const validNodes = currentGraphData.nodes.filter(
+      (n: any) => typeof n.x === "number" && typeof n.y === "number" && !isNaN(n.x) && !isNaN(n.y)
+    );
+    if (validNodes.length > 0) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const n of validNodes) {
+        if (n.x < minX) minX = n.x;
+        if (n.x > maxX) maxX = n.x;
+        if (n.y < minY) minY = n.y;
+        if (n.y > maxY) maxY = n.y;
+      }
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+      fgRef.current.centerAt(midX, midY, 200);
+    }
+    fgRef.current.zoomToFit(280, viewMode === "flowchart" ? 54 : 36);
+  }, [currentGraphData.nodes, viewMode]);
+
   // Center camera on selected or real-time changed node smoothly
   useEffect(() => {
     if (!fgRef.current) return;
@@ -419,7 +440,7 @@ export default function NetworkGraphCanvas({
     if (targetId) {
       const target = currentGraphData.nodes.find((n) => n.id === targetId || n.label === targetId);
       if (target && target.x !== undefined && target.y !== undefined) {
-        fgRef.current.centerAt(target.x, target.y, 400);
+        fgRef.current.centerAt(target.x, target.y, 350);
       }
     }
   }, [selectedNodeId, realtimeChangedNodeIds, currentGraphData.nodes]);
@@ -431,22 +452,26 @@ export default function NetworkGraphCanvas({
       if (viewMode === "graph" && layoutMode === "cluster") {
         fgRef.current.d3Force("charge")?.strength?.(-110)?.distanceMax?.(260)?.distanceMin?.(25);
         fgRef.current.d3Force("link")?.distance?.(55);
+      } else if (viewMode === "flowchart") {
+        fgRef.current.d3Force("charge")?.strength?.(-130)?.distanceMax?.(280);
       }
     } catch {
       // Safe fallback
     }
     const timer = setTimeout(() => {
-      fgRef.current?.zoomToFit(380, viewMode === "flowchart" ? 44 : 32);
+      handleFit();
     }, 120);
     return () => clearTimeout(timer);
   }, [
     viewMode,
+    layoutMode,
     currentGraphData.nodes.length,
     currentGraphData.links.length,
     highlightedNodeIds,
     realtimeChangedNodeIds,
     dimensions.width,
     dimensions.height,
+    handleFit,
   ]);
 
   // Zoom control handlers
@@ -462,11 +487,6 @@ export default function NetworkGraphCanvas({
     fgRef.current.zoom(Math.max(currentZoom / 1.35, 0.1), 250);
   };
 
-  const handleFit = () => {
-    if (!fgRef.current) return;
-    fgRef.current.zoomToFit(380, 32);
-  };
-
   const handleSwitchLayout = (mode: "tree" | "cluster") => {
     setLayoutMode(mode);
     setTimeout(() => {
@@ -476,9 +496,9 @@ export default function NetworkGraphCanvas({
           fgRef.current.d3Force("link")?.distance?.(55);
         }
         fgRef.current.d3ReheatSimulation?.();
-        fgRef.current.zoomToFit(380, 32);
+        handleFit();
       }
-    }, 100);
+    }, 80);
   };
 
   // Handle node click
@@ -550,7 +570,7 @@ export default function NetworkGraphCanvas({
               onClick={() => {
                 userPrefersGraphRef.current = true;
                 setViewMode("graph");
-                setTimeout(() => fgRef.current?.zoomToFit(380, 36), 80);
+                setTimeout(handleFit, 60);
               }}
               className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10.5px] font-mono transition-colors cursor-pointer ${
                 viewMode === "graph"
@@ -560,13 +580,13 @@ export default function NetworkGraphCanvas({
               title="Full project code graph"
             >
               <Network size={11} className={viewMode === "graph" ? "text-[#f54e00]" : "text-neutral-400"} />
-              <span className={dimensions.width < 340 ? "hidden" : "inline"}>Graph</span>
+              <span>Graph</span>
             </button>
             <button
               onClick={() => {
                 userPrefersGraphRef.current = false;
                 setViewMode("flowchart");
-                setTimeout(() => fgRef.current?.zoomToFit(380, 42), 80);
+                setTimeout(handleFit, 60);
               }}
               className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10.5px] font-mono transition-colors cursor-pointer ${
                 viewMode === "flowchart"
@@ -576,7 +596,7 @@ export default function NetworkGraphCanvas({
               title={`File logic flowchart for ${activeFileName || "current file"}`}
             >
               <Workflow size={11} className={viewMode === "flowchart" ? "text-[#f54e00]" : "text-neutral-400"} />
-              <span className="truncate max-w-[85px]">{activeFileName ? `Flow: ${activeFileName}` : "Flowchart"}</span>
+              <span className="truncate max-w-[80px]">{activeFileName ? `Flow: ${activeFileName}` : "Flowchart"}</span>
               {realtimeChangedSet.size > 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#e5c07b] animate-pulse" />}
             </button>
           </div>
@@ -593,32 +613,18 @@ export default function NetworkGraphCanvas({
               <span>Exact Change</span>
             </div>
           ) : null}
-
-          {/* CODE MAP OVERVIEW BUTTON */}
-          <button
-            id="hierarchy-toggle-btn"
-            onClick={() => setIsHierarchyOpen(!isHierarchyOpen)}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-[6px] border text-[11px] font-mono transition-colors cursor-pointer shrink-0 ${
-              isHierarchyOpen
-                ? "bg-[#1f1f1f] border-[#f54e00] text-white"
-                : "bg-transparent border-[#262626] hover:border-[#383838] text-neutral-300 hover:text-white"
-            }`}
-            title="Toggle Code Flow & Structure Map"
-          >
-            <Workflow size={11} className={isHierarchyOpen ? "text-[#f54e00]" : "text-neutral-400"} />
-            <span>Map</span>
-          </button>
         </div>
 
         {/* NODES SEARCH DROPDOWN */}
         <div ref={searchDropdownRef} className="relative shrink-0">
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="flex items-center gap-1.5 text-xs font-mono text-neutral-300 hover:text-white cursor-pointer px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] transition-colors"
+            className="flex items-center gap-1 text-[11px] font-mono text-neutral-300 hover:text-white cursor-pointer px-2 py-1 rounded-[6px] bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] transition-colors shrink-0"
+            title="Search code nodes"
           >
-            <span className="text-[11px] text-neutral-400 uppercase hidden sm:inline">Item:</span>
-            <span className="max-w-[70px] sm:max-w-[100px] truncate text-neutral-100 font-semibold">{selectedNodeId || "Search"}</span>
-            <ChevronDown size={11} className="text-neutral-400 shrink-0" />
+            <Search size={11} className="text-neutral-400 shrink-0" />
+            <span className="max-w-[70px] truncate text-neutral-200">{selectedNodeId || "Search"}</span>
+            <ChevronDown size={10} className="text-neutral-500 shrink-0" />
           </button>
 
           {/* Dropdown Popover */}
@@ -712,19 +718,22 @@ export default function NetworkGraphCanvas({
             <FileCode size={10} className={realtimeChangedSet.size > 0 ? "text-[#e5c07b]" : "text-neutral-400"} />
             <span>{activeFileName || "auth.ts"}</span>
           </span>
-          <ChevronRight size={9} className="text-neutral-600 shrink-0" />
-
-          {/* SUBTOPICS (Function / Call Target) */}
-          <span
-            onClick={() => {
-              const activeNode = graphData.nodes.find((n) => n.id === (selectedNodeId || "validateToken"));
-              if (activeNode) onSelectNode(activeNode);
-            }}
-            className="px-1.5 py-0.5 rounded text-[#f54e00] bg-[#f54e00]/10 border border-[#f54e00]/30 shrink-0 font-medium cursor-pointer text-[10px]"
-            title="Active Function (Subtopic)"
-          >
-            {selectedNodeId || "validateToken"}
-          </span>
+          {/* SUBTOPICS (Function / Call Target) - Only render if a specific item is selected */}
+          {selectedNodeId && (
+            <>
+              <ChevronRight size={9} className="text-neutral-600 shrink-0" />
+              <span
+                onClick={() => {
+                  const activeNode = graphData.nodes.find((n) => n.id === selectedNodeId);
+                  if (activeNode) onSelectNode(activeNode);
+                }}
+                className="px-1.5 py-0.5 rounded text-[#f54e00] bg-[#f54e00]/10 border border-[#f54e00]/30 shrink-0 font-medium cursor-pointer text-[10px] max-w-[130px] truncate"
+                title={`Active Function: ${selectedNodeId}`}
+              >
+                {selectedNodeId}
+              </span>
+            </>
+          )}
 
           {/* REAL-TIME EDITED PULSE BADGE */}
           {realtimeChangedSet.size > 0 && (
@@ -899,7 +908,28 @@ export default function NetworkGraphCanvas({
           d3VelocityDecay={0.35}
           d3AlphaDecay={0.03}
           onEngineStop={() => {
-            fgRef.current?.zoomToFit(250, viewMode === "flowchart" ? 40 : 24);
+            handleFit();
+          }}
+          // Hit area detection matching world coordinates
+          nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
+            if (viewMode === "flowchart") {
+              const isFile = Boolean(node.isFileRoot);
+              const isEdited = Boolean(node.isEdited) || realtimeChangedSet.has(String(node.id));
+              const cardWidth = isFile ? 88 : (isEdited && node.changeSnippet) ? 128 : 100;
+              const cardHeight = (isEdited && node.changeSnippet) ? 26 : 19;
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.rect(node.x - cardWidth / 2, node.y - cardHeight / 2, cardWidth, cardHeight);
+              ctx.fill();
+            } else {
+              const nid = String(node.id);
+              const isBig = nid === "root" || nid === "src";
+              const radius = isBig ? 13 : 8;
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
+              ctx.fill();
+            }
           }}
           // Link styling: clean monochrome neutral connections or flowchart flow
           linkColor={(link: any) => {
@@ -944,8 +974,9 @@ export default function NetworkGraphCanvas({
               const isCaller = Boolean(node.isCaller);
               const isFile = Boolean(node.isFileRoot);
 
-              const cardWidth = Math.max(125 / globalScale, 85);
-              const cardHeight = isEdited ? Math.max(38 / globalScale, 28) : Math.max(26 / globalScale, 20);
+              // Fixed world dimensions proportional to DAG layout (dagLevelDistance ~58)
+              const cardWidth = isFile ? 88 : (isEdited && node.changeSnippet) ? 128 : 100;
+              const cardHeight = (isEdited && node.changeSnippet) ? 26 : 19;
               const halfW = cardWidth / 2;
               const halfH = cardHeight / 2;
 
@@ -954,27 +985,27 @@ export default function NetworkGraphCanvas({
               // Card Glow
               if (isEdited) {
                 ctx.shadowColor = "rgba(229, 192, 123, 0.85)";
-                ctx.shadowBlur = 12 / globalScale;
+                ctx.shadowBlur = 6;
               } else if (isHighlighted) {
                 ctx.shadowColor = "rgba(239, 68, 68, 0.85)";
-                ctx.shadowBlur = 12 / globalScale;
+                ctx.shadowBlur = 6;
               } else if (isSelected) {
                 ctx.shadowColor = "rgba(245, 78, 0, 0.85)";
-                ctx.shadowBlur = 9 / globalScale;
+                ctx.shadowBlur = 6;
               }
 
               // Card Background
               ctx.fillStyle = isEdited
-                ? "rgba(25, 19, 10, 0.96)"
+                ? "rgba(24, 18, 9, 0.96)"
                 : isHighlighted
                 ? "rgba(35, 12, 16, 0.96)"
                 : isSelected
-                ? "rgba(26, 12, 6, 0.96)"
-                : "rgba(12, 12, 12, 0.95)";
+                ? "rgba(28, 12, 6, 0.96)"
+                : "rgba(14, 14, 14, 0.95)";
 
               ctx.beginPath();
               if (typeof ctx.roundRect === "function") {
-                ctx.roundRect(node.x - halfW, node.y - halfH, cardWidth, cardHeight, 3.5 / globalScale);
+                ctx.roundRect(node.x - halfW, node.y - halfH, cardWidth, cardHeight, 3);
               } else {
                 ctx.rect(node.x - halfW, node.y - halfH, cardWidth, cardHeight);
               }
@@ -992,45 +1023,61 @@ export default function NetworkGraphCanvas({
                 : isCaller
                 ? "#63478c"
                 : "#242424";
-              ctx.lineWidth = (isEdited || isHighlighted || isSelected) ? 1.6 / globalScale : 1.0 / globalScale;
+              ctx.lineWidth = (isEdited || isHighlighted || isSelected) ? 1.4 : 0.9;
               ctx.stroke();
 
               ctx.shadowBlur = 0;
 
-              // Title Text
-              const fontSize = Math.max(7.5 / globalScale, 2.6);
-              ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
+              // Title Text with truncation
+              const titleFontSize = 6.4;
+              ctx.font = `600 ${titleFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
               ctx.textAlign = "left";
               ctx.textBaseline = "middle";
 
-              const paddingX = 7 / globalScale;
-              const titleY = isEdited ? node.y - 6 / globalScale : node.y;
+              const paddingX = 6;
+              const titleY = (isEdited && node.changeSnippet) ? node.y - 4.5 : node.y;
 
-              ctx.fillStyle = isEdited ? "#ffe2a3" : isHighlighted ? "#fca5a5" : isSelected ? "#ffffff" : isFile ? "#e4e4e7" : "#d4d4d8";
-              ctx.fillText(nLabel || nid, node.x - halfW + paddingX, titleY);
+              ctx.fillStyle = isEdited
+                ? "#ffe2a3"
+                : isHighlighted
+                ? "#fca5a5"
+                : isSelected
+                ? "#ffffff"
+                : isFile
+                ? "#e4e4e7"
+                : "#d4d4d8";
+
+              const rawTitle = nLabel || nid;
+              const maxTitleLen = (isEdited && node.changeSnippet) ? 15 : isFile ? 13 : 16;
+              const displayTitle = rawTitle.length > maxTitleLen ? `${rawTitle.slice(0, maxTitleLen - 1)}…` : rawTitle;
+              ctx.fillText(displayTitle, node.x - halfW + paddingX, titleY);
 
               // Subtitle / Exact Change Detail
               if (isEdited && node.changeSnippet) {
-                const subFontSize = Math.max(6 / globalScale, 2.1);
+                const subFontSize = 4.6;
                 ctx.font = `500 ${subFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.fillStyle = "#e5c07b";
-                ctx.fillText(String(node.changeSnippet), node.x - halfW + paddingX, node.y + 7 / globalScale);
-              } else if (node.desc) {
-                const subFontSize = Math.max(6 / globalScale, 2.1);
+                const rawSnippet = String(node.changeSnippet);
+                const displaySnippet = rawSnippet.length > 25 ? `${rawSnippet.slice(0, 24)}…` : rawSnippet;
+                ctx.fillText(displaySnippet, node.x - halfW + paddingX, node.y + 5.5);
+              } else if (node.desc && isFile) {
+                const subFontSize = 4.4;
                 ctx.font = `400 ${subFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.fillStyle = "#71717a";
-                ctx.fillText(String(node.desc), node.x - halfW + paddingX, node.y + 5.5 / globalScale);
+                const rawDesc = String(node.desc);
+                const displayDesc = rawDesc.length > 20 ? `${rawDesc.slice(0, 19)}…` : rawDesc;
+                ctx.fillText(displayDesc, node.x - halfW + paddingX, node.y + 5.0);
               }
 
               // Badges on right side
               if (isEdited) {
-                const badgeFont = Math.max(5.5 / globalScale, 2.0);
+                const badgeFont = 4.4;
                 ctx.font = `700 ${badgeFont}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#e5c07b";
                 ctx.fillText("● EDITED", node.x + halfW - paddingX, titleY);
               } else if (isHighlighted) {
-                const badgeFont = Math.max(5.5 / globalScale, 2.0);
+                const badgeFont = 4.4;
                 ctx.font = `700 ${badgeFont}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#ef4444";
