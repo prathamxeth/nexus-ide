@@ -13,13 +13,25 @@ import {
   Activity, Radio, HelpCircle, PanelRight, PanelBottom, PanelLeft,
   ChevronUp, CornerDownLeft, FileText, Send, Mic, ThumbsUp, ThumbsDown,
   Camera, Globe, Eye, History, MoreHorizontal, Sliders, CheckSquare,
-  Compass, Workflow, ArrowUp
+  Compass, Workflow, ArrowUp, Code2
 } from "lucide-react";
 
+import dynamic from "next/dynamic";
 import { GraphViewer } from "@/components/GraphViewer";
+import type { GraphBlock, GraphConnection, GraphCanvasHandle } from "@/components/GraphCanvas";
 import { SettingsModal } from "@/components/SettingsModal";
 import { CommandPalette } from "@/components/CommandPalette";
 import { playUiSound } from "@/lib/sound";
+
+// Dynamically load Gravity UI Graph client-side only (avoid SSR ResizeObserver/canvas errors)
+const GraphCanvasViewer = dynamic(() => import("@/components/GraphCanvas"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center font-mono text-xs text-neutral-500 bg-[#121212]">
+      Loading Graph Canvas...
+    </div>
+  ),
+});
 
 // Graph data interfaces for FalkorDB AST engine
 export interface GraphNode {
@@ -497,6 +509,170 @@ export default function GraphiCode() {
     ]
   });
 
+  // View Modes (True Graph-First IDE): Code-First (70/30), Split (50/50), Graph-First (75/25)
+  const [ideViewMode, setIdeViewMode] = useState<"code-first" | "split" | "graph-first">("split");
+  const monacoEditorRef = useRef<any>(null);
+  const graphCanvasRef = useRef<GraphCanvasHandle>(null);
+
+  // Two-Way IDE Synchronization: Click graph block -> Switch file + Scroll Monaco to declaration
+  const handleSelectGraphBlock = (block: any) => {
+    playUiSound("click");
+    const blockId = String(block?.id || block || "");
+    let targetFile = block?.file;
+    if (!targetFile || targetFile.startsWith("falkordb://") || targetFile.startsWith("github://")) {
+      if (blockId.includes("billing") || blockId.includes("processInvoice")) targetFile = "billing.ts";
+      else if (blockId.includes("finance") || blockId.includes("auditAccount")) targetFile = "finance.ts";
+      else targetFile = "auth.ts";
+    }
+
+    // Automatically switch Monaco editor to the corresponding file
+    if (targetFile) {
+      handleSelectTab(targetFile);
+    }
+
+    // Scroll Monaco to the function's declaration line
+    const targetLine = block?.data?.line || (targetFile === "auth.ts" ? 14 : targetFile === "billing.ts" ? 18 : targetFile === "finance.ts" ? 22 : 1);
+    if (monacoEditorRef.current) {
+      setTimeout(() => {
+        try {
+          monacoEditorRef.current.revealLineInCenter(targetLine);
+          monacoEditorRef.current.setPosition({ lineNumber: targetLine, column: 1 });
+          monacoEditorRef.current.focus();
+        } catch (err) {
+          console.warn("Monaco reveal line error:", err);
+        }
+      }, 60);
+    }
+  };
+
+  // Active blocks for @gravity-ui/graph interactive canvas
+  const activeBlocks: GraphBlock[] = React.useMemo(() => {
+    if (graphData && graphData.nodes && graphData.nodes.length > 0) {
+      return graphData.nodes.map((node: any, idx: number) => {
+        const id = String(node.id || node.name || node.label || `node_${idx}`);
+        const isFocus = id.includes("validateToken") || node.group === "focus" || node.layer === "ast";
+        const isBlast = id.includes("processInvoice") || id.includes("auditAccount") || node.group === "blast" || node.layer === "blast";
+        const isMemory = id.includes("RULE") || node.group === "memory" || node.layer === "memory";
+        const isPR = id.includes("PR") || node.group === "pr" || node.layer === "company";
+
+        const type = isBlast ? "blast_radius" : isMemory ? "memory" : isPR ? "company_pr" : "function";
+        
+        let file = node.file || "";
+        if (!file) {
+          if (id.includes("billing") || id.includes("processInvoice")) file = "billing.ts";
+          else if (id.includes("finance") || id.includes("auditAccount")) file = "finance.ts";
+          else if (id.includes("validateToken") || id.includes("auth")) file = "auth.ts";
+          else if (isMemory) file = "falkordb://memory/rules";
+          else if (isPR) file = "github://nexus-ide/pull/104";
+        }
+
+        const isHop2 = id.includes("audit") || node.metadata?.hop === 2;
+
+        return {
+          id,
+          title: node.label || node.name || id,
+          type,
+          file,
+          data: {
+            signature: isFocus ? "validateToken(token: string): boolean" : undefined,
+            memory_rule: isMemory ? (node.metadata?.rule || (id.includes("Reject") ? "Reject tokens with alg='none' under all conditions" : "Must check exp claim with clock skew <= 60s")) : undefined,
+            hop: isHop2 ? 2 : 1,
+            pr_id: 104,
+            author: "@alex.chen",
+            ticket: "SEC-402",
+            line: file === "auth.ts" ? 14 : file === "billing.ts" ? 18 : file === "finance.ts" ? 22 : 1,
+          },
+          x: isFocus ? 0 : isBlast ? (isHop2 ? -340 : -340) : isMemory ? 340 : 0,
+          y: isFocus ? 0 : isBlast ? (isHop2 ? 100 : -80) : isMemory ? (id.includes("Reject") ? 100 : -80) : -180,
+        };
+      });
+    }
+    return [
+      {
+        id: "validateToken",
+        title: "validateToken()",
+        type: "function",
+        file: "auth.ts",
+        data: { signature: "validateToken(token: string): boolean", line: 14 },
+        x: 0,
+        y: 0,
+      },
+      {
+        id: "processInvoice",
+        title: "processInvoice()",
+        type: "blast_radius",
+        file: "billing.ts",
+        data: { hop: 1, callers: 2, line: 18 },
+        x: -340,
+        y: -80,
+      },
+      {
+        id: "auditAccount",
+        title: "auditAccount()",
+        type: "blast_radius",
+        file: "finance.ts",
+        data: { hop: 2, callers: 1, line: 22 },
+        x: -340,
+        y: 100,
+      },
+      {
+        id: "rule_exp",
+        title: "RULE: Must check exp",
+        type: "memory",
+        file: "falkordb://memory/rules",
+        data: { memory_rule: "Must check exp claim with clock skew <= 60s" },
+        x: 340,
+        y: -80,
+      },
+      {
+        id: "rule_alg",
+        title: "RULE: Reject 'none' alg",
+        type: "memory",
+        file: "falkordb://memory/rules",
+        data: { memory_rule: "Reject tokens with alg='none' under all conditions" },
+        x: 340,
+        y: 100,
+      },
+      {
+        id: "pr_104",
+        title: "PR #104 (@alex.chen)",
+        type: "company_pr",
+        file: "github://nexus-ide/pull/104",
+        data: { pr_id: 104, author: "@alex.chen", ticket: "SEC-402" },
+        x: 0,
+        y: -180,
+      },
+    ];
+  }, [graphData]);
+
+  const activeConnections: GraphConnection[] = React.useMemo(() => {
+    if (graphData && graphData.links && graphData.links.length > 0) {
+      return graphData.links.map((link: any, idx: number) => {
+        const s = typeof link.source === "object" ? link.source.id : String(link.source);
+        const t = typeof link.target === "object" ? link.target.id : String(link.target);
+        const isBlast = s.includes("Invoice") || s.includes("audit") || link.type === "CALLS";
+        const isMemory = s.includes("RULE") || link.type === "CONSTRAINED_BY";
+        const isPR = s.includes("PR") || link.type === "AUTHORED_BY";
+
+        return {
+          id: `conn_${idx}`,
+          source: s,
+          target: t,
+          type: isBlast ? "blast" : isMemory ? "memory" : isPR ? "company" : "function",
+          color: isBlast ? "#ef4444" : isMemory ? "#f59e0b" : isPR ? "#10b981" : "#3b82f6",
+          label: link.type || (isBlast ? "CALLS" : isMemory ? "CONSTRAINED_BY" : isPR ? "AUTHORED_BY" : "CONNECTED"),
+        };
+      });
+    }
+    return [
+      { id: "c1", source: "processInvoice", target: "validateToken", type: "blast", color: "#ef4444", label: "CALLS (Hop 1)" },
+      { id: "c2", source: "auditAccount", target: "validateToken", type: "blast", color: "#ef4444", label: "CALLS (Hop 2)" },
+      { id: "c3", source: "rule_exp", target: "validateToken", type: "memory", color: "#f59e0b", label: "CONSTRAINED_BY" },
+      { id: "c4", source: "rule_alg", target: "validateToken", type: "memory", color: "#f59e0b", label: "CONSTRAINED_BY" },
+      { id: "c5", source: "pr_104", target: "validateToken", type: "company", color: "#10b981", label: "AUTHORED_BY" },
+    ];
+  }, [graphData]);
+
   useEffect(() => {
     setIsMounted(true);
     const handleExtensionErrors = (e: ErrorEvent) => {
@@ -768,6 +944,7 @@ export default function GraphiCode() {
                 setModifiedCode(patch);
               } else if (eventType === "done") {
                 setIsProcessing(false);
+                graphCanvasRef.current?.zoomToCenter(150);
                 setMessages(prev => [
                   ...prev,
                   {
@@ -806,6 +983,7 @@ function decodePayload(token: string) {
 `;
         setModifiedCode(fallbackPatch);
         setIsProcessing(false);
+        graphCanvasRef.current?.zoomToCenter(150);
         setMessages(prev => [
           ...prev,
           {
@@ -933,16 +1111,69 @@ function decodePayload(token: string) {
           </div>
         </div>
 
-        {/* Center: Dynamic Window Title */}
-        <div 
-          onClick={() => {
-            playUiSound("switch");
-            setIsCommandPaletteOpen(true);
-          }}
-          className="text-xs font-mono text-neutral-300 hover:text-white flex items-center gap-2 cursor-pointer transition-colors"
-          title="Command Palette (⌘P / ⌘K)"
-        >
-          <span>{windowTitle}</span>
+        {/* Center: Dynamic Window Title & Segmented View Modes Toggle */}
+        <div className="flex items-center gap-3">
+          <div 
+            onClick={() => {
+              playUiSound("switch");
+              setIsCommandPaletteOpen(true);
+            }}
+            className="text-xs font-mono text-neutral-300 hover:text-white flex items-center gap-2 cursor-pointer transition-colors"
+            title="Command Palette (⌘P / ⌘K)"
+          >
+            <span>{windowTitle}</span>
+          </div>
+
+          {/* Segmented View Mode Toggle: Code-First (70/30) | Split (50/50) | Graph-First (75/25) */}
+          <div className="flex items-center bg-[#1c1c1c] border border-[#2d2d2d] rounded-md p-0.5 text-xs font-mono select-none shadow-inner">
+            <button
+              onClick={() => {
+                playUiSound("switch");
+                setIdeViewMode("code-first");
+              }}
+              title="Code-First Mode: 70% Monaco Editor, 30% Graph Canvas"
+              className={`px-2.5 py-0.5 rounded flex items-center gap-1.5 transition-all cursor-pointer ${
+                ideViewMode === "code-first"
+                  ? "bg-[#2c2c2c] text-white font-medium shadow-sm border border-white/10"
+                  : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              <Code2 size={12} className={ideViewMode === "code-first" ? "text-blue-400" : ""} />
+              <span>Code-First</span>
+            </button>
+
+            <button
+              onClick={() => {
+                playUiSound("switch");
+                setIdeViewMode("split");
+              }}
+              title="Split Mode: 50% Monaco Editor, 50% Graph Canvas"
+              className={`px-2.5 py-0.5 rounded flex items-center gap-1.5 transition-all cursor-pointer ${
+                ideViewMode === "split"
+                  ? "bg-[#2c2c2c] text-white font-medium shadow-sm border border-white/10"
+                  : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              <Columns2 size={12} className={ideViewMode === "split" ? "text-amber-400" : ""} />
+              <span>Split</span>
+            </button>
+
+            <button
+              onClick={() => {
+                playUiSound("switch");
+                setIdeViewMode("graph-first");
+              }}
+              title="Graph-First Mode: 75% Graph Canvas, 25% Inline Code Preview & Agent Drawer"
+              className={`px-2.5 py-0.5 rounded flex items-center gap-1.5 transition-all cursor-pointer ${
+                ideViewMode === "graph-first"
+                  ? "bg-[#2c2c2c] text-white font-medium shadow-sm border border-white/10"
+                  : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              <Network size={12} className={ideViewMode === "graph-first" ? "text-[#f43f5e]" : ""} />
+              <span>Graph-First</span>
+            </button>
+          </div>
         </div>
 
         {/* Right: Window Layout Controls & Settings */}
@@ -1969,72 +2200,234 @@ function decodePayload(token: string) {
               </div>
             ) : null}
 
-            {/* VIEW C: MONACO CODE EDITOR (Markdown or TypeScript) */}
+            {/* VIEW C: MONACO CODE EDITOR & INTERACTIVE GRAPH CANVAS (Controlled by View Modes: Code-First, Split, Graph-First) */}
             {activeTab !== "Review" && activeTab !== "FalkorDB Graph" && !isDiffMode && (
-              <div className="flex-1 w-full h-full min-h-0">
-                {isMounted ? (
-                  <Editor
-                    height="100%"
-                    language={activeTab.endsWith(".md") ? "markdown" : "typescript"}
-                    theme="vs-dark"
-                    value={files[activeTab] || ""}
-                    onChange={(val) => {
-                      if (val !== undefined) {
-                        setFiles((prev) => ({ ...prev, [activeTab]: val }));
-                      }
-                    }}
-                    options={{
-                      minimap: { enabled: true, maxColumn: 80 },
-                      fontSize: 13,
-                      fontFamily: "'JetBrains Mono', Menlo, Monaco, monospace",
-                      lineNumbers: "on",
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                      tabSize: 4,
-                      renderLineHighlight: "all",
-                      cursorBlinking: "smooth",
-                      smoothScrolling: true,
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center font-mono text-xs text-neutral-500">
-                    Loading Editor...
-                  </div>
+              <div className="flex-1 w-full h-full min-h-0 flex flex-row">
+                {ideViewMode === "code-first" && (
+                  <>
+                    <div className="w-[70%] h-full min-h-0 relative border-r border-[#242424]">
+                      {isMounted ? (
+                        <Editor
+                          height="100%"
+                          language={activeTab.endsWith(".md") ? "markdown" : "typescript"}
+                          theme="vs-dark"
+                          value={files[activeTab] || ""}
+                          onMount={(editor) => {
+                            monacoEditorRef.current = editor;
+                          }}
+                          onChange={(val) => {
+                            if (val !== undefined) {
+                              setFiles((prev) => ({ ...prev, [activeTab]: val }));
+                            }
+                          }}
+                          options={{
+                            minimap: { enabled: true, maxColumn: 80 },
+                            fontSize: 13,
+                            fontFamily: "'JetBrains Mono', Menlo, Monaco, monospace",
+                            lineNumbers: "on",
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true,
+                            tabSize: 4,
+                            renderLineHighlight: "all",
+                            cursorBlinking: "smooth",
+                            smoothScrolling: true,
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center font-mono text-xs text-neutral-500">
+                          Loading Editor...
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="w-[30%] h-full min-h-0 relative bg-[#121212] flex flex-col">
+                      <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
+                        <span className="flex items-center gap-1.5 text-neutral-300 font-semibold truncate">
+                          <Network size={12} className="text-amber-400 shrink-0" />
+                          <span>Graph Canvas (30%)</span>
+                        </span>
+                        <button
+                          onClick={() => graphCanvasRef.current?.zoomToCenter(150)}
+                          className="hover:text-white px-1.5 py-0.5 rounded bg-[#222] border border-white/5 text-[10px] cursor-pointer"
+                          title="Zoom to Center"
+                        >
+                          Center
+                        </button>
+                      </div>
+                      <div className="flex-1 w-full h-full min-h-0">
+                        <GraphCanvasViewer
+                          ref={graphCanvasRef}
+                          blocks={activeBlocks}
+                          connections={activeConnections}
+                          onSelectBlock={handleSelectGraphBlock}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {ideViewMode === "split" && (
+                  <>
+                    <div className="w-[50%] h-full min-h-0 relative border-r border-[#242424]">
+                      {isMounted ? (
+                        <Editor
+                          height="100%"
+                          language={activeTab.endsWith(".md") ? "markdown" : "typescript"}
+                          theme="vs-dark"
+                          value={files[activeTab] || ""}
+                          onMount={(editor) => {
+                            monacoEditorRef.current = editor;
+                          }}
+                          onChange={(val) => {
+                            if (val !== undefined) {
+                              setFiles((prev) => ({ ...prev, [activeTab]: val }));
+                            }
+                          }}
+                          options={{
+                            minimap: { enabled: true, maxColumn: 80 },
+                            fontSize: 13,
+                            fontFamily: "'JetBrains Mono', Menlo, Monaco, monospace",
+                            lineNumbers: "on",
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true,
+                            tabSize: 4,
+                            renderLineHighlight: "all",
+                            cursorBlinking: "smooth",
+                            smoothScrolling: true,
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center font-mono text-xs text-neutral-500">
+                          Loading Editor...
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="w-[50%] h-full min-h-0 relative bg-[#121212] flex flex-col">
+                      <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
+                        <span className="flex items-center gap-1.5 text-neutral-300 font-semibold truncate">
+                          <Network size={12} className="text-amber-400 shrink-0" />
+                          <span>Interactive AST Canvas (50%)</span>
+                        </span>
+                        <button
+                          onClick={() => graphCanvasRef.current?.zoomToCenter(150)}
+                          className="hover:text-white px-1.5 py-0.5 rounded bg-[#222] border border-white/5 text-[10px] cursor-pointer"
+                          title="Zoom to Center"
+                        >
+                          Center (150px)
+                        </button>
+                      </div>
+                      <div className="flex-1 w-full h-full min-h-0">
+                        <GraphCanvasViewer
+                          ref={graphCanvasRef}
+                          blocks={activeBlocks}
+                          connections={activeConnections}
+                          onSelectBlock={handleSelectGraphBlock}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {ideViewMode === "graph-first" && (
+                  <>
+                    <div className="w-[75%] h-full min-h-0 relative bg-[#121212] flex flex-col border-r border-[#242424]">
+                      <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
+                        <span className="flex items-center gap-1.5 text-neutral-300 font-semibold truncate">
+                          <Network size={12} className="text-[#f43f5e] shrink-0" />
+                          <span>Graph-First Architectural Canvas (75%)</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">Click block to jump</span>
+                          <button
+                            onClick={() => graphCanvasRef.current?.zoomToCenter(150)}
+                            className="hover:text-white px-1.5 py-0.5 rounded bg-[#222] border border-white/5 text-[10px] cursor-pointer"
+                            title="Zoom to Center"
+                          >
+                            Center
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex-1 w-full h-full min-h-0">
+                        <GraphCanvasViewer
+                          ref={graphCanvasRef}
+                          blocks={activeBlocks}
+                          connections={activeConnections}
+                          onSelectBlock={handleSelectGraphBlock}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="w-[25%] h-full min-h-0 relative flex flex-col bg-[#141414]">
+                      <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
+                        <span className="text-white font-medium truncate flex items-center gap-1">
+                          <FileCode size={12} className="text-blue-400" />
+                          <span>{activeTab}</span>
+                        </span>
+                      </div>
+                      <div className="flex-1 w-full h-full min-h-0">
+                        {isMounted ? (
+                          <Editor
+                            height="100%"
+                            language={activeTab.endsWith(".md") ? "markdown" : "typescript"}
+                            theme="vs-dark"
+                            value={files[activeTab] || ""}
+                            onMount={(editor) => {
+                              monacoEditorRef.current = editor;
+                            }}
+                            onChange={(val) => {
+                              if (val !== undefined) {
+                                setFiles((prev) => ({ ...prev, [activeTab]: val }));
+                              }
+                            }}
+                            options={{
+                              minimap: { enabled: false },
+                              fontSize: 12,
+                              fontFamily: "'JetBrains Mono', Menlo, Monaco, monospace",
+                              lineNumbers: "on",
+                              scrollBeyondLastLine: false,
+                              automaticLayout: true,
+                              tabSize: 2,
+                              renderLineHighlight: "all",
+                              cursorBlinking: "smooth",
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-mono text-xs text-neutral-500">
+                            Loading Editor...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
 
-            {/* VIEW D: STRATIFIED FALKORDB KNOWLEDGE GRAPH */}
+            {/* VIEW D: STRATIFIED FALKORDB KNOWLEDGE GRAPH (Dedicated Tab) */}
             {activeTab === "FalkorDB Graph" && (
-              <div className="flex-1 w-full h-full min-h-0 bg-[#0e0e0e] relative">
-                <GraphViewer
-                  graphData={{
-                    nodes: graphData.nodes as any,
-                    edges: graphData.links.map((l: any) => {
-                      const s = typeof l.source === "object" ? l.source.id : String(l.source);
-                      const t = typeof l.target === "object" ? l.target.id : String(l.target);
-                      return {
-                        source: s,
-                        target: t,
-                        type: l.type || (s.includes("rule") || s.includes("RULE") ? "CONSTRAINED_BY" : s.includes("pr") || s.includes("PR") ? "AUTHORED_BY" : "CALLS"),
-                      };
-                    }),
-                  }}
-                  focusNodeId="validateToken"
-                  blastRadiusNodeIds={["processInvoice", "auditAccount"]}
-                  memoryNodeIds={["RULE: Must check exp (skew <= 60s)", "RULE: Reject 'none' algorithm"]}
-                  onNodeClick={(node) => {
-                    playUiSound("click");
-                    const nid = String(node.id || node.name || node.label || "");
-                    if (nid.includes("billing") || nid.includes("processInvoice")) {
-                      handleSelectTab("billing.ts");
-                    } else if (nid.includes("finance") || nid.includes("auditAccount")) {
-                      handleSelectTab("finance.ts");
-                    } else if (nid.includes("validateToken") || nid.includes("auth")) {
-                      handleSelectTab("auth.ts");
-                    }
-                  }}
-                />
+              <div className="flex-1 w-full h-full min-h-0 bg-[#0e0e0e] relative flex flex-col">
+                <div className="h-7 px-3 bg-[#161616] border-b border-[#242424] flex items-center justify-between text-[11px] font-mono text-neutral-400 shrink-0 select-none">
+                  <span className="flex items-center gap-1.5 text-neutral-300 font-semibold">
+                    <Network size={12} className="text-amber-400" />
+                    FalkorDB Fullscreen Graph Canvas
+                  </span>
+                  <button
+                    onClick={() => graphCanvasRef.current?.zoomToCenter(150)}
+                    className="hover:text-white px-2 py-0.5 rounded bg-[#222] border border-white/5 text-[10px] cursor-pointer"
+                    title="Zoom to Center"
+                  >
+                    Center (150px)
+                  </button>
+                </div>
+                <div className="flex-1 w-full h-full min-h-0">
+                  <GraphCanvasViewer
+                    ref={graphCanvasRef}
+                    blocks={activeBlocks}
+                    connections={activeConnections}
+                    onSelectBlock={handleSelectGraphBlock}
+                  />
+                </div>
               </div>
             )}
 

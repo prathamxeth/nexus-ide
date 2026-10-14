@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@gravity-ui/graph": "^1.12.2",
+    "@gravity-ui/uikit": "^7.51.0",
     "@monaco-editor/react": "4.7.0",
     "clsx": "2.1.1",
     "lucide-react": "1.56.0",
