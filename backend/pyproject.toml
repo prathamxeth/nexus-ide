@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-ide-backend"
+version = "0.1.0"
+description = "Nexus IDE backend service powering AST parsing and FalkorDB graph-native code intelligence."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "falkordb>=1.0.8",
+    "tree-sitter>=0.22.0",
+    "tree-sitter-typescript>=0.21.0",
+    "tree-sitter-python>=0.21.0",
+    "pydantic>=2.6.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["services*", "main*"]

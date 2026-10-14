@@ -1,0 +1,8 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+falkordb>=1.0.8
+tree-sitter>=0.22.0
+tree-sitter-typescript>=0.21.0
+tree-sitter-python>=0.21.0
+pydantic>=2.6.0
+python-dotenv>=1.0.0
