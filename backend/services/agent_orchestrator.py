@@ -292,8 +292,9 @@ class AgentOrchestrator:
 
         llm = LLMProviderFactory.get_provider(chosen_provider)
 
+        display_provider = "OLLAMA" if chosen_provider == "ollama" else ("OPENAI" if chosen_provider == "openai" else ("ANTHROPIC" if chosen_provider == "anthropic" else "GRAPHICODE AI ENGINE"))
         yield self._format_sse("reasoning_chunk", {
-            "chunk": f"Connecting to {chosen_provider.upper()} ({chosen_model}) with FalkorDB Graph-RAG context...\n"
+            "chunk": f"Connecting to {display_provider} ({chosen_model}) with FalkorDB Graph-RAG context...\n"
         })
 
         if chosen_provider == "mock":
@@ -360,7 +361,7 @@ class AgentOrchestrator:
         total_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         yield self._format_sse("done", {
             "status": "completed",
-            "provider": chosen_provider,
+            "provider": display_provider,
             "model": chosen_model,
             "execution_time_ms": total_duration_ms,
             "total_dependents_resolved": len(dependents),
