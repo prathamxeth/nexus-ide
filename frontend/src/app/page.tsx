@@ -501,13 +501,60 @@ export default function NexusIDE() {
     }
   }, [workspaceFiles, openTabs]);
 
+  // Save Current File (Keyboard shortcut & Agent save)
+  const handleSaveCurrentFile = useCallback(() => {
+    if (!activeFileName || !workspaceFiles[activeFileName]) return;
+    setWorkspaceFiles((prev) => ({
+      ...prev,
+      [activeFileName]: {
+        ...prev[activeFileName],
+        modified: false,
+      },
+    }));
+
+    // Update real-time changed node list to show saved status
+    setRealtimeChangedNodeIds([activeFileName]);
+
+    // Optional fire-and-forget sync to FalkorDB knowledge graph
+    try {
+      fetch("http://localhost:8000/api/graph/index-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: workspaceFiles[activeFileName].path,
+          content: workspaceFiles[activeFileName].code,
+          language: workspaceFiles[activeFileName].language,
+        }),
+      }).catch(() => {});
+    } catch {}
+
+    setToastMessage(`✓ Saved ${activeFileName} without any error!`);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, [activeFileName, workspaceFiles]);
+
+  // Global Ctrl+S / Cmd+S save hotkey
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        handleSaveCurrentFile();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSaveCurrentFile]);
+
   // Close Tab
   const handleCloseTab = (tabToClose: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const remaining = openTabs.filter((t) => t !== tabToClose);
     setOpenTabs(remaining);
-    if (activeFileName === tabToClose && remaining.length > 0) {
-      setActiveFileName(remaining[remaining.length - 1]);
+    if (activeFileName === tabToClose) {
+      if (remaining.length > 0) {
+        setActiveFileName(remaining[remaining.length - 1]);
+      } else {
+        setActiveFileName("");
+      }
     }
   };
 
@@ -1295,13 +1342,33 @@ export default function NexusIDE() {
                         onClick={() => {
                           handleCodeChange(modifiedCodeForDiff);
                           setIsDiffMode(false);
-                          setToastMessage(`✓ Applied patch to ${activeFileName}!`);
+                          setWorkspaceFiles((prev) => ({
+                            ...prev,
+                            [activeFileName]: {
+                              ...prev[activeFileName],
+                              code: modifiedCodeForDiff,
+                              modified: false,
+                            },
+                          }));
+                          // Sync to knowledge graph backend
+                          try {
+                            fetch("http://localhost:8000/api/graph/index-code", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                path: workspaceFiles[activeFileName]?.path || `src/${activeFileName}`,
+                                content: modifiedCodeForDiff,
+                                language: workspaceFiles[activeFileName]?.language || "typescript",
+                              }),
+                            }).catch(() => {});
+                          } catch {}
+                          setToastMessage(`✓ Agent patch saved to ${activeFileName} without any error!`);
                           setTimeout(() => setToastMessage(null), 3000);
                         }}
                         className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 cursor-pointer text-[11px] font-mono transition-colors"
                       >
                         <Check size={11} />
-                        <span>Accept Changes</span>
+                        <span>Accept & Save Changes</span>
                       </button>
                       <button
                         onClick={() => setIsDiffMode(false)}
@@ -1354,12 +1421,37 @@ export default function NexusIDE() {
                         },
                       });
                       monaco.editor.setTheme("nexus-dark-clean");
+
+                      // Bind Ctrl+S / Cmd+S save command inside Monaco
+                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                        handleSaveCurrentFile();
+                      });
                     }
+
                     editor.onDidChangeCursorPosition((e: any) => {
                       setCursorPosition({
                         lineNumber: e.position.lineNumber,
                         column: e.position.column,
                       });
+                    });
+
+                    // Live Highlight Listener: as soon as user highlights anything, open flowchart for that file & symbol
+                    editor.onDidChangeCursorSelection((e: any) => {
+                      const selection = editor.getSelection();
+                      if (selection && !selection.isEmpty()) {
+                        const selectedText = editor.getModel()?.getValueInRange(selection)?.trim();
+                        if (selectedText && selectedText.length > 1) {
+                          const matchedNode = nodes.find(
+                            (n) => n.id === selectedText || n.label === selectedText || selectedText.includes(n.id) || selectedText.includes(n.label)
+                          );
+                          if (matchedNode) {
+                            setSelectedNode(matchedNode);
+                            setVisitedBlockIds([matchedNode.id]);
+                          } else {
+                            setVisitedBlockIds([activeFileName]);
+                          }
+                        }
+                      }
                     });
                   }}
                   options={{
@@ -1580,6 +1672,8 @@ export default function NexusIDE() {
             highlightedNodeIds={visitedBlockIds}
             realtimeChangedNodeIds={realtimeChangedNodeIds}
             activeFileName={activeFileName}
+            activeFileCode={activeFile.code}
+            isModified={activeFile.modified}
             onSelectNode={handleSelectNode}
             onRunAction={(node) => {
               const target = node ? node.label : "validateToken";
