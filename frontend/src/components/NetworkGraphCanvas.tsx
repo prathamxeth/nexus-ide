@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Filter, Play, Search, ChevronDown, Check, RotateCw } from "lucide-react";
+import { Filter, Play, Search, ChevronDown, Check, RotateCw, Maximize2, GitFork, Network } from "lucide-react";
 
 // Dynamically import react-force-graph-2d client-side only
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
@@ -68,6 +68,7 @@ export default function NetworkGraphCanvas({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
+  const [layoutMode, setLayoutMode] = useState<"tree" | "cluster">("tree");
 
   // Node type filters
   const [activeTypes, setActiveTypes] = useState<Record<string, boolean>>({
@@ -142,14 +143,21 @@ export default function NetworkGraphCanvas({
     }
   }, [selectedNodeId, graphData.nodes]);
 
-  // Initial fit
+  // Keep all nodes bounded within view: auto-fit on load, dimension resize, or layoutMode switch
   useEffect(() => {
     if (fgRef.current && graphData.nodes.length > 0) {
-      setTimeout(() => {
-        fgRef.current?.zoomToFit(400, 40);
-      }, 300);
+      try {
+        if (layoutMode === "cluster") {
+          // Bounded cluster forces to prevent spreading out of bounds
+          fgRef.current.d3Force("charge")?.strength?.(-55)?.distanceMax?.(160);
+        }
+      } catch {}
+      const timer = setTimeout(() => {
+        fgRef.current?.zoomToFit(350, 24);
+      }, 200);
+      return () => clearTimeout(timer);
     }
-  }, [graphData.nodes.length]);
+  }, [graphData.nodes.length, dimensions.width, dimensions.height, layoutMode]);
 
   // Handle node click
   const handleNodeClick = useCallback(
@@ -253,11 +261,18 @@ export default function NetworkGraphCanvas({
         height={dimensions.height}
         graphData={graphData}
         backgroundColor="#080a0f"
-        nodeRelSize={6}
+        nodeRelSize={5.5}
+        dagMode={layoutMode === "tree" ? "td" : undefined}
+        dagLevelDistance={44}
         onNodeClick={handleNodeClick}
         onBackgroundClick={() => onSelectNode(null)}
         cooldownTicks={120}
-        d3VelocityDecay={0.3}
+        warmupTicks={50}
+        d3VelocityDecay={0.4}
+        d3AlphaDecay={0.03}
+        onEngineStop={() => {
+          fgRef.current?.zoomToFit(250, 24);
+        }}
         // Link styling: fine white / grey connections
         linkColor={(link: any) => {
           if (!connectedNeighbors) return "#222a38";
@@ -363,16 +378,54 @@ export default function NetworkGraphCanvas({
         }}
       />
 
-      {/* BOTTOM FLOATING CONTROLS: FILTER NODE TYPES & RUN */}
-      <div className="absolute bottom-5 left-5 z-20 flex items-center gap-3">
+      {/* BOTTOM FLOATING CONTROLS: LAYOUT TOGGLE, FIT, FILTER & RUN */}
+      <div className="absolute bottom-5 left-5 z-20 flex items-center gap-2.5 flex-wrap">
+        {/* Layout Mode Pill: Tree vs Cluster */}
+        <div className="flex items-center bg-[#12151e]/90 border border-[#232838] rounded-xl p-0.5 shadow-2xl">
+          <button
+            onClick={() => setLayoutMode("tree")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
+              layoutMode === "tree"
+                ? "bg-sky-500/25 text-sky-200 border border-sky-500/40"
+                : "text-neutral-400 hover:text-white"
+            }`}
+            title="Tree Graph Layout (Structured Hierarchical)"
+          >
+            <GitFork size={12} className="text-sky-400" />
+            <span>Tree</span>
+          </button>
+          <button
+            onClick={() => setLayoutMode("cluster")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
+              layoutMode === "cluster"
+                ? "bg-sky-500/25 text-sky-200 border border-sky-500/40"
+                : "text-neutral-400 hover:text-white"
+            }`}
+            title="Compact Cluster Layout (Force Bounded)"
+          >
+            <Network size={12} className="text-emerald-400" />
+            <span>Cluster</span>
+          </button>
+        </div>
+
+        {/* Fit to View Button */}
+        <button
+          onClick={() => fgRef.current?.zoomToFit(300, 24)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#12151e]/90 hover:bg-[#1a1f2e] border border-[#232838] text-xs font-mono text-neutral-300 hover:text-white shadow-2xl transition-colors cursor-pointer"
+          title="Fit all nodes inside container"
+        >
+          <Maximize2 size={12} className="text-neutral-400" />
+          <span>Fit</span>
+        </button>
+
         {/* Filter Node Types Pill */}
         <div className="relative">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#12151e]/90 hover:bg-[#1a1f2e] border border-[#232838] text-xs font-mono text-neutral-200 hover:text-white shadow-2xl transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#12151e]/90 hover:bg-[#1a1f2e] border border-[#232838] text-xs font-mono text-neutral-200 hover:text-white shadow-2xl transition-colors cursor-pointer"
           >
-            <Filter size={13} className="text-neutral-400" />
-            <span>Filter Node Types</span>
+            <Filter size={12} className="text-neutral-400" />
+            <span>Filter</span>
           </button>
 
           {isFilterOpen && (
@@ -412,7 +465,7 @@ export default function NetworkGraphCanvas({
             const target = graphData.nodes.find((n) => n.id === selectedNodeId) || null;
             onRunAction?.(target);
           }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#12151e]/90 hover:bg-[#1a1f2e] border border-[#232838] text-xs font-mono text-neutral-200 hover:text-white shadow-2xl transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#12151e]/90 hover:bg-[#1a1f2e] border border-[#232838] text-xs font-mono text-neutral-200 hover:text-white shadow-2xl transition-colors cursor-pointer"
         >
           <Play size={12} className="text-emerald-400 fill-emerald-400" />
           <span>Run</span>
