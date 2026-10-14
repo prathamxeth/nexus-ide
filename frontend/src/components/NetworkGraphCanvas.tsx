@@ -42,6 +42,7 @@ interface NetworkGraphCanvasProps {
   selectedNodeId: string | null;
   onSelectNode: (node: NodeItem | null) => void;
   onRunAction?: (node: NodeItem | null) => void;
+  highlightedNodeIds?: string[] | Set<string>;
 }
 
 const COLOR_MAP: Record<string, string> = {
@@ -58,6 +59,7 @@ export default function NetworkGraphCanvas({
   selectedNodeId,
   onSelectNode,
   onRunAction,
+  highlightedNodeIds,
 }: NetworkGraphCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<any>(null);
@@ -275,6 +277,8 @@ export default function NetworkGraphCanvas({
         // Custom Node Painting matching user screenshot
         nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
           const nid = String(node.id);
+          const nLabel = String(node.label || "");
+          const nName = String(node.name || "");
           const type = node.type || "Function";
           const baseColor = node.color || COLOR_MAP[type] || "#06b6d4";
 
@@ -282,18 +286,39 @@ export default function NetworkGraphCanvas({
           const isConnected = connectedNeighbors ? connectedNeighbors.has(nid) : true;
           const isDimmed = connectedNeighbors !== null && !isConnected;
 
+          // Check if visited by backend graph_traversal event
+          const isHighlighted = highlightedNodeIds
+            ? (highlightedNodeIds instanceof Set
+                ? (highlightedNodeIds.has(nid) || highlightedNodeIds.has(nLabel) || highlightedNodeIds.has(nName))
+                : (highlightedNodeIds.includes(nid) || highlightedNodeIds.includes(nLabel) || highlightedNodeIds.includes(nName)))
+            : false;
+
           // Compute radius based on importance
           const isBig = nid === "root" || nid === "src" || nid === "FastMCPServer" || nid === "ASGI" || nid === "asgi.py" || nid === "worker.py";
           const baseRadius = isBig ? 12 : 7.5;
-          const radius = isSelected ? baseRadius + 2.5 : baseRadius;
+          const radius = (isSelected || isHighlighted) ? baseRadius + 3 : baseRadius;
 
           ctx.save();
-          if (isDimmed) {
+          if (isDimmed && !isHighlighted) {
             ctx.globalAlpha = 0.2;
           }
 
-          // 1. Halo / Glow when selected
-          if (isSelected) {
+          // 1. Red Blast Radius Glow when node is traversed/visited during refactor
+          if (isHighlighted) {
+            // Outer pulsing halo
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius + 7, 0, 2 * Math.PI, false);
+            ctx.strokeStyle = "rgba(239, 68, 68, 0.4)";
+            ctx.lineWidth = 4 / globalScale;
+            ctx.stroke();
+
+            // Inner intense red ring
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius + 3, 0, 2 * Math.PI, false);
+            ctx.strokeStyle = "rgba(239, 68, 68, 0.95)";
+            ctx.lineWidth = 2.5 / globalScale;
+            ctx.stroke();
+          } else if (isSelected) {
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI, false);
             ctx.strokeStyle = "rgba(56, 189, 248, 0.9)";
@@ -310,17 +335,17 @@ export default function NetworkGraphCanvas({
           // 2. Main Circle Fill
           ctx.beginPath();
           ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-          ctx.fillStyle = baseColor;
+          ctx.fillStyle = isHighlighted ? "#ef4444" : baseColor;
           ctx.fill();
 
-          ctx.strokeStyle = "#0d1117";
-          ctx.lineWidth = 1.5 / globalScale;
+          ctx.strokeStyle = isHighlighted ? "#fee2e2" : "#0d1117";
+          ctx.lineWidth = (isHighlighted ? 2.0 : 1.5) / globalScale;
           ctx.stroke();
 
           // 3. Label text
           const label = String(node.label || node.id);
           const fontSize = Math.max(9 / globalScale, 2.8);
-          ctx.font = `${isBig ? "bold " : ""}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
+          ctx.font = `${(isBig || isHighlighted) ? "bold " : ""}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
 
@@ -330,7 +355,7 @@ export default function NetworkGraphCanvas({
             ctx.fillText(label, node.x, node.y);
           } else {
             // Text below node
-            ctx.fillStyle = isSelected ? "#38bdf8" : "#e2e8f0";
+            ctx.fillStyle = isHighlighted ? "#f87171" : isSelected ? "#38bdf8" : "#e2e8f0";
             ctx.fillText(label, node.x, node.y + radius + 4.5 / globalScale);
           }
 

@@ -61,6 +61,7 @@ export interface GraphCanvasProps {
   onSelectBlock: (block: any, file?: string, line?: number) => void;
   className?: string;
   zoomPadding?: number;
+  highlightedBlockIds?: string[] | Set<string>;
 }
 
 const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvasViewer(
@@ -70,6 +71,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
     onSelectBlock,
     className = "",
     zoomPadding = 140,
+    highlightedBlockIds,
   },
   ref
 ) {
@@ -312,19 +314,33 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
           const isFunction = block.type === "function" || (!isBlast && !isMemory && !isPR);
           const isSelected = selectedBlockId === block.id;
 
+          const blockId = String(block.id);
+          const blockTitle = String(block.title || "");
+          const isVisited = highlightedBlockIds
+            ? (highlightedBlockIds instanceof Set
+                ? (highlightedBlockIds.has(blockId) || highlightedBlockIds.has(blockTitle))
+                : (highlightedBlockIds.includes(blockId) || highlightedBlockIds.includes(blockTitle)))
+            : false;
+
           return (
             <div
               onClick={() => handleBlockClick(block)}
               className={`p-3.5 rounded-xl border font-mono shadow-2xl transition-[border-color,box-shadow] duration-150 cursor-pointer select-none group relative overflow-hidden backdrop-blur-xl ${
-                isSelected ? "ring-2 ring-white/30" : ""
+                isVisited
+                  ? "ring-2 ring-red-500 shadow-[0_0_35px_rgba(239,68,68,0.7)] border-red-500 bg-[#250d12]/95 text-red-100 animate-pulse"
+                  : isSelected
+                  ? "ring-2 ring-white/30"
+                  : ""
               } ${
-                isBlast
-                  ? "bg-[#1E1117]/95 border-rose-500/60 hover:border-rose-400 text-rose-100 hover:shadow-[0_0_30px_rgba(244,63,94,0.35)]"
-                  : isMemory
-                  ? "bg-[#1F190F]/95 border-amber-500/60 hover:border-amber-400 text-amber-100 hover:shadow-[0_0_30px_rgba(245,158,11,0.35)]"
-                  : isPR
-                  ? "bg-[#0E2018]/95 border-emerald-500/60 hover:border-emerald-400 text-emerald-100 hover:shadow-[0_0_30px_rgba(34,197,94,0.35)]"
-                  : "bg-[#151D2F]/95 border-blue-500/50 hover:border-blue-400 text-blue-100 hover:shadow-[0_0_30px_rgba(59,130,246,0.35)]"
+                !isVisited && (
+                  isBlast
+                    ? "bg-[#1E1117]/95 border-rose-500/60 hover:border-rose-400 text-rose-100 hover:shadow-[0_0_30px_rgba(244,63,94,0.35)]"
+                    : isMemory
+                    ? "bg-[#1F190F]/95 border-amber-500/60 hover:border-amber-400 text-amber-100 hover:shadow-[0_0_30px_rgba(245,158,11,0.35)]"
+                    : isPR
+                    ? "bg-[#0E2018]/95 border-emerald-500/60 hover:border-emerald-400 text-emerald-100 hover:shadow-[0_0_30px_rgba(34,197,94,0.35)]"
+                    : "bg-[#151D2F]/95 border-blue-500/50 hover:border-blue-400 text-blue-100 hover:shadow-[0_0_30px_rgba(59,130,246,0.35)]"
+                )
               }`}
               style={{
                 width: block.width || 280,
@@ -334,7 +350,9 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
               {/* Top Accent Gradient Bar */}
               <div 
                 className={`absolute top-0 left-0 right-0 h-[2px] ${
-                  isBlast
+                  isVisited
+                    ? "bg-gradient-to-r from-red-500 via-rose-400 to-red-600"
+                    : isBlast
                     ? "bg-gradient-to-r from-rose-500 via-red-400 to-transparent"
                     : isMemory
                     ? "bg-gradient-to-r from-amber-500 via-orange-400 to-transparent"
@@ -367,7 +385,11 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
                 </div>
                 
                 {/* Clean SVG Badges without Emojis (Complying with Nexus IDE Master Design System) */}
-                {isBlast ? (
+                {isVisited ? (
+                  <span className="text-[8px] tracking-wider uppercase px-1.5 py-0.5 rounded font-bold bg-red-500/30 text-red-300 border border-red-500/60 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.4)]">
+                    TRAVERSED (AFFECTED)
+                  </span>
+                ) : isBlast ? (
                   <span className="text-[8px] tracking-wider uppercase px-1.5 py-0.5 rounded font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 shrink-0">
                     BLAST RADIUS (HOP {block.data?.hop || 1})
                   </span>

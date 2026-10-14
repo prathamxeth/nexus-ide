@@ -6,28 +6,36 @@ import {
   RotateCw, 
   Send, 
   Bot, 
-  User, 
-  Code2, 
   FileText, 
-  Sparkles, 
-  ChevronRight, 
   Copy, 
   Check, 
-  Terminal,
-  Activity,
   Layers,
-  CheckCircle2,
-  AlertCircle
+  Network,
+  Zap,
+  Activity,
+  Flame
 } from "lucide-react";
 import NetworkGraphCanvas, { NodeItem, EdgeItem } from "@/components/NetworkGraphCanvas";
+import type { GraphBlock, GraphConnection } from "@/components/GraphCanvas";
 import { MCP_CODEBASE_REGISTRY } from "@/lib/mcp-codebase";
 
-// Dynamically import Monaco Editor to avoid SSR issues
+// Dynamically import Monaco Editor
 const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-[#0d1017] text-xs font-mono text-neutral-500">
       Loading Code Editor...
+    </div>
+  ),
+});
+
+// Dynamically import Gravity UI Graph Canvas to avoid SSR issues
+const GraphCanvas = dynamic(() => import("@/components/GraphCanvas"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex flex-col items-center justify-center text-xs font-mono text-neutral-500 gap-2">
+      <RotateCw className="w-5 h-5 text-emerald-400 animate-spin" />
+      <span>Rendering Gravity UI 4-Lane Graph...</span>
     </div>
   ),
 });
@@ -38,17 +46,22 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   nodeContext?: string;
+  isStreaming?: boolean;
 }
 
 export default function NexusIDE() {
   // Navigation & View Mode
   const [activeTab, setActiveTab] = useState<"chat" | "code">("chat");
+  const [canvasMode, setCanvasMode] = useState<"gravity" | "network">("gravity");
   const [leftPanelWidth, setLeftPanelWidth] = useState(420);
   const [isResizing, setIsResizing] = useState(false);
 
   // Graph Data State
   const [nodes, setNodes] = useState<NodeItem[]>([]);
   const [edges, setEdges] = useState<EdgeItem[]>([]);
+  const [gravityBlocks, setGravityBlocks] = useState<GraphBlock[]>([]);
+  const [gravityConnections, setGravityConnections] = useState<GraphConnection[]>([]);
+  const [visitedBlockIds, setVisitedBlockIds] = useState<string[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeItem | null>(null);
   const [isLoadingGraph, setIsLoadingGraph] = useState(false);
   const [backendStatus, setBackendStatus] = useState<"connected" | "connecting" | "offline">("connecting");
@@ -60,14 +73,35 @@ export default function NexusIDE() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Active Code View State
-  const [activeFileCode, setActiveFileCode] = useState<string>(MCP_CODEBASE_REGISTRY["asgi.py"].code);
-  const [activeFileName, setActiveFileName] = useState<string>("asgi.py");
-  const [activeFileLanguage, setActiveFileLanguage] = useState<string>("python");
+  const [activeFileCode, setActiveFileCode] = useState<string>(
+    `export function validateToken(token: string): boolean {\n  if (!token) return false;\n  return decodePayload(token) !== null;\n}\n\nexport function verifyToken(token: string): boolean {\n  return validateToken(token);\n}\n\nfunction decodePayload(token: string) {\n  try {\n    return JSON.parse(atob(token.split('.')[1] || '{}'));\n  } catch {\n    return null;\n  }\n}\n`
+  );
+  const [activeFileName, setActiveFileName] = useState<string>("src/auth.ts");
+  const [activeFileLanguage, setActiveFileLanguage] = useState<string>("typescript");
   const [isCopied, setIsCopied] = useState(false);
 
-  // Fetch real graph data from backend /api/graph/inspect
+  // Fetch real graph data from backend /api/graph/data and /api/graph/inspect
   const fetchGraphData = useCallback(async () => {
     setIsLoadingGraph(true);
+    let connected = false;
+
+    // 1. Fetch Gravity UI 4-Lane Graph Data (x=50, 350, 680, 1000)
+    try {
+      const targetFn = selectedNode?.label || "validateToken";
+      const gravRes = await fetch(`http://localhost:8000/api/graph/data?function_name=${encodeURIComponent(targetFn)}`);
+      if (gravRes.ok) {
+        const gravData = await gravRes.json();
+        if (gravData.blocks && gravData.blocks.length > 0) {
+          setGravityBlocks(gravData.blocks);
+          setGravityConnections(gravData.connections || []);
+          connected = true;
+        }
+      }
+    } catch (err) {
+      console.warn("Gravity graph fetch error:", err);
+    }
+
+    // 2. Fetch Network Topology Data
     try {
       const res = await fetch("http://localhost:8000/api/graph/inspect");
       if (res.ok) {
@@ -86,124 +120,44 @@ export default function NexusIDE() {
           }));
           setNodes(mappedNodes);
           setEdges(mappedEdges);
-          setBackendStatus("connected");
-          setIsLoadingGraph(false);
-          return;
+          connected = true;
         }
       }
-    } catch {
-      // Backend unavailable or starting up
+    } catch (err) {
+      console.warn("Network graph fetch error:", err);
     }
 
-    // Fallback directly to registry node-link structure if backend is offline
+    if (connected) {
+      setBackendStatus("connected");
+      setIsLoadingGraph(false);
+      return;
+    }
+
+    // Fallback if backend is starting up or offline
     const fallbackNodes: NodeItem[] = [
-      { id: "root", label: "root", type: "Module" },
-      { id: "src", label: "src", type: "Module" },
-      { id: "tests", label: "tests", type: "Module" },
-      { id: "add", label: "add", type: "Endpoint" },
-      { id: "fetch", label: "fetch", type: "Endpoint" },
-      { id: "websocket", label: "websocket", type: "Endpoint" },
-      { id: "worker.py", label: "worker.py", type: "File" },
-      { id: "logger.py", label: "logger.py", type: "File" },
-      { id: "asgi.py", label: "asgi.py", type: "File" },
-      { id: "exceptions.py", label: "exceptions.py", type: "File" },
-      { id: "uvicorn.py", label: "uvicorn.py", type: "File" },
-      { id: "build.sh", label: "build.sh", type: "File" },
-      { id: "vendor.txt", label: "vendor.txt", type: "File" },
-      { id: "package.json", label: "package.json", type: "File" },
-      { id: "README.md", label: "README.md", type: "File" },
-      { id: "requirements-test.txt", label: "requirements-test.txt", type: "File" },
-      { id: "package-lock.json", label: "package-lock.json", type: "File" },
-      { id: "pyproject.toml", label: "pyproject.toml", type: "File" },
-      { id: "FastMCPServer", label: "FastMCPServer", type: "Class" },
-      { id: "ASGI", label: "ASGI", type: "Class" },
-      { id: "background_task", label: "background_task", type: "Class" },
-      { id: "setup_server", label: "setup_server", type: "Function" },
-      { id: "echo_prompt", label: "echo_prompt", type: "Function" },
-      { id: "get_greeting", label: "get_greeting", type: "Function" },
-      { id: "calculate_bmi", label: "calculate_bmi", type: "Function" },
-      { id: "on_fetch", label: "on_fetch", type: "Function" },
-      { id: "ws_receive", label: "ws_receive", type: "Function" },
-      { id: "onmessage", label: "onmessage", type: "Function" },
-      { id: "process_request", label: "process_request", type: "Function" },
-      { id: "process_websocket", label: "process_websocket", type: "Function" },
-      { id: "onopen", label: "onopen", type: "Function" },
-      { id: "onclose", label: "onclose", type: "Function" },
-      { id: "ws_send", label: "ws_send", type: "Function" },
-      { id: "getattr", label: "getattr", type: "Function" },
-      { id: "shutdown", label: "shutdown", type: "Function" },
-      { id: "start_application", label: "start_application", type: "Function" },
-      { id: "receive", label: "receive", type: "Function" },
-      { id: "send", label: "send", type: "Function" },
-      { id: "acquire_ws_buffer", label: "acquire_ws_buffer", type: "Function" },
+      { id: "validateToken", label: "validateToken", type: "Function" },
+      { id: "verifyToken", label: "verifyToken", type: "Function" },
+      { id: "processInvoice", label: "processInvoice", type: "Function" },
+      { id: "auditAccount", label: "auditAccount", type: "Function" },
+      { id: "src/auth.ts", label: "src/auth.ts", type: "File" },
+      { id: "src/billing.ts", label: "src/billing.ts", type: "File" },
+      { id: "src/finance.ts", label: "src/finance.ts", type: "File" },
     ];
 
     const fallbackEdges: EdgeItem[] = [
-      { source: "root", target: "src" },
-      { source: "root", target: "tests" },
-      { source: "root", target: "build.sh" },
-      { source: "root", target: "vendor.txt" },
-      { source: "root", target: "package.json" },
-      { source: "root", target: "README.md" },
-      { source: "root", target: "package-lock.json" },
-      { source: "root", target: "requirements-test.txt" },
-      { source: "root", target: "pyproject.toml" },
-      { source: "root", target: "uvicorn.py" },
-      { source: "src", target: "worker.py" },
-      { source: "src", target: "logger.py" },
-      { source: "src", target: "asgi.py" },
-      { source: "src", target: "exceptions.py" },
-      { source: "src", target: "onmessage" },
-      { source: "src", target: "process_request" },
-      { source: "src", target: "onopen" },
-      { source: "worker.py", target: "setup_server" },
-      { source: "worker.py", target: "FastMCPServer" },
-      { source: "worker.py", target: "on_fetch" },
-      { source: "worker.py", target: "logger.py" },
-      { source: "worker.py", target: "exceptions.py" },
-      { source: "setup_server", target: "calculate_bmi" },
-      { source: "setup_server", target: "add" },
-      { source: "setup_server", target: "echo_prompt" },
-      { source: "setup_server", target: "get_greeting" },
-      { source: "FastMCPServer", target: "calculate_bmi" },
-      { source: "FastMCPServer", target: "setup_server" },
-      { source: "logger.py", target: "setup_server" },
-      { source: "logger.py", target: "asgi.py" },
-      { source: "asgi.py", target: "ASGI" },
-      { source: "asgi.py", target: "process_websocket" },
-      { source: "asgi.py", target: "ws_send" },
-      { source: "asgi.py", target: "ws_receive" },
-      { source: "asgi.py", target: "onopen" },
-      { source: "asgi.py", target: "onclose" },
-      { source: "asgi.py", target: "fetch" },
-      { source: "asgi.py", target: "websocket" },
-      { source: "asgi.py", target: "shutdown" },
-      { source: "asgi.py", target: "start_application" },
-      { source: "asgi.py", target: "getattr" },
-      { source: "process_websocket", target: "ws_receive" },
-      { source: "process_websocket", target: "ws_send" },
-      { source: "process_websocket", target: "onclose" },
-      { source: "process_websocket", target: "onopen" },
-      { source: "process_websocket", target: "acquire_ws_buffer" },
-      { source: "process_websocket", target: "background_task" },
-      { source: "ASGI", target: "start_application" },
-      { source: "ASGI", target: "shutdown" },
-      { source: "ASGI", target: "receive" },
-      { source: "ASGI", target: "send" },
-      { source: "ASGI", target: "ws_send" },
-      { source: "fetch", target: "process_request" },
-      { source: "fetch", target: "getattr" },
-      { source: "websocket", target: "asgi.py" },
-      { source: "start_application", target: "receive" },
-      { source: "start_application", target: "send" },
-      { source: "start_application", target: "shutdown" },
+      { source: "verifyToken", target: "validateToken", relationship: "CALLS" },
+      { source: "processInvoice", target: "validateToken", relationship: "CALLS" },
+      { source: "auditAccount", target: "validateToken", relationship: "CALLS" },
+      { source: "src/auth.ts", target: "validateToken", relationship: "DEFINES" },
+      { source: "src/billing.ts", target: "processInvoice", relationship: "DEFINES" },
+      { source: "src/finance.ts", target: "auditAccount", relationship: "DEFINES" },
     ];
 
     setNodes(fallbackNodes);
     setEdges(fallbackEdges);
     setBackendStatus("offline");
     setIsLoadingGraph(false);
-  }, []);
+  }, [selectedNode]);
 
   useEffect(() => {
     fetchGraphData();
@@ -214,16 +168,35 @@ export default function NexusIDE() {
     setSelectedNode(node);
     if (!node) return;
 
-    // If node exists in code registry, update Code & Docs
+    // Check codebase registry
     const codeEntry = MCP_CODEBASE_REGISTRY[node.id] || MCP_CODEBASE_REGISTRY[node.label];
     if (codeEntry) {
       setActiveFileCode(codeEntry.code);
       setActiveFileName(codeEntry.name);
       setActiveFileLanguage(codeEntry.language);
+    } else if (node.label === "validateToken" || node.id === "validateToken") {
+      setActiveFileName("src/auth.ts");
+      setActiveFileLanguage("typescript");
     }
   }, []);
 
-  // Submit Query to Agent
+  // Handle Block Selection in Gravity UI Graph
+  const handleSelectBlock = useCallback((block: any) => {
+    if (!block) return;
+    const title = block.title || block.id;
+    const matchedNode = nodes.find((n) => n.id === block.id || n.label === title);
+    if (matchedNode) {
+      setSelectedNode(matchedNode);
+    } else {
+      setSelectedNode({ id: block.id, label: title, type: block.type });
+    }
+
+    if (block.file) {
+      setActiveFileName(block.file);
+    }
+  }, [nodes]);
+
+  // Submit Query to Agent via POST /api/agent/stream
   const handleSendQuery = async () => {
     if (!inputQuery.trim() || isGenerating) return;
 
@@ -241,15 +214,37 @@ export default function NexusIDE() {
     setMessages((prev) => [...prev, newMsg]);
     setIsGenerating(true);
 
+    const assistantMsgId = String(Date.now() + 1);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMsgId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isStreaming: true,
+      },
+    ]);
+
+    // Target function determined by context or query
+    let targetFn = "validateToken";
+    if (selectedNode && selectedNode.label) {
+      targetFn = selectedNode.label;
+    } else if (query.toLowerCase().includes("process_websocket")) {
+      targetFn = "process_websocket";
+    }
+
     try {
-      // Attempt streaming from backend agent refactor API
-      const response = await fetch("http://localhost:8000/api/agent/stream-refactor", {
+      const response = await fetch("http://localhost:8000/api/agent/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: query,
-          target_file: selectedNode ? selectedNode.label : "src/asgi.py",
-          active_model: "claude-3-5-sonnet-20241022",
+          target_function: targetFn,
+          code: activeFileCode,
+          file_path: activeFileName,
+          provider: "mock",
+          model: "claude-3-5-sonnet",
         }),
       });
 
@@ -257,84 +252,117 @@ export default function NexusIDE() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let agentReply = "";
-
-        const assistantMsgId = String(Date.now() + 1);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: assistantMsgId,
-            role: "assistant",
-            content: "",
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ]);
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const dataStr = line.slice(6);
-              try {
-                const parsed = JSON.parse(dataStr);
-                if (parsed.content) {
-                  agentReply += parsed.content;
+          buffer += decoder.decode(value, { stream: true });
+
+          const events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+
+          for (const ev of events) {
+            if (!ev.trim()) continue;
+            let eventName = "message";
+            let dataStr = "";
+            const lines = ev.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("event: ")) {
+                eventName = line.slice(7).trim();
+              } else if (line.startsWith("data: ")) {
+                dataStr = line.slice(6).trim();
+              }
+            }
+
+            if (!dataStr) continue;
+            try {
+              const parsed = JSON.parse(dataStr);
+
+              // 1. Graph Traversal Event: Contains visitedBlockIds to highlight in red!
+              if (eventName === "graph_traversal") {
+                const visited: string[] = parsed.visitedBlockIds || parsed.visited_block_ids || [];
+                setVisitedBlockIds(visited);
+
+                if (parsed.blocks && parsed.blocks.length > 0) {
+                  setGravityBlocks(parsed.blocks);
+                  if (parsed.connections) {
+                    setGravityConnections(parsed.connections);
+                  }
+                }
+              } 
+              // 2. Context Resolved: FalkorDB Brain & Provenance
+              else if (eventName === "context_resolved") {
+                const rulesCount = parsed.rules?.length || 0;
+                const callersCount = parsed.blast_radius_count || 0;
+                const author = parsed.ownership?.author || "@alex.chen";
+                const prNum = parsed.ownership?.pr_number || 104;
+
+                agentReply += `**FalkorDB Blast Radius Verified:** \`${callersCount} callers\` in call hierarchy\n`;
+                agentReply += `**Company Brain:** Modified by \`${author}\` in PR #${prNum}\n`;
+                if (rulesCount > 0) {
+                  agentReply += `**Enforced Guardrail Rules (${rulesCount}):**\n`;
+                  for (const r of parsed.rules) {
+                    agentReply += `- *${r}*\n`;
+                  }
+                }
+                agentReply += "\n---\n\n";
+
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantMsgId ? { ...m, content: agentReply } : m))
+                );
+              } 
+              // 3. Reasoning Chunk
+              else if (eventName === "reasoning_chunk") {
+                if (parsed.chunk) {
+                  agentReply += parsed.chunk;
                   setMessages((prev) =>
                     prev.map((m) => (m.id === assistantMsgId ? { ...m, content: agentReply } : m))
                   );
                 }
-              } catch {
-                // non-json stream chunk
+              } 
+              // 4. Code Patch
+              else if (eventName === "code_patch") {
+                if (parsed.modified_code) {
+                  setActiveFileCode(parsed.modified_code);
+                  agentReply += `\n\n\`\`\`typescript\n// Refactored AST Code Patch for ${parsed.target_function}\n${parsed.modified_code.trim()}\n\`\`\`\n`;
+                  setMessages((prev) =>
+                    prev.map((m) => (m.id === assistantMsgId ? { ...m, content: agentReply } : m))
+                  );
+                }
+              } 
+              // 5. Completion
+              else if (eventName === "done") {
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantMsgId ? { ...m, isStreaming: false } : m))
+                );
+                setIsGenerating(false);
               }
+            } catch {
+              // Parse fallback
             }
           }
         }
         setIsGenerating(false);
         return;
       }
-    } catch {
-      // Offline fallback: provide accurate technical explanation of the node
+    } catch (err) {
+      console.warn("Agent stream connection failed:", err);
     }
 
-    // Dynamic, accurate architectural explanation for the node
+    // Fallback if local backend is unreachable
     setTimeout(() => {
-      let explanation = "";
-      if (query.toLowerCase().includes("process_websocket") || selectedNode?.id === "process_websocket") {
-        explanation = `### \`process_websocket\` Execution Lifecycle
-
-\`process_websocket\` is the core asynchronous loop in **\`src/asgi.py\`** managing bidirectional WebSocket streams:
-
-1. **Connection Handshake**: Receives scope client credentials and calls \`await self.onopen(connection_id, send)\` to dispatch \`websocket.accept\`.
-2. **Buffer Allocation**: Invokes \`await self.acquire_ws_buffer(connection_id)\` to reserve worker memory.
-3. **Continuous Framing Loop**:
-   - Loops over \`await self.ws_receive(receive)\` awaiting binary/text packets.
-   - Forwards frames to \`onmessage\`, which queues asynchronous execution via \`asyncio.create_task(self.background_task(...))\`.
-4. **Clean Teardown**: Upon \`websocket.disconnect\` or \`WebSocketClosed\`, cleanly flushes socket state via \`await self.onclose(connection_id)\`.`;
-      } else if (selectedNode) {
-        explanation = `### Node Context: \`${selectedNode.label}\` (\`${selectedNode.type}\`)
-
-- **Layer**: ${selectedNode.type}
-- **Connected Graph Neighbors**: ${edges.filter((e) => e.source === selectedNode.id || e.target === selectedNode.id).length} links
-- **Description**: ${MCP_CODEBASE_REGISTRY[selectedNode.id]?.description || "Core component within fastapi-worker-dani-mcp-server."}`;
-      } else {
-        explanation = `### Codebase Overview: \`fastapi-worker-dani-mcp-server\`
-
-- **Active Runtime**: Python ASGI with FastMCPServer worker lifecycle.
-- **Indexed Nodes**: ${nodes.length} nodes across Modules, Files, Classes, and Functions.
-- Click any node on the graph canvas or type a query to inspect relationships and source code.`;
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: String(Date.now() + 1),
-          role: "assistant",
-          content: explanation,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? {
+                ...m,
+                content: `### Architecture Analysis: \`${targetFn}\`\n\n- **Status**: Backend connecting to FalkorDB on port 6379.\n- **Lanes**: 4 Gravity-UI lanes (x=50, 350, 680, 1000) active.\n- Click **Run** on any node or test with \`validateToken\` to observe live red node highlighting.`,
+                isStreaming: false,
+              }
+            : m
+        )
+      );
       setIsGenerating(false);
     }, 400);
   };
@@ -365,6 +393,11 @@ export default function NexusIDE() {
     };
   }, [isResizing]);
 
+  // Scroll messages to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
     <div className="w-screen h-screen min-h-dvh bg-[#080a0f] text-[#e2e8f0] font-sans antialiased overflow-hidden flex select-none">
       {/* ======================================================== */}
@@ -380,8 +413,15 @@ export default function NexusIDE() {
             <div className="text-sm font-semibold tracking-tight text-white font-mono flex items-center gap-2">
               <span>fastapi-worker-dani-mcp-server</span>
             </div>
-            <div className="text-[11px] font-mono text-neutral-400 mt-0.5">
-              main
+            <div className="text-[11px] font-mono text-neutral-400 mt-0.5 flex items-center gap-2">
+              <span>main</span>
+              <span className="text-neutral-600">•</span>
+              <span className="flex items-center gap-1 text-[10px]">
+                <span className={`w-1.5 h-1.5 rounded-full ${backendStatus === "connected" ? "bg-emerald-400 shadow-[0_0_6px_#22c55e]" : "bg-amber-400"}`} />
+                <span className={backendStatus === "connected" ? "text-emerald-400" : "text-amber-400"}>
+                  {backendStatus === "connected" ? "Backend SSE Live" : "Connecting..."}
+                </span>
+              </span>
             </div>
           </div>
 
@@ -426,8 +466,14 @@ export default function NexusIDE() {
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Top Chat Input Area matching screenshot */}
             <div className="p-4 border-b border-[#1b202c] bg-[#0c0e14]">
-              <div className="text-[11px] font-sans text-neutral-400 font-medium mb-1.5">
-                Chat
+              <div className="text-[11px] font-sans text-neutral-400 font-medium mb-1.5 flex items-center justify-between">
+                <span>Chat</span>
+                {visitedBlockIds.length > 0 && (
+                  <span className="text-[10px] text-red-400 font-mono flex items-center gap-1">
+                    <Flame size={11} className="text-red-400 animate-pulse" />
+                    <span>{visitedBlockIds.length} Visited Nodes (Red)</span>
+                  </span>
+                )}
               </div>
               <div className="relative bg-[#11141d] border border-[#202636] focus-within:border-sky-500/70 rounded-xl p-2.5 transition-colors">
                 <input
@@ -437,7 +483,7 @@ export default function NexusIDE() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSendQuery();
                   }}
-                  placeholder="Ask anything about the codebase or architecture..."
+                  placeholder="Ask agent to refactor validateToken or analyze blast radius..."
                   className="w-full bg-transparent text-xs font-mono text-white placeholder-neutral-500 outline-none pr-8"
                 />
                 <button
@@ -460,10 +506,10 @@ export default function NexusIDE() {
                 <div className="h-full flex flex-col justify-center items-center text-center p-6 text-neutral-500 text-xs font-mono">
                   <Bot className="w-8 h-8 text-neutral-600 mb-2 stroke-[1.5]" />
                   <p className="text-neutral-400 font-sans font-medium mb-1">
-                    Ready to query codebase topology
+                    Ready to stream agent refactoring
                   </p>
                   <p className="text-[11px] text-neutral-500 max-w-xs leading-relaxed">
-                    Select any node on the graph or type an architectural question above.
+                    Type a prompt like &quot;Refactor validateToken with 60s clock skew&quot; to watch real-time graph traversal.
                   </p>
                 </div>
               ) : (
@@ -475,7 +521,7 @@ export default function NexusIDE() {
                     }`}
                   >
                     <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-mono">
-                      <span>{m.role === "user" ? "You" : "Nexus Assistant"}</span>
+                      <span>{m.role === "user" ? "You" : "Nexus Agent"}</span>
                       <span>•</span>
                       <span>{m.timestamp}</span>
                     </div>
@@ -487,6 +533,9 @@ export default function NexusIDE() {
                       }`}
                     >
                       {m.content}
+                      {m.isStreaming && (
+                        <span className="inline-block w-1.5 h-3 ml-1 bg-sky-400 animate-pulse align-middle" />
+                      )}
                     </div>
                   </div>
                 ))
@@ -494,7 +543,7 @@ export default function NexusIDE() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Bottom Keyboard Legend matching user screenshot */}
+            {/* Bottom Keyboard Legend */}
             <div className="p-3 bg-[#0a0c12] border-t border-[#1b202c] flex items-center justify-between text-[11px] font-sans text-neutral-400 select-none">
               <div className="flex items-center gap-2">
                 <span>Focus on node</span>
@@ -504,7 +553,7 @@ export default function NexusIDE() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span>Expand/collapse node</span>
+                <span>Expand/collapse</span>
                 <kbd className="px-2 py-0.5 rounded-md bg-[#161a25] border border-[#242b3d] text-neutral-300 font-mono text-[10px]">
                   ⌘ + Click
                 </kbd>
@@ -572,21 +621,68 @@ export default function NexusIDE() {
       </div>
 
       {/* ======================================================== */}
-      {/* 3. RIGHT PANEL: INTERACTIVE FORCE-DIRECTED NETWORK GRAPH */}
+      {/* 3. RIGHT PANEL: INTERACTIVE GRAPH CANVAS */}
       {/* ======================================================== */}
-      <div className="flex-1 h-full min-w-0 relative bg-[#080a0f] overflow-hidden">
-        <NetworkGraphCanvas
-          nodes={nodes}
-          edges={edges}
-          selectedNodeId={selectedNode ? selectedNode.id : null}
-          onSelectNode={handleSelectNode}
-          onRunAction={(node) => {
-            if (node) {
-              setInputQuery(`Analyze and inspect relationships for ${node.label}`);
-              setActiveTab("chat");
-            }
-          }}
-        />
+      <div className="flex-1 h-full min-w-0 relative bg-[#080a0f] overflow-hidden flex flex-col">
+        {/* TOP CANVAS CONTROLLER: 4-LANE GRAVITY UI vs TOPOLOGY SWITCHER */}
+        <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+          <div className="flex items-center bg-[#12151e]/90 backdrop-blur-md border border-[#232838] rounded-xl p-1 shadow-2xl">
+            <button
+              onClick={() => setCanvasMode("gravity")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
+                canvasMode === "gravity"
+                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <Layers size={13} />
+              <span>4-Lane Swimlanes</span>
+            </button>
+            <button
+              onClick={() => setCanvasMode("network")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
+                canvasMode === "network"
+                  ? "bg-sky-500/20 text-sky-300 border border-sky-500/40"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <Network size={13} />
+              <span>Force Topology</span>
+            </button>
+          </div>
+
+          {visitedBlockIds.length > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/80 border border-red-500/60 text-xs font-mono text-red-200 shadow-2xl animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
+              <span>Blast Radius Traversal: {visitedBlockIds.length} Nodes</span>
+            </div>
+          )}
+        </div>
+
+        {/* CANVAS RENDERER */}
+        <div className="flex-1 w-full h-full min-h-0 relative">
+          {canvasMode === "gravity" ? (
+            <GraphCanvas
+              blocks={gravityBlocks}
+              connections={gravityConnections}
+              highlightedBlockIds={visitedBlockIds}
+              onSelectBlock={handleSelectBlock}
+            />
+          ) : (
+            <NetworkGraphCanvas
+              nodes={nodes}
+              edges={edges}
+              selectedNodeId={selectedNode ? selectedNode.id : null}
+              highlightedNodeIds={visitedBlockIds}
+              onSelectNode={handleSelectNode}
+              onRunAction={(node) => {
+                const target = node ? node.label : "validateToken";
+                setInputQuery(`Refactor ${target} with 60-second clock skew tolerance and add error telemetry`);
+                setActiveTab("chat");
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
