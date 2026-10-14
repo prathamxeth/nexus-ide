@@ -859,25 +859,36 @@ export default function NexusIDE() {
               {/* COMPOSER HEADER */}
               <div className="h-8 px-3 bg-[#0d0f17] border-b border-[#1b202c] flex items-center justify-between text-xs font-mono text-neutral-400">
                 <div className="flex items-center gap-2">
-                  <Bot size={13} className="text-sky-400" />
+                  <Bot size={13} className="text-[#f54e00]" />
                   <span className="text-white font-medium">Nexus Agent</span>
                   <span className="text-neutral-600">•</span>
                   <span className="text-neutral-400">Target:</span>
-                  <span className="text-sky-300 font-semibold px-1.5 py-0.5 rounded bg-sky-950/60 border border-sky-500/30 text-[10px]">
+                  <span className="font-semibold px-2 py-0.5 rounded-full bg-[#9fbbe0]/15 border border-[#9fbbe0]/40 text-[#9fbbe0] text-[10px]">
                     {selectedNode ? selectedNode.label : "validateToken"}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 text-[10px]">
-                  <span className="px-2 py-0.5 rounded bg-[#161a25] border border-[#23293c] text-neutral-300">
-                    claude-3-5-sonnet
-                  </span>
-                  {visitedBlockIds.length > 0 && (
-                    <span className="flex items-center gap-1 text-red-400 font-semibold">
-                      <Flame size={11} className="text-red-400 animate-pulse" />
-                      <span>{visitedBlockIds.length} Visited (Red)</span>
+                  {/* Cursor DESIGN.md AI Timeline Stage Pills */}
+                  {isGenerating ? (
+                    <span className="px-2 py-0.5 rounded-full bg-[#dfa88f]/20 border border-[#dfa88f]/50 text-[#dfa88f] font-mono text-[10px] font-medium flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#dfa88f] animate-pulse" />
+                      Thinking
+                    </span>
+                  ) : visitedBlockIds.length > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full bg-[#9fc9a2]/20 border border-[#9fc9a2]/50 text-[#9fc9a2] font-mono text-[10px] font-medium flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#9fc9a2]" />
+                      Grepping ({visitedBlockIds.length})
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-[#9fbbe0]/15 border border-[#9fbbe0]/35 text-[#9fbbe0] font-mono text-[10px]">
+                      Reading
                     </span>
                   )}
+
+                  <span className="px-2 py-0.5 rounded-[8px] bg-[#161a25] border border-[#23293c] text-neutral-300">
+                    claude-3-5-sonnet
+                  </span>
                 </div>
               </div>
 
@@ -931,7 +942,7 @@ export default function NexusIDE() {
                 <button
                   onClick={handleSendQuery}
                   disabled={!inputQuery.trim() || isGenerating}
-                  className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-40 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono font-medium shadow-md"
+                  className="px-3.5 py-1.5 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white disabled:opacity-40 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono font-medium shadow-sm"
                 >
                   {isGenerating ? (
                     <RotateCw size={13} className="animate-spin" />

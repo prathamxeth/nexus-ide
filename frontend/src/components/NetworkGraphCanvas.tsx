@@ -46,11 +46,11 @@ interface NetworkGraphCanvasProps {
 }
 
 const COLOR_MAP: Record<string, string> = {
-  Module: "#0284c7",    // Blue
-  Endpoint: "#0284c7",  // Blue
-  File: "#8b5cf6",      // Purple
-  Class: "#10b981",     // Green
-  Function: "#06b6d4",  // Cyan
+  Module: "#9fbbe0",    // Cursor timeline-read (pastel blue)
+  Endpoint: "#f54e00",  // Cursor primary (Cursor Orange)
+  File: "#c0a8dd",      // Cursor timeline-edit (lavender)
+  Class: "#9fc9a2",     // Cursor timeline-grep (mint)
+  Function: "#dfa88f",  // Cursor timeline-thinking (peach)
 };
 
 export default function NetworkGraphCanvas({
@@ -343,23 +343,23 @@ export default function NetworkGraphCanvas({
               ctx.globalAlpha = 0.22;
             }
 
-            // 1. Red Blast Radius Glow when node is traversed/visited during refactor
+            // 1. Red / Cursor Orange Blast Radius Glow when node is traversed/visited during refactor
             if (isHighlighted) {
               ctx.beginPath();
               ctx.arc(node.x, node.y, radius + 6, 0, 2 * Math.PI, false);
-              ctx.strokeStyle = "rgba(239, 68, 68, 0.45)";
+              ctx.strokeStyle = "rgba(207, 45, 86, 0.45)";
               ctx.lineWidth = 3.5 / globalScale;
               ctx.stroke();
 
               ctx.beginPath();
               ctx.arc(node.x, node.y, radius + 2.5, 0, 2 * Math.PI, false);
-              ctx.strokeStyle = "rgba(239, 68, 68, 0.95)";
+              ctx.strokeStyle = "rgba(207, 45, 86, 0.95)";
               ctx.lineWidth = 2 / globalScale;
               ctx.stroke();
             } else if (isSelected) {
               ctx.beginPath();
               ctx.arc(node.x, node.y, radius + 3.5, 0, 2 * Math.PI, false);
-              ctx.strokeStyle = "rgba(56, 189, 248, 0.95)";
+              ctx.strokeStyle = "rgba(245, 78, 0, 0.95)";
               ctx.lineWidth = 2 / globalScale;
               ctx.stroke();
             } else if (connectedNeighbors && isConnected) {
@@ -373,10 +373,10 @@ export default function NetworkGraphCanvas({
             // 2. Main Circle Fill
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-            ctx.fillStyle = isHighlighted ? "#ef4444" : baseColor;
+            ctx.fillStyle = isHighlighted ? "#cf2d56" : baseColor;
             ctx.fill();
 
-            ctx.strokeStyle = isHighlighted ? "#fee2e2" : "#0d1117";
+            ctx.strokeStyle = isHighlighted ? "#fce7ee" : "#0d1117";
             ctx.lineWidth = (isHighlighted ? 1.8 : 1.2) / globalScale;
             ctx.stroke();
 
@@ -527,9 +527,9 @@ export default function NetworkGraphCanvas({
               const target = graphData.nodes.find((n) => n.id === selectedNodeId) || null;
               onRunAction?.(target);
             }}
-            className="flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-xs font-mono text-emerald-300 transition-colors cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white text-xs font-mono font-medium transition-colors cursor-pointer shadow-sm"
           >
-            <Play size={11} className="text-emerald-400 fill-emerald-400" />
+            <Play size={11} className="text-white fill-white" />
             <span>Run</span>
           </button>
         </div>
