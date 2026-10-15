@@ -121,6 +121,43 @@ function getNodeLevel(node: NodeItem): number {
   return getNodeVerticalTier(node).tier;
 }
 
+// Computes strictly sequential vertical levels for Tree mode (strictly one above another)
+function computeSequentialTreeLevels(validNodes: NodeItem[]): Map<string, number> {
+  const map = new Map<string, number>();
+
+  const priorityOrder = [
+    "root", "src", "tests", "build.sh", "package.json", "README.md", "vendor.txt", "pyproject.toml",
+    // asgi.py and its pipeline
+    "asgi.py", "ASGI", "start_application", "process_websocket", "onopen", "acquire_ws_buffer", "ws_receive", "ws_send", "onclose", "fetch", "websocket",
+    // worker.py and its pipeline
+    "worker.py", "FastMCPServer", "setup_server", "run_worker", "calculate_bmi", "add", "echo_prompt", "get_greeting", "on_fetch",
+    // auth.ts and its functions
+    "auth.ts", "validateToken", "verifyToken", "decodePayload",
+    // billing.ts and its functions
+    "billing.ts", "Invoice", "processInvoice", "calculateTax", "persistInvoice",
+    // finance.ts and its functions
+    "finance.ts", "auditAccount",
+    // logger & exceptions
+    "logger.py", "exceptions.py", "uvicorn.py"
+  ];
+
+  let currentLevel = 0;
+  for (const id of priorityOrder) {
+    if (validNodes.some((n) => n.id === id) && !map.has(id)) {
+      map.set(id, currentLevel++);
+    }
+  }
+
+  // Any remaining nodes get consecutive levels
+  for (const n of validNodes) {
+    if (!map.has(n.id)) {
+      map.set(n.id, currentLevel++);
+    }
+  }
+
+  return map;
+}
+
 export default function NetworkGraphCanvas({
   nodes,
   edges,
@@ -227,7 +264,7 @@ export default function NetworkGraphCanvas({
     return new Set(realtimeChangedNodeIds);
   }, [realtimeChangedNodeIds]);
 
-  // Filter nodes & links based on activeTypes, collapsed state, and Top-to-Bottom Vertical Layout
+  // Filter nodes & links based on activeTypes, collapsed state, and Tree vs Cluster Layout
   const graphData = useMemo(() => {
     const validNodes = nodes.filter((n) => {
       const typeKey = n.type || "Function";
@@ -235,6 +272,7 @@ export default function NetworkGraphCanvas({
     });
 
     const nodeTierMap = new Map<string, number>();
+    const treeLevelMap = computeSequentialTreeLevels(validNodes);
     const tierGroups: Record<number, any[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] };
 
     const enrichedNodes = validNodes.map((n) => {
@@ -248,38 +286,50 @@ export default function NetworkGraphCanvas({
       tierGroups[n.tier].push(n);
     }
 
-    // Sort nodes within each tier for consistent slotted positioning
+    // Sort nodes within each tier for consistent positioning in cluster mode
     Object.keys(tierGroups).forEach((tierStr) => {
       const tier = Number(tierStr);
       tierGroups[tier].sort((a, b) => (a.order - b.order) || a.id.localeCompare(b.id));
     });
 
-    // Compute vertical & slotted horizontal coordinates: strictly spreads from top to bottom
+    const totalTreeNodes = validNodes.length;
+
+    // Compute vertical & horizontal coordinates: Tree mode is strictly one above another
     const finalNodes = enrichedNodes.map((n) => {
-      const group = tierGroups[n.tier] || [n];
-      const count = group.length;
-      const idx = group.findIndex((m) => m.id === n.id);
-
-      // Vertical position (Tier 0 at top, Tier 7 at bottom)
-      const baseY = -250 + n.tier * 72;
-      // Slanted / slotted alternating Y offset for organic vertical depth
-      const staggerY = count > 1 ? (idx % 2 === 0 ? -6 : 6) : 0;
-      const targetY = baseY + staggerY;
-
-      // Horizontal position: tightly constrained within [-85, +85]
+      const treeLvl = treeLevelMap.get(n.id) ?? 0;
       let targetX = 0;
-      if (count === 1) {
-        targetX = 0;
+      let targetY = 0;
+
+      if (layoutMode === "tree") {
+        // Tree Mode: strictly one above another vertically along a clean column
+        const totalHeight = Math.max(totalTreeNodes * 28, 450);
+        targetY = -totalHeight / 2 + treeLvl * 28;
+        // Subtle stepped indent: Module -> File -> Function
+        targetX = n.type === "Module" ? -30 : n.type === "File" ? -10 : 15;
       } else {
-        const spreadWidth = Math.min(count * 34, 170);
-        const startX = -spreadWidth / 2;
-        const stepX = spreadWidth / (count - 1);
-        targetX = startX + idx * stepX;
+        // Cluster Mode: organic vertical cluster (fine in orientation)
+        const group = tierGroups[n.tier] || [n];
+        const count = group.length;
+        const idx = group.findIndex((m) => m.id === n.id);
+
+        const baseY = -220 + n.tier * 65;
+        const staggerY = count > 1 ? (idx % 2 === 0 ? -10 : 10) : 0;
+        targetY = baseY + staggerY;
+
+        if (count === 1) {
+          targetX = 0;
+        } else {
+          const spreadWidth = Math.min(count * 38, 160);
+          const startX = -spreadWidth / 2;
+          const stepX = spreadWidth / (count - 1);
+          targetX = startX + idx * stepX;
+        }
       }
 
       return {
         ...n,
-        level: n.tier,
+        // In tree mode, level is strictly unique sequential so nodes stack one above another
+        level: layoutMode === "tree" ? treeLvl : n.tier,
         targetY,
         targetX,
         x: n.x ?? targetX,
@@ -307,24 +357,24 @@ export default function NetworkGraphCanvas({
     // Strictly orient links top-down to guarantee an acyclic vertical DAG (0 cycles, 0 errors)
     const links = rawLinks
       .map((e) => {
-        const sTier = nodeTierMap.get(e.source) ?? 2;
-        const tTier = nodeTierMap.get(e.target) ?? 2;
-        if (sTier > tTier) {
+        const sLvl = layoutMode === "tree" ? (treeLevelMap.get(e.source) ?? 0) : (nodeTierMap.get(e.source) ?? 2);
+        const tLvl = layoutMode === "tree" ? (treeLevelMap.get(e.target) ?? 0) : (nodeTierMap.get(e.target) ?? 2);
+        if (sLvl > tLvl) {
           return { source: e.target, target: e.source, relationship: e.relationship };
         }
         return e;
       })
       .filter((e) => {
-        const sTier = nodeTierMap.get(e.source) ?? 2;
-        const tTier = nodeTierMap.get(e.target) ?? 2;
-        if (sTier === tTier && e.source > e.target) {
+        const sLvl = layoutMode === "tree" ? (treeLevelMap.get(e.source) ?? 0) : (nodeTierMap.get(e.source) ?? 2);
+        const tLvl = layoutMode === "tree" ? (treeLevelMap.get(e.target) ?? 0) : (nodeTierMap.get(e.target) ?? 2);
+        if (sLvl === tLvl && e.source > e.target) {
           return false;
         }
         return true;
       });
 
     return { nodes: finalNodes, links };
-  }, [nodes, edges, activeTypes, collapsedNodes]);
+  }, [nodes, edges, activeTypes, collapsedNodes, layoutMode]);
 
   // Dedicated File Flowchart Data: Vertical Linked Concise & Precise Pipeline (matching system flowchart)
   const flowchartData = useMemo(() => {
@@ -1043,7 +1093,7 @@ export default function NetworkGraphCanvas({
           backgroundColor="#000000"
           nodeRelSize={6}
           dagMode={viewMode === "flowchart" ? "td" : layoutMode === "tree" ? "td" : undefined}
-          dagLevelDistance={viewMode === "flowchart" ? 48 : layoutMode === "tree" ? 44 : 52}
+          dagLevelDistance={viewMode === "flowchart" ? 48 : layoutMode === "tree" ? 28 : 52}
           minZoom={0.25}
           maxZoom={3.0}
           onNodeClick={handleNodeClick}
@@ -1078,37 +1128,46 @@ export default function NetworkGraphCanvas({
             } else {
               const nid = String(node.id);
               const isBig = nid === "root" || nid === "src";
-              const radius = isBig ? 14 : 9;
+              const radius = isBig ? 8 : 5;
               ctx.fillStyle = color;
               ctx.beginPath();
-              ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
+              ctx.arc(node.x, node.y, radius + 3, 0, 2 * Math.PI, false);
               ctx.fill();
             }
           }}
-          // Link styling: clean monochrome neutral connections or flowchart flow
+          // Link styling: highlighted visible connections with prominent directional arrows
           linkColor={(link: any) => {
             if (viewMode === "flowchart") {
               const tgt = typeof link.target === "object" ? link.target.id : link.target;
               if (realtimeChangedSet.has(tgt) || Boolean(isModified)) return "#e5c07b";
               return "#383838";
             }
-            if (!connectedNeighbors) return "#222222";
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
-            if (connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
+            if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
               return "#f54e00"; // highlighted link
             }
-            return "#141414"; // dimmed
+            return "#4d4d4d"; // High visibility line (clearly visible, not invisible #141414!)
           }}
           linkWidth={(link: any) => {
-            if (viewMode === "flowchart") return 1.4;
-            if (!connectedNeighbors) return 0.9;
+            if (viewMode === "flowchart") return 1.5;
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
-            return connectedNeighbors.has(s) && connectedNeighbors.has(t) ? 2.0 : 0.4;
+            if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
+              return 2.4;
+            }
+            return 1.3;
           }}
-          linkDirectionalArrowLength={viewMode === "flowchart" ? 6 : 0}
+          linkDirectionalArrowLength={viewMode === "flowchart" ? 6 : layoutMode === "tree" ? 4.5 : 0}
           linkDirectionalArrowRelPos={1}
+          linkDirectionalArrowColor={(link: any) => {
+            const s = typeof link.source === "object" ? link.source.id : link.source;
+            const t = typeof link.target === "object" ? link.target.id : link.target;
+            if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
+              return "#f54e00";
+            }
+            return "#666666";
+          }}
           linkDirectionalParticles={viewMode === "flowchart" ? 2 : 0}
           linkDirectionalParticleSpeed={0.008}
           linkCurvature={0}
@@ -1277,124 +1336,110 @@ export default function NetworkGraphCanvas({
             // Real-time edited node check
             const isRealtimeChanged = realtimeChangedSet.has(nid) || realtimeChangedSet.has(nLabel) || realtimeChangedSet.has(nName);
 
-            // Compute radius based on importance & type
-            const isBig = nid === "root" || nid === "src" || nid === "FastMCPServer" || nid === "ASGI" || nid === "asgi.py" || nid === "worker.py";
+            // Refined dot sizes: reduced down so they are crisp, sleek, and not enlarged
+            const isBig = nid === "root" || nid === "src";
             const isFileNode = node.type === "File" || isBig;
-            const baseRadius = isBig ? 13 : isFileNode ? 10 : 7.5;
-            const radius = (isSelected || isHighlighted || isRealtimeChanged) ? baseRadius + 2.5 : baseRadius;
+            const baseRadius = isBig ? 5.5 : isFileNode ? 4.5 : node.type === "Class" ? 4.0 : 3.4;
+            const radius = (isSelected || isHighlighted || isRealtimeChanged) ? baseRadius + 1.6 : baseRadius;
 
             ctx.save();
             if (isDimmed && !isHighlighted && !isRealtimeChanged) {
-              ctx.globalAlpha = 0.22;
+              ctx.globalAlpha = 0.25;
             }
 
-            // 1. Real-time Changed / Blast-Radius / Selected halo pulse
+            // 1. Subtle, refined halo pulse when selected or edited
             if (isHighlighted) {
               ctx.beginPath();
-              ctx.arc(node.x, node.y, radius + 5 / globalScale, 0, 2 * Math.PI, false);
+              ctx.arc(node.x, node.y, radius + 2.5 / globalScale, 0, 2 * Math.PI, false);
               ctx.fillStyle = "rgba(207, 45, 86, 0.25)";
               ctx.fill();
               ctx.strokeStyle = "rgba(239, 68, 68, 0.75)";
-              ctx.lineWidth = 1.5 / globalScale;
+              ctx.lineWidth = 1.0 / globalScale;
               ctx.stroke();
             } else if (isRealtimeChanged) {
               ctx.beginPath();
-              ctx.arc(node.x, node.y, radius + 4 / globalScale, 0, 2 * Math.PI, false);
-              ctx.fillStyle = "rgba(229, 192, 123, 0.18)";
+              ctx.arc(node.x, node.y, radius + 2.0 / globalScale, 0, 2 * Math.PI, false);
+              ctx.fillStyle = "rgba(229, 192, 123, 0.2)";
               ctx.fill();
               ctx.strokeStyle = "rgba(229, 192, 123, 0.85)";
-              ctx.lineWidth = 1.8 / globalScale;
+              ctx.lineWidth = 1.0 / globalScale;
               ctx.stroke();
             } else if (isSelected) {
               ctx.beginPath();
-              ctx.arc(node.x, node.y, radius + 4 / globalScale, 0, 2 * Math.PI, false);
+              ctx.arc(node.x, node.y, radius + 2.0 / globalScale, 0, 2 * Math.PI, false);
               ctx.strokeStyle = "#f54e00";
-              ctx.lineWidth = 1.8 / globalScale;
+              ctx.lineWidth = 1.2 / globalScale;
               ctx.stroke();
             }
 
-            // 2. Node Core Disc
+            // 2. Node Core Disc (Crisp, sleek dot)
             ctx.beginPath();
             ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
             ctx.fillStyle = isHighlighted ? "#cf2d56" : isRealtimeChanged ? "#d19a66" : baseColor;
             ctx.fill();
 
-            ctx.strokeStyle = isHighlighted ? "#fce7ee" : isRealtimeChanged ? "#ffe2a3" : "#000000";
-            ctx.lineWidth = (isHighlighted || isRealtimeChanged) ? 1.8 / globalScale : 1.2 / globalScale;
+            ctx.strokeStyle = isHighlighted ? "#fce7ee" : isRealtimeChanged ? "#ffe2a3" : "#111111";
+            ctx.lineWidth = 0.8 / globalScale;
             ctx.stroke();
 
-            // 3. Crisp, High-Contrast Label Pill with Proper Legibility
+            // 3. Crisp Label Text (Positioned to the right of the dot, tree-style)
             const label = String(node.label || node.id);
             const isImportant = isBig || isSelected || isHighlighted || isRealtimeChanged || isFileNode;
 
-            if (isBig && radius * globalScale > 16) {
-              const bigFontSize = Math.min(Math.max(10.0 / globalScale, 6.0), 18.0);
-              ctx.font = `600 ${bigFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
-              ctx.fillStyle = "#ffffff";
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText(label, node.x, node.y);
+            const targetScreenPx = isImportant ? 9.2 : 7.8;
+            const fontSize = Math.min(Math.max(targetScreenPx / globalScale, 4.0), 16.0);
+            ctx.font = `${isImportant ? "600 " : "400 "}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+
+            const displayLabel = (!isImportant && label.length > 20) ? `${label.slice(0, 18)}…` : label;
+            const textWidth = ctx.measureText(displayLabel).width;
+            const labelX = node.x + radius + 3.5 / globalScale;
+            const labelY = node.y;
+
+            const pillPadX = 3.5 / globalScale;
+            const pillPadY = 1.8 / globalScale;
+            const pillWidth = textWidth + pillPadX * 2;
+            const pillHeight = fontSize + pillPadY * 2;
+
+            // Compact backdrop pill
+            ctx.fillStyle = "rgba(10, 10, 14, 0.88)";
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(labelX - pillPadX, labelY - pillHeight / 2, pillWidth, pillHeight, 2.5 / globalScale);
             } else {
-              // Target constant crisp screen size of ~9-11px for proper readability across all zoom levels
-              const targetScreenPx = isImportant ? 10.5 : 9.0;
-              const fontSize = Math.min(Math.max(targetScreenPx / globalScale, 5.0), 20.0);
-              ctx.font = `${isImportant ? "600 " : "500 "}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-
-              const displayLabel = (!isImportant && label.length > 15) ? `${label.slice(0, 13)}…` : label;
-              const textWidth = ctx.measureText(displayLabel).width;
-              const pillPadX = 5.0 / globalScale;
-              const pillPadY = 2.5 / globalScale;
-              const pillWidth = textWidth + pillPadX * 2;
-              const pillHeight = fontSize + pillPadY * 2;
-              const pillY = node.y + radius + 2.5 / globalScale;
-
-              // High-opacity dark backdrop pill
-              ctx.fillStyle = "rgba(10, 10, 14, 0.94)";
-              ctx.beginPath();
-              if (typeof ctx.roundRect === "function") {
-                ctx.roundRect(
-                  node.x - pillWidth / 2,
-                  pillY,
-                  pillWidth,
-                  pillHeight,
-                  3 / globalScale
-                );
-              } else {
-                ctx.rect(node.x - pillWidth / 2, pillY, pillWidth, pillHeight);
-              }
-              ctx.fill();
-
-              // High-contrast clean outline
-              ctx.strokeStyle = isHighlighted
-                ? "rgba(239, 68, 68, 0.85)"
-                : isRealtimeChanged
-                ? "rgba(229, 192, 123, 0.95)"
-                : isSelected
-                ? "rgba(245, 78, 0, 0.95)"
-                : isFileNode
-                ? "rgba(192, 168, 221, 0.55)"
-                : "rgba(255, 255, 255, 0.22)";
-              ctx.lineWidth = 0.85 / globalScale;
-              ctx.stroke();
-
-              // High-contrast clean text colors
-              ctx.fillStyle = isHighlighted
-                ? "#fca5a5"
-                : isRealtimeChanged
-                ? "#fef08a"
-                : isSelected
-                ? "#ff7a38"
-                : isFileNode
-                ? "#e9d5ff"
-                : type === "Class"
-                ? "#bbf7d0"
-                : type === "Endpoint"
-                ? "#fed7aa"
-                : "#f1f5f9";
-              ctx.fillText(displayLabel, node.x, pillY + pillHeight / 2);
+              ctx.rect(labelX - pillPadX, labelY - pillHeight / 2, pillWidth, pillHeight);
             }
+            ctx.fill();
+
+            // Subtle border
+            ctx.strokeStyle = isHighlighted
+              ? "rgba(239, 68, 68, 0.85)"
+              : isRealtimeChanged
+              ? "rgba(229, 192, 123, 0.95)"
+              : isSelected
+              ? "rgba(245, 78, 0, 0.95)"
+              : isFileNode
+              ? "rgba(192, 168, 221, 0.45)"
+              : "rgba(255, 255, 255, 0.12)";
+            ctx.lineWidth = 0.7 / globalScale;
+            ctx.stroke();
+
+            // Label text color
+            ctx.fillStyle = isHighlighted
+              ? "#fca5a5"
+              : isRealtimeChanged
+              ? "#fef08a"
+              : isSelected
+              ? "#ff7a38"
+              : isFileNode
+              ? "#e9d5ff"
+              : type === "Class"
+              ? "#bbf7d0"
+              : type === "Endpoint"
+              ? "#fed7aa"
+              : "#e2e8f0";
+            ctx.fillText(displayLabel, labelX, labelY);
 
             ctx.restore();
           }}
