@@ -74,36 +74,51 @@ const COLOR_MAP: Record<string, string> = {
   Function: "#dfa88f",  // Cursor timeline-thinking (peach)
 };
 
-// Vertical multi-tier topological hierarchy ranking for DAG Tree mode
-function getNodeLevel(node: NodeItem): number {
+// Vertical multi-tier topological hierarchy ranking (0 to 7) for top-to-bottom vertical spread
+function getNodeVerticalTier(node: NodeItem): { tier: number; order: number } {
   const t = node.type || "";
   const id = String(node.id || "");
 
-  // Tier 0: Workspace Module Root
-  if (t === "Module" || id === "root" || id === "src" || id === "tests") return 0;
+  // Tier 0: Workspace Module Root (Top of canvas)
+  if (t === "Module" || id === "root" || id === "src") return { tier: 0, order: id === "root" ? 0 : 1 };
 
-  // Tier 1: Core Daemon & Entrypoint Files
-  if (id === "asgi.py" || id === "worker.py" || id.includes("main") || id.includes("index")) return 1;
+  // Tier 1: Workspace Tests, Build Scripts & Project Config
+  if (id === "tests" || id.endsWith(".sh") || id.endsWith(".json") || id.endsWith(".md") || id.endsWith(".txt") || id.endsWith(".toml")) {
+    return { tier: 1, order: id === "tests" ? 0 : 1 };
+  }
 
-  // Tier 2: Domain Source Files
-  if (t === "File" || id.endsWith(".ts") || id.endsWith(".py") || id.endsWith(".json")) return 2;
+  // Tier 2: Domain Source Code Files (Python & TypeScript source files)
+  if (t === "File" || id.endsWith(".py") || id.endsWith(".ts")) {
+    const fileOrder = id === "asgi.py" ? 0 : id === "worker.py" ? 1 : id === "auth.ts" ? 2 : id === "billing.ts" ? 3 : id === "finance.ts" ? 4 : 5;
+    return { tier: 2, order: fileOrder };
+  }
 
-  // Tier 3: Core Service Classes & Primary Inbound Handlers
-  if (t === "Class" || id === "ASGI" || id === "FastMCPServer" || id === "auditAccount" || id === "validateToken") return 3;
+  // Tier 3: Core Service Classes & Daemon Objects
+  if (t === "Class" || id === "ASGI" || id === "FastMCPServer" || id === "background_task") {
+    return { tier: 3, order: id === "ASGI" ? 0 : id === "FastMCPServer" ? 1 : 2 };
+  }
 
-  // Tier 4: Business Logic Operations
-  if (id === "processInvoice" || id === "calculateTax" || id === "start_application" || id === "setup_server") return 4;
+  // Tier 4: Primary Daemon Starters, Public Routers & Inbound Handlers
+  if (id === "process_websocket" || id === "start_application" || id === "setup_server" || id === "auditAccount" || id === "validateToken") {
+    return { tier: 4, order: id === "process_websocket" ? 0 : id === "start_application" ? 1 : 2 };
+  }
 
-  // Tier 5: Internal Workers & Verification Functions
-  if (id === "verifyToken" || id === "decodePayload" || id === "acquire_ws_buffer" || id === "process_websocket") return 5;
+  // Tier 5: Core Business Logic, Frame Buffering & Verification
+  if (id === "acquire_ws_buffer" || id === "calculateTax" || id === "processInvoice" || id === "verifyToken" || id === "decodePayload" || id === "ws_receive" || id === "onmessage") {
+    return { tier: 5, order: 0 };
+  }
 
-  // Tier 6: Leaf Endpoints, Callbacks & Return models
-  if (t === "Endpoint" || id === "onopen" || id === "onclose" || id === "Invoice" || id.includes("Status")) return 6;
+  // Tier 6: Connection Hooks, Worker Loops & Lifecycle Teardowns
+  if (id === "onopen" || id === "onclose" || id === "run_worker" || id === "ws_send" || id === "process_request" || id === "shutdown") {
+    return { tier: 6, order: 0 };
+  }
 
-  // Distribute remaining functions across tiers 3 to 6 to keep vertical column balanced
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xff;
-  return 3 + (hash % 4);
+  // Tier 7: Leaf Endpoints, Utilities & Return States (Bottom of canvas)
+  return { tier: 7, order: 0 };
+}
+
+function getNodeLevel(node: NodeItem): number {
+  return getNodeVerticalTier(node).tier;
 }
 
 export default function NetworkGraphCanvas({
@@ -212,17 +227,65 @@ export default function NetworkGraphCanvas({
     return new Set(realtimeChangedNodeIds);
   }, [realtimeChangedNodeIds]);
 
-  // Filter nodes & links based on activeTypes, collapsed state, and Tree vs Cluster layout
+  // Filter nodes & links based on activeTypes, collapsed state, and Top-to-Bottom Vertical Layout
   const graphData = useMemo(() => {
     const validNodes = nodes.filter((n) => {
       const typeKey = n.type || "Function";
       return activeTypes[typeKey] !== false;
     });
 
-    const nodeLevelMap = new Map<string, number>();
-    for (const n of validNodes) {
-      nodeLevelMap.set(n.id, getNodeLevel(n));
+    const nodeTierMap = new Map<string, number>();
+    const tierGroups: Record<number, any[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] };
+
+    const enrichedNodes = validNodes.map((n) => {
+      const { tier, order } = getNodeVerticalTier(n);
+      nodeTierMap.set(n.id, tier);
+      return { ...n, tier, order };
+    });
+
+    for (const n of enrichedNodes) {
+      if (!tierGroups[n.tier]) tierGroups[n.tier] = [];
+      tierGroups[n.tier].push(n);
     }
+
+    // Sort nodes within each tier for consistent slotted positioning
+    Object.keys(tierGroups).forEach((tierStr) => {
+      const tier = Number(tierStr);
+      tierGroups[tier].sort((a, b) => (a.order - b.order) || a.id.localeCompare(b.id));
+    });
+
+    // Compute vertical & slotted horizontal coordinates: strictly spreads from top to bottom
+    const finalNodes = enrichedNodes.map((n) => {
+      const group = tierGroups[n.tier] || [n];
+      const count = group.length;
+      const idx = group.findIndex((m) => m.id === n.id);
+
+      // Vertical position (Tier 0 at top, Tier 7 at bottom)
+      const baseY = -250 + n.tier * 72;
+      // Slanted / slotted alternating Y offset for organic vertical depth
+      const staggerY = count > 1 ? (idx % 2 === 0 ? -6 : 6) : 0;
+      const targetY = baseY + staggerY;
+
+      // Horizontal position: tightly constrained within [-85, +85]
+      let targetX = 0;
+      if (count === 1) {
+        targetX = 0;
+      } else {
+        const spreadWidth = Math.min(count * 34, 170);
+        const startX = -spreadWidth / 2;
+        const stepX = spreadWidth / (count - 1);
+        targetX = startX + idx * stepX;
+      }
+
+      return {
+        ...n,
+        level: n.tier,
+        targetY,
+        targetX,
+        x: n.x ?? targetX,
+        y: n.y ?? targetY,
+      };
+    });
 
     const validNodeIds = new Set(validNodes.map((n) => n.id));
 
@@ -241,31 +304,27 @@ export default function NetworkGraphCanvas({
         return true;
       });
 
-    // In tree mode, strictly orient links top-down to guarantee an acyclic DAG (0 cycles, 0 errors)
+    // Strictly orient links top-down to guarantee an acyclic vertical DAG (0 cycles, 0 errors)
     const links = rawLinks
       .map((e) => {
-        if (layoutMode === "tree") {
-          const sLvl = nodeLevelMap.get(e.source) ?? 2;
-          const tLvl = nodeLevelMap.get(e.target) ?? 2;
-          if (sLvl > tLvl) {
-            return { source: e.target, target: e.source, relationship: e.relationship };
-          }
+        const sTier = nodeTierMap.get(e.source) ?? 2;
+        const tTier = nodeTierMap.get(e.target) ?? 2;
+        if (sTier > tTier) {
+          return { source: e.target, target: e.source, relationship: e.relationship };
         }
         return e;
       })
       .filter((e) => {
-        if (layoutMode === "tree") {
-          const sLvl = nodeLevelMap.get(e.source) ?? 2;
-          const tLvl = nodeLevelMap.get(e.target) ?? 2;
-          if (sLvl === tLvl && e.source > e.target) {
-            return false;
-          }
+        const sTier = nodeTierMap.get(e.source) ?? 2;
+        const tTier = nodeTierMap.get(e.target) ?? 2;
+        if (sTier === tTier && e.source > e.target) {
+          return false;
         }
         return true;
       });
 
-    return { nodes: validNodes, links };
-  }, [nodes, edges, activeTypes, collapsedNodes, layoutMode]);
+    return { nodes: finalNodes, links };
+  }, [nodes, edges, activeTypes, collapsedNodes]);
 
   // Dedicated File Flowchart Data: Vertical Linked Concise & Precise Pipeline (matching system flowchart)
   const flowchartData = useMemo(() => {
@@ -298,12 +357,11 @@ export default function NetworkGraphCanvas({
         { id: "ASGI", label: "ASGI.__init__()", desc: "Worker Lifecycle Initialization", category: "core", accentColor: "#38bdf8" },
         { id: "start_application", label: "start_application()", desc: "Starts FastMCP Worker Daemon", category: "logic", accentColor: "#2dd4bf" },
         { id: "process_websocket", label: "process_websocket()", desc: "Async WebSocket Frame Router", category: "core", accentColor: "#38bdf8" },
+        { id: "onopen", label: "onopen()", desc: "Handshake Connection Hook", category: "side", accentColor: "#fb923c" },
         { id: "acquire_ws_buffer", label: "acquire_ws_buffer()", desc: "Buffers Client Connection Frames", category: "calc", accentColor: "#10b981" },
         { id: "onclose", label: "onclose()", desc: "Graceful Connection Teardown", category: "output", accentColor: "#94a3b8" },
       ];
-      sideSteps = [
-        { step: { id: "onopen", label: "onopen()", desc: "Handshake Hook", category: "side", accentColor: "#fb923c", isSideBranch: true }, connectedTo: "process_websocket" }
-      ];
+      sideSteps = [];
     } else if (activeFileName === "auth.ts") {
       pipelineSteps = [
         { id: "file:auth.ts", label: "auth.ts", desc: "Security Gateway SPI", category: "entry", isSPI: true, accentColor: "#c084fc" },
@@ -315,14 +373,13 @@ export default function NetworkGraphCanvas({
     } else if (activeFileName === "billing.ts") {
       pipelineSteps = [
         { id: "file:billing.ts", label: "billing.ts", desc: "Billing & Invoicing Engine", category: "entry", isSPI: true, accentColor: "#c084fc" },
+        { id: "Invoice", label: "Invoice Model", desc: "Typed Schema Definition", category: "side", accentColor: "#fb923c" },
         { id: "processInvoice", label: "processInvoice()", desc: "Parses Items & Tax Liability", category: "core", accentColor: "#38bdf8" },
         { id: "calculateTax", label: "calculateTax()", desc: "External Regional Tax Formula", category: "calc", accentColor: "#a855f7" },
         { id: "persistInvoice", label: "persistInvoice()", desc: "Commits Invoice to Database", category: "logic", accentColor: "#10b981" },
         { id: "billingState", label: "State: PROCESSED", desc: "Emits Transaction Dispatched", category: "output", accentColor: "#34d399" },
       ];
-      sideSteps = [
-        { step: { id: "Invoice", label: "Invoice Model", desc: "Typed Schema Definition", category: "side", accentColor: "#fb923c", isSideBranch: true }, connectedTo: "processInvoice" }
-      ];
+      sideSteps = [];
     } else if (activeFileName === "worker.py") {
       pipelineSteps = [
         { id: "file:worker.py", label: "worker.py", desc: "FastMCP Worker Service SPI", category: "entry", isSPI: true, accentColor: "#c084fc" },
@@ -482,8 +539,8 @@ export default function NetworkGraphCanvas({
         // Comfortably fill canvas vertically without oversized text
         fitZoom = Math.min(Math.max(fitZoom, 0.78), 1.25);
       } else {
-        // Full graph fills max canvas space vertically & horizontally
-        fitZoom = Math.min(Math.max(fitZoom, 0.52), 1.35);
+        // Full graph fills max canvas space vertically & horizontally without shrinking
+        fitZoom = Math.min(Math.max(fitZoom, 0.65), 1.35);
       }
 
       fgRef.current.centerAt(midX, midY, 260);
@@ -510,13 +567,38 @@ export default function NetworkGraphCanvas({
     if (!fgRef.current || currentGraphData.nodes.length === 0) return;
     try {
       if (viewMode === "graph") {
+        // Custom vertical constraint force to spread strictly from top to bottom
+        const verticalForce = () => {
+          let fNodes: any[] = [];
+          const force = (alpha: number) => {
+            for (let i = 0; i < fNodes.length; i++) {
+              const node = fNodes[i];
+              if (node.targetY !== undefined) {
+                node.vy += (node.targetY - node.y) * 0.28 * alpha;
+              }
+              if (node.targetX !== undefined) {
+                node.vx += (node.targetX - node.x) * 0.32 * alpha;
+              } else {
+                node.vx += (0 - node.x) * 0.25 * alpha;
+              }
+            }
+          };
+          force.initialize = (_nodes: any[]) => {
+            fNodes = _nodes;
+          };
+          return force;
+        };
+
+        fgRef.current.d3Force("verticalSpread", verticalForce());
         if (layoutMode === "cluster") {
-          fgRef.current.d3Force("charge")?.strength?.(-80)?.distanceMax?.(240)?.distanceMin?.(20);
-          fgRef.current.d3Force("link")?.distance?.(45);
+          fgRef.current.d3Force("charge")?.strength?.(-45)?.distanceMax?.(170)?.distanceMin?.(15);
+          fgRef.current.d3Force("link")?.distance?.(36);
         } else {
-          fgRef.current.d3Force("charge")?.strength?.(-65)?.distanceMax?.(200);
+          fgRef.current.d3Force("charge")?.strength?.(-35)?.distanceMax?.(140);
+          fgRef.current.d3Force("link")?.distance?.(30);
         }
       } else if (viewMode === "flowchart") {
+        fgRef.current.d3Force("verticalSpread", null);
         fgRef.current.d3Force("charge")?.strength?.(-90)?.distanceMax?.(200);
       }
     } catch {
@@ -524,7 +606,7 @@ export default function NetworkGraphCanvas({
     }
     const timer = setTimeout(() => {
       handleFit();
-    }, 100);
+    }, 120);
     return () => clearTimeout(timer);
   }, [
     viewMode,
@@ -556,8 +638,11 @@ export default function NetworkGraphCanvas({
     setTimeout(() => {
       if (fgRef.current) {
         if (mode === "cluster") {
-          fgRef.current.d3Force("charge")?.strength?.(-110)?.distanceMax?.(260)?.distanceMin?.(25);
-          fgRef.current.d3Force("link")?.distance?.(55);
+          fgRef.current.d3Force("charge")?.strength?.(-50)?.distanceMax?.(180)?.distanceMin?.(15);
+          fgRef.current.d3Force("link")?.distance?.(38);
+        } else {
+          fgRef.current.d3Force("charge")?.strength?.(-35)?.distanceMax?.(140);
+          fgRef.current.d3Force("link")?.distance?.(30);
         }
         fgRef.current.d3ReheatSimulation?.();
         handleFit();
@@ -1234,31 +1319,35 @@ export default function NetworkGraphCanvas({
             ctx.lineWidth = (isHighlighted || isRealtimeChanged) ? 1.8 / globalScale : 1.2 / globalScale;
             ctx.stroke();
 
-            // 3. Label text with clean backdrop pill
+            // 3. Crisp, High-Contrast Label Pill with Proper Legibility
             const label = String(node.label || node.id);
-            const isImportant = isBig || isSelected || isHighlighted || isRealtimeChanged;
-
-            if (!isImportant && globalScale < 0.38) {
-              ctx.restore();
-              return;
-            }
-
-            const fontSize = Math.min(Math.max(6.0 / globalScale, 2.6), 8.0);
-            ctx.font = `${isImportant ? "600 " : "400 "}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
+            const isImportant = isBig || isSelected || isHighlighted || isRealtimeChanged || isFileNode;
 
             if (isBig && radius * globalScale > 16) {
+              const bigFontSize = Math.min(Math.max(10.0 / globalScale, 6.0), 18.0);
+              ctx.font = `600 ${bigFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
               ctx.fillStyle = "#ffffff";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
               ctx.fillText(label, node.x, node.y);
             } else {
-              const displayLabel = (!isImportant && label.length > 13) ? `${label.slice(0, 11)}…` : label;
-              const textWidth = ctx.measureText(displayLabel).width;
-              const pillHeight = fontSize + 3.0 / globalScale;
-              const pillY = node.y + radius + 2 / globalScale;
-              const pillWidth = textWidth + 5.0 / globalScale;
+              // Target constant crisp screen size of ~9-11px for proper readability across all zoom levels
+              const targetScreenPx = isImportant ? 10.5 : 9.0;
+              const fontSize = Math.min(Math.max(targetScreenPx / globalScale, 5.0), 20.0);
+              ctx.font = `${isImportant ? "600 " : "500 "}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
 
-              ctx.fillStyle = "rgba(8, 8, 8, 0.94)";
+              const displayLabel = (!isImportant && label.length > 15) ? `${label.slice(0, 13)}…` : label;
+              const textWidth = ctx.measureText(displayLabel).width;
+              const pillPadX = 5.0 / globalScale;
+              const pillPadY = 2.5 / globalScale;
+              const pillWidth = textWidth + pillPadX * 2;
+              const pillHeight = fontSize + pillPadY * 2;
+              const pillY = node.y + radius + 2.5 / globalScale;
+
+              // High-opacity dark backdrop pill
+              ctx.fillStyle = "rgba(10, 10, 14, 0.94)";
               ctx.beginPath();
               if (typeof ctx.roundRect === "function") {
                 ctx.roundRect(
@@ -1266,24 +1355,40 @@ export default function NetworkGraphCanvas({
                   pillY,
                   pillWidth,
                   pillHeight,
-                  2 / globalScale
+                  3 / globalScale
                 );
               } else {
                 ctx.rect(node.x - pillWidth / 2, pillY, pillWidth, pillHeight);
               }
               ctx.fill();
 
+              // High-contrast clean outline
               ctx.strokeStyle = isHighlighted
-                ? "rgba(239, 68, 68, 0.6)"
+                ? "rgba(239, 68, 68, 0.85)"
                 : isRealtimeChanged
-                ? "rgba(229, 192, 123, 0.7)"
+                ? "rgba(229, 192, 123, 0.95)"
                 : isSelected
-                ? "rgba(245, 78, 0, 0.7)"
-                : "rgba(255, 255, 255, 0.12)";
-              ctx.lineWidth = 0.7 / globalScale;
+                ? "rgba(245, 78, 0, 0.95)"
+                : isFileNode
+                ? "rgba(192, 168, 221, 0.55)"
+                : "rgba(255, 255, 255, 0.22)";
+              ctx.lineWidth = 0.85 / globalScale;
               ctx.stroke();
 
-              ctx.fillStyle = isHighlighted ? "#fca5a5" : isRealtimeChanged ? "#e5c07b" : isSelected ? "#f54e00" : "#d4d4d8";
+              // High-contrast clean text colors
+              ctx.fillStyle = isHighlighted
+                ? "#fca5a5"
+                : isRealtimeChanged
+                ? "#fef08a"
+                : isSelected
+                ? "#ff7a38"
+                : isFileNode
+                ? "#e9d5ff"
+                : type === "Class"
+                ? "#bbf7d0"
+                : type === "Endpoint"
+                ? "#fed7aa"
+                : "#f1f5f9";
               ctx.fillText(displayLabel, node.x, pillY + pillHeight / 2);
             }
 
