@@ -536,8 +536,9 @@ export default function NetworkGraphCanvas({
       let fitZoom = Math.min(availWidth / contentWidth, availHeight / contentHeight);
 
       if (viewMode === "flowchart") {
-        // Comfortably fill canvas vertically without oversized text
-        fitZoom = Math.min(Math.max(fitZoom, 0.78), 1.25);
+        // Lock flowchart zoom to Screenshot 1 size (~1.65) so it never diminishes
+        const targetFlowZoom = Math.min(Math.max((dimensions.width * 0.62) / 120, 1.55), 1.85);
+        fitZoom = targetFlowZoom;
       } else {
         // Full graph fills max canvas space vertically & horizontally without shrinking
         fitZoom = Math.min(Math.max(fitZoom, 0.65), 1.35);
@@ -599,7 +600,8 @@ export default function NetworkGraphCanvas({
         }
       } else if (viewMode === "flowchart") {
         fgRef.current.d3Force("verticalSpread", null);
-        fgRef.current.d3Force("charge")?.strength?.(-90)?.distanceMax?.(200);
+        fgRef.current.d3Force("charge")?.strength?.(0); // Zero repulsive drift so cards stay fixed
+        fgRef.current.d3Force("link")?.distance?.(48);
       }
     } catch {
       // Safe fallback
@@ -1041,7 +1043,7 @@ export default function NetworkGraphCanvas({
           backgroundColor="#000000"
           nodeRelSize={6}
           dagMode={viewMode === "flowchart" ? "td" : layoutMode === "tree" ? "td" : undefined}
-          dagLevelDistance={viewMode === "flowchart" ? 44 : layoutMode === "tree" ? 44 : 52}
+          dagLevelDistance={viewMode === "flowchart" ? 48 : layoutMode === "tree" ? 44 : 52}
           minZoom={0.25}
           maxZoom={3.0}
           onNodeClick={handleNodeClick}
@@ -1059,7 +1061,9 @@ export default function NetworkGraphCanvas({
           d3VelocityDecay={0.35}
           d3AlphaDecay={0.03}
           onEngineStop={() => {
-            handleFit();
+            if (viewMode === "graph") {
+              handleFit();
+            }
           }}
           // Hit area detection matching world coordinates
           nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
