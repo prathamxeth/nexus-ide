@@ -215,9 +215,9 @@ export function FileTree({
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#666666]">AST Nodes</span>
+              <span className="text-[#666666]">Code Items</span>
               <span className="text-[#3b82f6] font-semibold">
-                {dbHealth ? `${dbHealth.total_nodes} nodes` : "—"}
+                {dbHealth ? `${dbHealth.total_nodes} items` : "—"}
               </span>
             </div>
           </div>
@@ -230,7 +230,7 @@ export function FileTree({
             <RefreshCw
               className={`w-3 h-3 text-[#3b82f6] ${isReindexing ? "animate-spin" : ""}`}
             />
-            <span>{isReindexing ? "Indexing AST..." : "Live Re-index AST"}</span>
+            <span>{isReindexing ? "Indexing Code..." : "Update Code Graph"}</span>
           </button>
         </div>
       </div>

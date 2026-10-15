@@ -365,7 +365,7 @@ export function GraphViewer({
             title="Refresh Graph"
             className="p-1 hover:bg-[#222] text-neutral-400 hover:text-white rounded transition-colors"
           >
-            <RefreshCw size={13} className={isLoading ? "animate-spin text-blue-400" : ""} />
+            <RefreshCw size={13} className={isLoading ? "animate-spin text-[#f54e00]" : ""} />
           </button>
         )}
       </div>
@@ -382,7 +382,7 @@ export function GraphViewer({
           <div className="flex items-center gap-1.5 mb-1 pb-1 border-b border-[#262626]">
             <span
               className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: LAYER_CONFIG[hoverNode.layer as LayerKey]?.color || "#3b82f6" }}
+              style={{ backgroundColor: LAYER_CONFIG[hoverNode.layer as LayerKey]?.color || "#f54e00" }}
             />
             <span className="font-semibold text-white truncate">
               {hoverNode.label || hoverNode.id}
@@ -394,8 +394,8 @@ export function GraphViewer({
 
           <div className="space-y-1 text-[11px] text-neutral-400">
             {hoverNode.file && (
-              <div className="text-blue-400 truncate">
-                File: <span className="text-neutral-300">{hoverNode.file}</span>
+              <div className="text-neutral-400 truncate">
+                File: <span className="text-neutral-200">{hoverNode.file}</span>
               </div>
             )}
             {hoverNode.metadata?.rule && (

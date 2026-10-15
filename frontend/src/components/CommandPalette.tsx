@@ -62,10 +62,10 @@ export function CommandPalette({
       id: "file-auth",
       category: "Files",
       title: "auth.ts",
-      subtitle: "Target AST function: validateToken()",
-      icon: <FileCode className="w-4 h-4 text-blue-400" />,
+      subtitle: "Main function: validateToken()",
+      icon: <FileCode className="w-4 h-4 text-[#f54e00]" />,
       badge: "Target",
-      badgeColor: "bg-blue-950/60 text-blue-400 border-blue-800/40",
+      badgeColor: "bg-[#1c1c1c] text-[#f54e00] border-[#333333]",
       shortcut: "⌘1",
       onSelect: () => {
         onSelectFile("auth.ts");
@@ -76,9 +76,9 @@ export function CommandPalette({
       id: "file-billing",
       category: "Files",
       title: "billing.ts",
-      subtitle: "Blast Radius caller: processInvoice() [Hop 1]",
+      subtitle: "Connected caller: processInvoice() [Direct]",
       icon: <FileCode className="w-4 h-4 text-red-400" />,
-      badge: "Hop 1",
+      badge: "Connected",
       badgeColor: "bg-red-950/60 text-red-400 border-red-800/40",
       shortcut: "⌘2",
       onSelect: () => {
@@ -90,9 +90,9 @@ export function CommandPalette({
       id: "file-finance",
       category: "Files",
       title: "finance.ts",
-      subtitle: "Blast Radius caller: auditAccount() [Hop 2]",
+      subtitle: "Connected caller: auditAccount() [Indirect]",
       icon: <FileCode className="w-4 h-4 text-red-400" />,
-      badge: "Hop 2",
+      badge: "Connected",
       badgeColor: "bg-red-950/60 text-red-400 border-red-800/40",
       shortcut: "⌘3",
       onSelect: () => {
@@ -105,8 +105,8 @@ export function CommandPalette({
     {
       id: "graph-stratified",
       category: "Graph Actions",
-      title: "Inspect 4-Layer Knowledge Graph",
-      subtitle: "FalkorDB AST, Blast Radius, Memory & Company Brain",
+      title: "Inspect Code Knowledge Graph",
+      subtitle: "Connected Code, What Breaks, Memory & Team History",
       icon: <Network className="w-4 h-4 text-amber-400" />,
       badge: "FalkorDB",
       badgeColor: "bg-amber-950/60 text-amber-400 border-amber-800/40",
@@ -118,21 +118,21 @@ export function CommandPalette({
     {
       id: "graph-blast",
       category: "Graph Actions",
-      title: "Traverse Blast Radius Call Graph",
-      subtitle: "Identify all upstream callers of validateToken",
+      title: "Find What Breaks on Changes",
+      subtitle: "See all functions that call or rely on validateToken",
       icon: <ShieldAlert className="w-4 h-4 text-red-400" />,
       badge: "2 Callers",
       badgeColor: "bg-red-950/60 text-red-400 border-red-800/40",
       onSelect: () => {
         onSelectView("graph");
-        onRunPrompt("Analyze blast radius callers for validateToken in FalkorDB");
+        onRunPrompt("Track 1 · What breaks if validateToken changes?");
       },
     },
     {
       id: "graph-memory",
       category: "Graph Actions",
-      title: "Check Procedural Memory Guardrails",
-      subtitle: "Verify PR #104 rule: 'Must check exp (skew <= 60s)'",
+      title: "Check Remembered Rules",
+      subtitle: "Verify remembered rule from PR #104: 'Check expiration within 60s'",
       icon: <BookOpen className="w-4 h-4 text-amber-400" />,
       badge: "Track 2",
       badgeColor: "bg-amber-950/60 text-amber-400 border-amber-800/40",
@@ -145,25 +145,25 @@ export function CommandPalette({
     {
       id: "agent-harden",
       category: "Agent Refactor",
-      title: "Harden validateToken with strict expiration check",
-      subtitle: "Enforce procedural memory rule (skew <= 60s) from PR #104",
+      title: "Update validateToken with expiration check",
+      subtitle: "Follow remembered rule (skew <= 60s) from PR #104",
       icon: <Sparkles className="w-4 h-4 text-emerald-400" />,
       badge: "Live SSE",
       badgeColor: "bg-emerald-950/60 text-emerald-400 border-emerald-800/40",
       shortcut: "↵",
       onSelect: () => {
         onSelectView("diff");
-        onRunPrompt("Harden validateToken with fail-closed null checks and strict expiration claim enforcement (skew <= 60s)");
+        onRunPrompt("Track 1 · What breaks if validateToken changes?");
       },
     },
     {
       id: "agent-diff-review",
       category: "Agent Refactor",
-      title: "Open Side-by-Side Diff Review",
-      subtitle: "Inspect pending patch with Accept (⌘Y) / Reject (⌘N)",
-      icon: <ArrowRight className="w-4 h-4 text-blue-400" />,
-      badge: "Monaco Diff",
-      badgeColor: "bg-blue-950/60 text-blue-400 border-blue-800/40",
+      title: "Open Side-by-Side Code Comparison",
+      subtitle: "Compare pending changes with Accept (⌘Y) / Reject (⌘N)",
+      icon: <ArrowRight className="w-4 h-4 text-neutral-300" />,
+      badge: "Compare",
+      badgeColor: "bg-[#1c1c1c] text-neutral-300 border-[#333333]",
       onSelect: () => {
         onSelectView("diff");
       },
@@ -175,7 +175,7 @@ export function CommandPalette({
       category: "AI Models",
       title: "Switch to Claude 3.5 Sonnet",
       subtitle: "Anthropic Claude reasoning engine",
-      icon: <Cloud className="w-4 h-4 text-blue-400" />,
+      icon: <Cloud className="w-4 h-4 text-[#f54e00]" />,
       badge: currentModel.includes("claude") ? "Active" : "Cloud",
       badgeColor: currentModel.includes("claude") ? "bg-emerald-950/60 text-emerald-400 border-emerald-800/40" : "bg-neutral-800 text-neutral-400",
       onSelect: () => onSelectModel("claude-3.5-sonnet"),
@@ -195,7 +195,7 @@ export function CommandPalette({
       category: "AI Models",
       title: "Switch to GPT-4o",
       subtitle: "OpenAI multi-modal model",
-      icon: <Cloud className="w-4 h-4 text-blue-400" />,
+      icon: <Cloud className="w-4 h-4 text-neutral-300" />,
       badge: currentModel.includes("gpt") ? "Active" : "Cloud",
       badgeColor: currentModel.includes("gpt") ? "bg-emerald-950/60 text-emerald-400 border-emerald-800/40" : "bg-neutral-800 text-neutral-400",
       onSelect: () => onSelectModel("gpt-4o"),
@@ -385,7 +385,7 @@ export function CommandPalette({
             <span>↵ Select</span>
             <span>ESC Close</span>
           </div>
-          <span className="text-neutral-400">GraphiCode Command Palette</span>
+          <span className="text-neutral-400">Nexus IDE Command Palette</span>
         </div>
       </div>
     </div>

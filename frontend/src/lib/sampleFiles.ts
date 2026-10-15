@@ -33,40 +33,55 @@ export async function validateToken(token: string): Promise<boolean> {
 }
 `,
   },
-  "api_handler.ts": {
-    name: "api_handler.ts",
-    path: "src/api_handler.ts",
+  "billing.ts": {
+    name: "billing.ts",
+    path: "src/billing.ts",
     language: "typescript",
-    targetFunction: "handleApiRequest",
-    content: `import { verifyToken } from './auth';
+    targetFunction: "processInvoice",
+    content: `import { validateToken } from './auth';
 
-export interface ApiPayload {
-  endpoint: string;
-  headers: Record<string, string>;
-  body: any;
+export interface Invoice {
+  id: string;
+  amount: number;
+  customerId: string;
+  token: string;
 }
 
-export async function handleApiRequest(payload: ApiPayload) {
-  const authHeader = payload.headers['authorization'];
-  if (!authHeader) {
-    throw new Error("Missing authorization header");
+/**
+ * Processes automated subscription invoice billing.
+ * Upstream caller (Hop 1) in FalkorDB blast radius graph.
+ */
+export async function processInvoice(invoice: Invoice): Promise<{ success: boolean; txId?: string }> {
+  // Direct dependency on auth.ts:validateToken
+  const isAuthorized = await validateToken(invoice.token);
+  if (!isAuthorized) {
+    throw new Error("Billing unauthorized: invalid session token");
   }
 
-  const token = authHeader.replace(/^Bearer\\s+/, '');
-  const isValid = verifyToken(token);
-  
-  if (!isValid) {
-    return {
-      status: 401,
-      body: { error: "Unauthorized access" }
-    };
-  }
-
-  return processRoute(payload.endpoint, payload.body);
+  const txId = "tx_" + Math.random().toString(36).substring(2, 9);
+  return { success: true, txId };
 }
+`,
+  },
+  "finance.ts": {
+    name: "finance.ts",
+    path: "src/finance.ts",
+    language: "typescript",
+    targetFunction: "auditAccount",
+    content: `import { processInvoice, Invoice } from './billing';
 
-function processRoute(endpoint: string, body: any) {
-  return { status: 200, data: { endpoint, processed: true } };
+/**
+ * Audits enterprise corporate accounts.
+ * Transitive caller (Hop 2) in FalkorDB blast radius graph.
+ */
+export async function auditAccount(accountId: string, invoices: Invoice[]): Promise<boolean> {
+  for (const inv of invoices) {
+    const res = await processInvoice(inv);
+    if (!res.success) {
+      return false;
+    }
+  }
+  return true;
 }
 `,
   },

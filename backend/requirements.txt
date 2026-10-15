@@ -6,3 +6,4 @@ tree-sitter-typescript>=0.21.0
 tree-sitter-python>=0.21.0
 pydantic>=2.6.0
 python-dotenv>=1.0.0
+mcp>=1.0.0

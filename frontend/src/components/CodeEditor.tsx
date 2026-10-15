@@ -184,7 +184,7 @@ export function CodeEditor({
 
           <button
             onClick={onAcceptDiff}
-            className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#22c55e] hover:bg-[#16a34a] text-[#ffffff] text-xs font-mono font-medium transition-all shadow-[0_0_12px_rgba(34,197,94,0.3)] hover:scale-102 active:scale-98"
+            className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#22c55e] hover:bg-[#16a34a] text-[#ffffff] text-xs font-mono font-medium transition-colors duration-150 active:opacity-90 shadow-[0_0_12px_rgba(34,197,94,0.25)]"
           >
             <Check className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Accept Diff (Cmd+Y)</span>

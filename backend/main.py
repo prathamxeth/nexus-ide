@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from services.ast_parser import get_ast_parser
 from services.falkor_client import get_falkor_service
+from services.graph_layout import format_gravity_graph
 
 load_dotenv()
 
@@ -138,10 +139,52 @@ class GraphEdge(BaseModel):
     properties: Optional[Dict[str, Any]] = None
 
 
+class GravityAnchor(BaseModel):
+    id: str
+    type: str = Field("IN", description="IN | OUT")
+    index: int = 0
+
+
+class GravityBlockData(BaseModel):
+    signature: str = ""
+    blast_level: int = 0
+    memory_rule: Optional[str] = None
+    pr_owner: Optional[str] = None
+
+
+class GravityBlock(BaseModel):
+    id: str
+    title: str
+    type: str = Field(..., description="function | memory | blast_radius | company_pr | file")
+    file: str = ""
+    x: int
+    y: int
+    width: int = 240
+    height: int = 110
+    anchors: List[GravityAnchor]
+    data: GravityBlockData
+
+
+class GravityConnection(BaseModel):
+    id: str
+    sourceBlockId: str
+    sourceAnchorId: str
+    targetBlockId: str
+    targetAnchorId: str
+    label: str
+
+
+class GravityGraphResponse(BaseModel):
+    blocks: List[GravityBlock]
+    connections: List[GravityConnection]
+
+
 class GraphInspectResponse(BaseModel):
     nodes: List[GraphNode]
     edges: List[GraphEdge]
     execution_time_ms: float
+    blocks: Optional[List[Dict[str, Any]]] = None
+    connections: Optional[List[Dict[str, Any]]] = None
 
 
 class DependentFunction(BaseModel):
@@ -233,6 +276,57 @@ def index_code(payload: IndexCodePayload) -> IndexCodeResponse:
         )
 
 
+@app.get("/api/graph/data", response_model=GravityGraphResponse, tags=["Knowledge Graph"])
+@app.get("/graph/data", response_model=GravityGraphResponse, tags=["Knowledge Graph"])
+def get_graph_data(
+    file: Optional[str] = Query(None, description="Optional file path filter"),
+    function_name: Optional[str] = Query(None, description="Optional target function name to evaluate blast radius"),
+) -> Dict[str, Any]:
+    """Fetch nodes and relationships from FalkorDB using falkor_client and return formatted @gravity-ui/graph dictionary."""
+    falkor = get_falkor_service()
+    try:
+        file_filter = file if isinstance(file, str) and file.strip() else None
+        fn_filter = function_name if isinstance(function_name, str) and function_name.strip() else None
+
+        if file_filter:
+            nodes_cypher = "MATCH (n) WHERE n.file = $file OR n.path = $file RETURN n"
+            rels_cypher = """
+            MATCH (s)-[r]->(t)
+            WHERE (s.file = $file OR s.path = $file) OR (t.file = $file OR t.path = $file)
+            RETURN r
+            """
+            params = {"file": file_filter}
+            raw_nodes_res = falkor.query(nodes_cypher, params)
+            raw_rels_res = falkor.query(rels_cypher, params)
+        else:
+            raw_nodes_res = falkor.query("MATCH (n) RETURN n")
+            raw_rels_res = falkor.query("MATCH ()-[r]->() RETURN r")
+
+        raw_nodes = [row[0] for row in raw_nodes_res if row and len(row) > 0]
+        raw_rels = [row[0] for row in raw_rels_res if row and len(row) > 0]
+
+        # If a target function is requested, tag caller depths for blast radius swimlane placement
+        if fn_filter:
+            blast_res = falkor.get_blast_radius(fn_filter)
+            callers_map = {c["name"]: c["depth"] for c in blast_res.get("callers", [])}
+            for n in raw_nodes:
+                props = getattr(n, "properties", None)
+                if isinstance(props, dict):
+                    name = props.get("name")
+                    if name == fn_filter:
+                        props["blast_level"] = 0
+                    elif name in callers_map:
+                        props["blast_level"] = callers_map[name]
+
+        return format_gravity_graph(nodes=raw_nodes, relationships=raw_rels)
+    except Exception as exc:
+        logger.error("Error fetching graph data: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch graph data: {exc}",
+        )
+
+
 @app.get("/api/graph/inspect", response_model=GraphInspectResponse, tags=["Knowledge Graph"])
 def inspect_graph(file: Optional[str] = Query(None, description="Optional file path filter")) -> GraphInspectResponse:
     """Inspect code graph nodes and edges for visualization and verification."""
@@ -240,11 +334,12 @@ def inspect_graph(file: Optional[str] = Query(None, description="Optional file p
     start_time = time.perf_counter()
 
     try:
-        if file:
+        file_filter = file if isinstance(file, str) and file.strip() else None
+        if file_filter:
             cypher = "MATCH (f:File {path: $file})-[r]->(target) RETURN f, type(r) AS rel, target LIMIT 100"
-            params = {"file": file}
+            params = {"file": file_filter}
         else:
-            cypher = "MATCH (f:File)-[r]->(target) RETURN f, type(r) AS rel, target LIMIT 100"
+            cypher = "MATCH (f)-[r]->(target) RETURN f, type(r) AS rel, target LIMIT 250"
             params = {}
 
         raw_results = falkor.query(cypher, params)
@@ -258,20 +353,22 @@ def inspect_graph(file: Optional[str] = Query(None, description="Optional file p
             src_node, rel_type, tgt_node = row[0], row[1], row[2]
 
             for node in (src_node, tgt_node):
-                nid = f"node_{node.id}" if hasattr(node, "id") else str(node)
+                props = getattr(node, "properties", {})
+                nid = str(props.get("id") or (f"node_{node.id}" if hasattr(node, "id") else str(node)))
                 if nid not in nodes_map:
-                    ntype = node.labels[0] if (hasattr(node, "labels") and node.labels) else "Node"
-                    props = getattr(node, "properties", {})
-                    nlabel = props.get("name") or props.get("path") or nid
+                    ntype = str(props.get("type") or (node.labels[0] if (hasattr(node, "labels") and node.labels) else "Node"))
+                    nlabel = str(props.get("name") or props.get("path") or props.get("label") or nid)
                     nodes_map[nid] = GraphNode(
                         id=nid,
-                        label=str(nlabel),
+                        label=nlabel,
                         type=ntype,
                         properties=props,
                     )
 
-            src_id = f"node_{src_node.id}" if hasattr(src_node, "id") else str(src_node)
-            tgt_id = f"node_{tgt_node.id}" if hasattr(tgt_node, "id") else str(tgt_node)
+            src_props = getattr(src_node, "properties", {})
+            tgt_props = getattr(tgt_node, "properties", {})
+            src_id = str(src_props.get("id") or (f"node_{src_node.id}" if hasattr(src_node, "id") else str(src_node)))
+            tgt_id = str(tgt_props.get("id") or (f"node_{tgt_node.id}" if hasattr(tgt_node, "id") else str(tgt_node)))
             edges.append(
                 GraphEdge(
                     source=src_id,
@@ -281,10 +378,13 @@ def inspect_graph(file: Optional[str] = Query(None, description="Optional file p
             )
 
         execution_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        gravity_data = format_gravity_graph(nodes=list(nodes_map.values()), relationships=edges)
         return GraphInspectResponse(
             nodes=list(nodes_map.values()),
             edges=edges,
             execution_time_ms=execution_time_ms,
+            blocks=gravity_data["blocks"],
+            connections=gravity_data["connections"],
         )
     except Exception as exc:
         logger.error("Error inspecting graph: %s", exc)
@@ -296,13 +396,19 @@ def inspect_graph(file: Optional[str] = Query(None, description="Optional file p
 
 @app.get("/api/graph/stratified", tags=["Knowledge Graph"])
 def get_stratified_graph(
-    function_name: str = Query("validateToken", description="Target function name to evaluate 4-layer stratified graph")
+    function_name: str = Query("validateToken", description="Target function name to evaluate 4-layer stratified graph"),
+    format: Optional[str] = Query(None, description="Optional format: 'gravity' for @gravity-ui/graph format"),
 ) -> Dict[str, Any]:
     """Fetch typed, 4-layer stratified graph (AST, Blast Radius, Memory, Company)."""
     parser = get_ast_parser()
     falkor = get_falkor_service()
+    fn_name = function_name if isinstance(function_name, str) and function_name.strip() else "validateToken"
+    fmt = format if isinstance(format, str) and format.strip() else None
     try:
-        return parser.query_stratified_subgraph(function_name, falkor)
+        stratified = parser.query_stratified_subgraph(fn_name, falkor)
+        if fmt == "gravity":
+            return format_gravity_graph(nodes=stratified["nodes"], relationships=stratified["edges"])
+        return stratified
     except Exception as exc:
         logger.error("Error fetching stratified graph: %s", exc)
         raise HTTPException(
@@ -438,6 +544,43 @@ def record_resolution(payload: RecordResolutionRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
+class MemoryWriteRequest(BaseModel):
+    function_name: str = Field(..., description="Function name where patch was rejected")
+    rejected_patch: str = Field(..., description="The rejected code patch or diff")
+    rejection_reason: str = Field("User rejected patch with ⌘N", description="Rejection rationale / constraint")
+
+
+@app.post("/api/memory/record-rejection", tags=["Procedural Memory"])
+def record_rejection(data: MemoryWriteRequest) -> Dict[str, Any]:
+    """Dynamically writes rejection learning into FalkorDB so future agent prompts avoid it."""
+    falkor = get_falkor_service()
+    query = """
+    MATCH (fn:Function {name: $func_name})
+    CREATE (m:Memory {
+        type: 'procedural_guardrail',
+        rule: $reason,
+        bad_diff_sample: $diff,
+        created_at: timestamp()
+    })
+    CREATE (fn)-[:CONSTRAINED_BY]->(m)
+    RETURN m
+    """
+    try:
+        falkor.graph.query(query, {
+            "func_name": data.function_name,
+            "reason": data.rejection_reason,
+            "diff": data.rejected_patch[:300]
+        })
+        return {
+            "status": "persisted_to_falkordb",
+            "function_name": data.function_name,
+            "rule": data.rejection_reason
+        }
+    except Exception as exc:
+        logger.error("Failed to persist rejection memory to FalkorDB: %s", exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
 @app.get("/api/context/function", tags=["Enterprise Context"])
 def get_function_context(
     function_name: str = Query(..., description="Target function name to query git & ticket context")
@@ -491,6 +634,7 @@ class StreamRefactorRequest(BaseModel):
     api_key: Optional[str] = Field(None, description="Optional user BYOK key override")
 
 
+@app.post("/api/agent/stream", tags=["AI Orchestration"])
 @app.post("/api/agent/stream-refactor", tags=["AI Orchestration"])
 async def stream_refactor(request: StreamRefactorRequest) -> StreamingResponse:
     """Stream AI agent refactoring loop via Server-Sent Events (SSE).

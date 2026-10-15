@@ -1,4 +1,4 @@
-# 🎬 GraphiCode — 3-Minute Hackathon Winning Demo Script
+# 🎬 NexusIDE — 3-Minute Hackathon Winning Demo Script
 
 > **Recording Tool**: Loom or Screen Studio (1080p / 60fps)  
 > **Total Duration**: 3:00  
@@ -17,15 +17,15 @@
 > 
 > Why? Because **Vector RAG is topologically blind**. Embeddings find semantically similar text, but they have zero awareness of caller graphs, multi-hop dependencies, or procedural constraints.  
 > 
-> To solve this, we built **GraphiCode**—the graph-native agentic IDE powered by **FalkorDB**."
+> To solve this, we built **NexusIDE**—the graph-native agentic IDE powered by **FalkorDB**."
 
 ---
 
 ### Segment 2: The FalkorDB Advantage (0:30 – 1:30)
-**[Visual]**: Transition to GraphiCode running at `http://localhost:3000`. Show the sleek dark desktop interface.
+**[Visual]**: Transition to NexusIDE running at `http://localhost:3000`. Show the sleek dark desktop interface.
 
 **[Narrator]**:
-> "Here is GraphiCode. Notice the left sidebar with our active review queue, our central Composer Agent, and our interactive live workspace.  
+> "Here is NexusIDE. Notice the left sidebar with our active review queue, our central Composer Agent, and our interactive live workspace.  
 > 
 > Let's run that exact same prompt: *'Add expiration check to validateToken and update callers'*. Watch the bottom drawer."
 
@@ -37,7 +37,7 @@
 > - `processInvoice` in `billing.ts` at Hop 1
 > - `auditAccount` in `finance.ts` at Hop 2  
 > 
-> GraphiCode knows the exact blast radius *before* writing a single line of code."
+> NexusIDE knows the exact blast radius *before* writing a single line of code."
 
 ---
 
@@ -45,11 +45,11 @@
 **[Visual]**: Zoom in slightly on the graph nodes (Blue, Red, Yellow, Green) and the Composer active context pills.
 
 **[Narrator]**:
-> "This is where GraphiCode hits **all three FalkorDB tracks** simultaneously:
+> "This is where NexusIDE hits **all three FalkorDB tracks** simultaneously:
 > 
 > 1. **Track 1 (Connected Data)**: The blue focus node `validateToken` is connected directly to its multi-hop AST call tree via Tree-sitter and FalkorDB GraphBLAS queries.
 > 
-> 2. **Track 2 (Agent Memory & Coordination)**: Look at this amber node. GraphiCode queried procedural memory and surfaced a rule from a past incident: *'Must check exp claim with clock skew <= 60s'*. The agent is physically prevented from generating a naive patch.
+> 2. **Track 2 (Agent Memory & Coordination)**: Look at this amber node. NexusIDE queried procedural memory and surfaced a rule from a past incident: *'Must check exp claim with clock skew <= 60s'*. The agent is physically prevented from generating a naive patch.
 > 
 > 3. **Track 3 (Company Brain)**: Notice the emerald node. FalkorDB correlated the code syntax with Git commit history and Jira tickets—surfacing `PR #104` authored by `@alex.chen` (`SEC-402`), giving the AI the original author's intent."
 
@@ -59,7 +59,7 @@
 **[Visual]**: Monaco Diff view activates side-by-side with additions in green and deletions in red. Show the floating action bar.
 
 **[Narrator]**:
-> "Now look at the editor. GraphiCode toggled Monaco's side-by-side Diff view.  
+> "Now look at the editor. NexusIDE toggled Monaco's side-by-side Diff view.  
 > It injected the fail-closed null checks, respected the 60-second skew tolerance from procedural memory, and avoided any signature breaking changes.  
 > 
 > I can review the patch, press **`Cmd+Y`** to accept... and notice what happens in the graph: FalkorDB re-indexes the AST in real-time.  
@@ -71,8 +71,8 @@
 **[Visual]**: Flash the terminal running `./run.sh` and the architectural flow diagram.
 
 **[Narrator]**:
-> "Best of all: GraphiCode is a **one-command deployment**. A single `./run.sh` builds FalkorDB, the FastAPI backend, and the Next.js frontend, seeding all AST and PR data with zero configuration.  
+> "Best of all: NexusIDE is a **one-command deployment**. A single `./run.sh` builds FalkorDB, the FastAPI backend, and the Next.js frontend, seeding all AST and PR data with zero configuration.  
 > 
-> By replacing flat vector embeddings with FalkorDB's sub-millisecond graph intelligence, GraphiCode turns AI from a dangerous code guesser into an enterprise-grade software engineer.  
+> By replacing flat vector embeddings with FalkorDB's sub-millisecond graph intelligence, NexusIDE turns AI from a dangerous code guesser into an enterprise-grade software engineer.  
 > 
 > Thank you, and welcome to the graph-native future of software development."

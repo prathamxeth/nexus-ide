@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "GraphiCode — Agentic IDE with Graph as Context",
-  description: "Next-generation developer environment powered by FalkorDB AST graphs and dual-agent reasoning.",
+  title: "Nexus IDE — Graph-Native Agentic Developer Environment",
+  description: "Developer environment powered by FalkorDB AST knowledge graphs and deterministic multi-agent code refactoring.",
 };
 
 export default function RootLayout({
