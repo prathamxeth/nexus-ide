@@ -222,7 +222,7 @@ function computeSequentialTreeLevels(validNodes: NodeItem[]): Map<string, number
   return map;
 }
 
-// RAG Agent Knowledge Graph & Hierarchical AST Layout: uses full canvas space from left to right and top to bottom
+// Unified High-Precision Graph Layout: Perfectly spaced 5-lane branches with identical geometry for both Tree & Cluster modes
 function getNodeLayoutCoords(
   node: NodeItem,
   layoutMode: "tree" | "cluster",
@@ -235,144 +235,79 @@ function getNodeLayoutCoords(
   const scaleX = halfW / 195;
   const scaleY = halfH / 280;
 
-  // ========================================================
-  // TREE MODE: HIERARCHICAL BRANCHING DAG (Full width & height spread)
-  // ========================================================
-  if (layoutMode === "tree") {
-    // 1. Top Root & Modules
-    if (id === "root") return { targetX: 0, targetY: -260 * scaleY };
-    if (id === "src") return { targetX: 0, targetY: -190 * scaleY };
+  // =========================================================================
+  // 1. TOP ROOT & PROJECT CONFIGURATION FAN-OUT (Y = -270 to -190)
+  // =========================================================================
+  if (id === "root") return { targetX: 0, targetY: -265 * scaleY };
+  if (id === "src") return { targetX: 0, targetY: -190 * scaleY };
 
-    // Configs & Project Docs (Top Left to Top Right fan out)
-    if (id === "package.json") return { targetX: -160 * scaleX, targetY: -240 * scaleY };
-    if (id === "package-lock.json") return { targetX: -195 * scaleX, targetY: -200 * scaleY };
-    if (id === "pyproject.toml") return { targetX: -125 * scaleX, targetY: -200 * scaleY };
-    if (id === "README.md") return { targetX: 125 * scaleX, targetY: -240 * scaleY };
-    if (id === "build.sh") return { targetX: 165 * scaleX, targetY: -200 * scaleY };
-    if (id === "vendor.txt") return { targetX: 195 * scaleX, targetY: -240 * scaleY };
-    if (id === "requirements-test.txt") return { targetX: 85 * scaleX, targetY: -200 * scaleY };
-    if (id === "tests") return { targetX: -50 * scaleX, targetY: -230 * scaleY };
+  // Symmetrically spaced top configs across full horizontal width
+  if (id === "package-lock.json") return { targetX: -190 * scaleX, targetY: -225 * scaleY };
+  if (id === "package.json") return { targetX: -135 * scaleX, targetY: -225 * scaleY };
+  if (id === "pyproject.toml") return { targetX: -80 * scaleX, targetY: -225 * scaleY };
+  if (id === "tests") return { targetX: -30 * scaleX, targetY: -225 * scaleY };
+  if (id === "README.md") return { targetX: 30 * scaleX, targetY: -225 * scaleY };
+  if (id === "requirements-test.txt") return { targetX: 80 * scaleX, targetY: -225 * scaleY };
+  if (id === "build.sh") return { targetX: 135 * scaleX, targetY: -225 * scaleY };
+  if (id === "vendor.txt") return { targetX: 190 * scaleX, targetY: -225 * scaleY };
 
-    // 5 Major Branches Under src (Spanning across full canvas from left to right):
-    // Lane 1: Auth & Security (Far-Left: X = -160)
-    if (id === "auth.ts") return { targetX: -160 * scaleX, targetY: -120 * scaleY };
-    if (id === "validateToken") return { targetX: -160 * scaleX, targetY: -50 * scaleY };
-    if (id === "verifyToken") return { targetX: -190 * scaleX, targetY: 20 * scaleY };
-    if (id === "decodePayload") return { targetX: -130 * scaleX, targetY: 20 * scaleY };
+  // =========================================================================
+  // 2. EQUIDISTANT 5 MAJOR CODE BRANCH LANES (-170, -85, 0, +85, +170)
+  // Both Tree and Cluster modes share identical, perfectly distanced geometry
+  // =========================================================================
 
-    // Lane 2: Billing & Commerce (Mid-Left: X = -80)
-    if (id === "billing.ts") return { targetX: -80 * scaleX, targetY: -120 * scaleY };
-    if (id === "processInvoice") return { targetX: -80 * scaleX, targetY: -50 * scaleY };
-    if (id === "calculateTax") return { targetX: -80 * scaleX, targetY: 20 * scaleY };
+  // LANE 1: SECURITY & AUTHENTICATION (Far-Left Column: Center X = -170)
+  if (id === "auth.ts") return { targetX: -170 * scaleX, targetY: -125 * scaleY };
+  if (id === "validateToken") return { targetX: -170 * scaleX, targetY: -50 * scaleY };
+  if (id === "verifyToken") return { targetX: -192 * scaleX, targetY: 25 * scaleY };
+  if (id === "decodePayload") return { targetX: -148 * scaleX, targetY: 25 * scaleY };
 
-    // Lane 3: Finance & Audit (Center-Left: X = -5)
-    if (id === "finance.ts") return { targetX: -5 * scaleX, targetY: -120 * scaleY };
-    if (id === "auditAccount") return { targetX: -5 * scaleX, targetY: -50 * scaleY };
+  // LANE 2: BILLING & COMMERCE (Mid-Left Column: Center X = -85)
+  if (id === "billing.ts") return { targetX: -85 * scaleX, targetY: -125 * scaleY };
+  if (id === "processInvoice") return { targetX: -85 * scaleX, targetY: -50 * scaleY };
+  if (id === "calculateTax") return { targetX: -85 * scaleX, targetY: 25 * scaleY };
 
-    // Lane 4: ASGI Gateway & WebSockets (Center-Right: X = 75)
-    if (id === "asgi.py") return { targetX: 75 * scaleX, targetY: -120 * scaleY };
-    if (id === "ASGI") return { targetX: 55 * scaleX, targetY: -50 * scaleY };
-    if (id === "receive") return { targetX: 35 * scaleX, targetY: 15 * scaleY };
-    if (id === "send") return { targetX: 75 * scaleX, targetY: 15 * scaleY };
-    if (id === "getattr") return { targetX: 55 * scaleX, targetY: 75 * scaleY };
-    if (id === "start_application") return { targetX: 115 * scaleX, targetY: -50 * scaleY };
-    if (id === "process_request") return { targetX: 100 * scaleX, targetY: 15 * scaleY };
-    if (id === "onmessage") return { targetX: 135 * scaleX, targetY: 15 * scaleY };
-    if (id === "fetch") return { targetX: 45 * scaleX, targetY: 135 * scaleY };
-    if (id === "websocket") return { targetX: 95 * scaleX, targetY: 135 * scaleY };
-    if (id === "process_websocket") return { targetX: 75 * scaleX, targetY: 195 * scaleY };
-    if (id === "onopen") return { targetX: 45 * scaleX, targetY: 250 * scaleY };
-    if (id === "acquire_ws_buffer") return { targetX: 75 * scaleX, targetY: 250 * scaleY };
-    if (id === "ws_receive") return { targetX: 105 * scaleX, targetY: 250 * scaleY };
-    if (id === "ws_send") return { targetX: 45 * scaleX, targetY: 300 * scaleY };
-    if (id === "onclose") return { targetX: 75 * scaleX, targetY: 300 * scaleY };
-    if (id === "background_task") return { targetX: 105 * scaleX, targetY: 300 * scaleY };
+  // LANE 3: FINANCE & AUDIT & CORE UTILITIES (Center Column: Center X = 0)
+  if (id === "finance.ts") return { targetX: 0, targetY: -125 * scaleY };
+  if (id === "auditAccount") return { targetX: 0, targetY: -50 * scaleY };
+  // Symmetrically balanced utilities under Lane 3
+  if (id === "logger.py") return { targetX: -28 * scaleX, targetY: 35 * scaleY };
+  if (id === "exceptions.py") return { targetX: 28 * scaleX, targetY: 35 * scaleY };
+  if (id === "uvicorn.py") return { targetX: 0, targetY: 110 * scaleY };
 
-    // Lane 5: Worker & MCP Tools (Far-Right: X = 165)
-    if (id === "worker.py") return { targetX: 165 * scaleX, targetY: -120 * scaleY };
-    if (id === "FastMCPServer") return { targetX: 165 * scaleX, targetY: -50 * scaleY };
-    if (id === "setup_server") return { targetX: 165 * scaleX, targetY: 15 * scaleY };
-    if (id === "calculate_bmi") return { targetX: 145 * scaleX, targetY: 75 * scaleY };
-    if (id === "add") return { targetX: 185 * scaleX, targetY: 75 * scaleY };
-    if (id === "echo_prompt") return { targetX: 145 * scaleX, targetY: 135 * scaleY };
-    if (id === "get_greeting") return { targetX: 185 * scaleX, targetY: 135 * scaleY };
-    if (id === "on_fetch") return { targetX: 165 * scaleX, targetY: 195 * scaleY };
-    if (id === "shutdown") return { targetX: 165 * scaleX, targetY: 250 * scaleY };
+  // LANE 4: ASGI GATEWAY & WEBSOCKETS (Mid-Right Column: Center X = +85)
+  if (id === "asgi.py") return { targetX: 85 * scaleX, targetY: -125 * scaleY };
+  if (id === "ASGI") return { targetX: 65 * scaleX, targetY: -55 * scaleY };
+  if (id === "start_application") return { targetX: 105 * scaleX, targetY: -55 * scaleY };
+  if (id === "process_request") return { targetX: 65 * scaleX, targetY: 5 * scaleY };
+  if (id === "onmessage") return { targetX: 105 * scaleX, targetY: 5 * scaleY };
+  if (id === "receive") return { targetX: 65 * scaleX, targetY: 65 * scaleY };
+  if (id === "send") return { targetX: 105 * scaleX, targetY: 65 * scaleY };
+  if (id === "getattr") return { targetX: 85 * scaleX, targetY: 125 * scaleY };
+  if (id === "fetch") return { targetX: 65 * scaleX, targetY: 185 * scaleY };
+  if (id === "websocket") return { targetX: 105 * scaleX, targetY: 185 * scaleY };
+  if (id === "process_websocket") return { targetX: 85 * scaleX, targetY: 240 * scaleY };
+  if (id === "onopen") return { targetX: 50 * scaleX, targetY: 295 * scaleY };
+  if (id === "acquire_ws_buffer") return { targetX: 85 * scaleX, targetY: 295 * scaleY };
+  if (id === "ws_receive") return { targetX: 120 * scaleX, targetY: 295 * scaleY };
+  if (id === "ws_send") return { targetX: 50 * scaleX, targetY: 350 * scaleY };
+  if (id === "onclose") return { targetX: 85 * scaleX, targetY: 350 * scaleY };
+  if (id === "background_task") return { targetX: 120 * scaleX, targetY: 350 * scaleY };
 
-    // System Utilities (Bottom center)
-    if (id === "logger.py") return { targetX: -65 * scaleX, targetY: 90 * scaleY };
-    if (id === "exceptions.py") return { targetX: -25 * scaleX, targetY: 90 * scaleY };
-    if (id === "uvicorn.py") return { targetX: -45 * scaleX, targetY: 150 * scaleY };
+  // LANE 5: WORKER DAEMON & MCP TOOLS (Far-Right Column: Center X = +170)
+  if (id === "worker.py") return { targetX: 170 * scaleX, targetY: -125 * scaleY };
+  if (id === "FastMCPServer") return { targetX: 170 * scaleX, targetY: -55 * scaleY };
+  if (id === "setup_server") return { targetX: 170 * scaleX, targetY: 5 * scaleY };
+  if (id === "calculate_bmi") return { targetX: 150 * scaleX, targetY: 65 * scaleY };
+  if (id === "add") return { targetX: 190 * scaleX, targetY: 65 * scaleY };
+  if (id === "echo_prompt") return { targetX: 150 * scaleX, targetY: 125 * scaleY };
+  if (id === "get_greeting") return { targetX: 190 * scaleX, targetY: 125 * scaleY };
+  if (id === "on_fetch") return { targetX: 170 * scaleX, targetY: 185 * scaleY };
+  if (id === "shutdown") return { targetX: 170 * scaleX, targetY: 240 * scaleY };
 
-    return { targetX: 0, targetY: 0 };
-  }
-
-  // ========================================================
-  // CLUSTER MODE: RAG AGENT KNOWLEDGE GRAPH COMMUNITIES
-  // Organic clusters spread across full left-to-right & top-to-bottom space
-  // ========================================================
-  // Cluster A: Root & Environment (Top Sector)
-  if (id === "root") return { targetX: 0, targetY: -220 * scaleY };
-  if (id === "src") return { targetX: 0, targetY: -150 * scaleY };
-  if (id === "package.json") return { targetX: -140 * scaleX, targetY: -230 * scaleY };
-  if (id === "package-lock.json") return { targetX: -185 * scaleX, targetY: -190 * scaleY };
-  if (id === "pyproject.toml") return { targetX: -110 * scaleX, targetY: -190 * scaleY };
-  if (id === "README.md") return { targetX: 120 * scaleX, targetY: -230 * scaleY };
-  if (id === "build.sh") return { targetX: 165 * scaleX, targetY: -190 * scaleY };
-  if (id === "vendor.txt") return { targetX: 190 * scaleX, targetY: -230 * scaleY };
-  if (id === "requirements-test.txt") return { targetX: 85 * scaleX, targetY: -190 * scaleY };
-  if (id === "tests") return { targetX: -55 * scaleX, targetY: -210 * scaleY };
-
-  // Cluster B: Security & Authentication (Far-Left Sector)
-  if (id === "auth.ts") return { targetX: -160 * scaleX, targetY: -90 * scaleY };
-  if (id === "validateToken") return { targetX: -140 * scaleX, targetY: -20 * scaleY };
-  if (id === "verifyToken") return { targetX: -180 * scaleX, targetY: 45 * scaleY };
-  if (id === "decodePayload") return { targetX: -125 * scaleX, targetY: 55 * scaleY };
-
-  // Cluster C: Commerce & Finance (Mid-Left Sector)
-  if (id === "billing.ts") return { targetX: -75 * scaleX, targetY: -75 * scaleY };
-  if (id === "finance.ts") return { targetX: -45 * scaleX, targetY: 0 };
-  if (id === "processInvoice") return { targetX: -85 * scaleX, targetY: -5 * scaleY };
-  if (id === "calculateTax") return { targetX: -65 * scaleX, targetY: 65 * scaleY };
-  if (id === "auditAccount") return { targetX: -30 * scaleX, targetY: 65 * scaleY };
-
-  // Cluster D: ASGI WebSockets & Server Pipeline (Center-Right Sector)
-  if (id === "asgi.py") return { targetX: 65 * scaleX, targetY: -80 * scaleY };
-  if (id === "ASGI") return { targetX: 45 * scaleX, targetY: -15 * scaleY };
-  if (id === "receive") return { targetX: 20 * scaleX, targetY: 45 * scaleY };
-  if (id === "send") return { targetX: 60 * scaleX, targetY: 45 * scaleY };
-  if (id === "getattr") return { targetX: 40 * scaleX, targetY: 105 * scaleY };
-  if (id === "start_application") return { targetX: 105 * scaleX, targetY: -20 * scaleY };
-  if (id === "process_request") return { targetX: 90 * scaleX, targetY: 45 * scaleY };
-  if (id === "onmessage") return { targetX: 130 * scaleX, targetY: 45 * scaleY };
-  if (id === "fetch") return { targetX: 30 * scaleX, targetY: 165 * scaleY };
-  if (id === "websocket") return { targetX: 80 * scaleX, targetY: 165 * scaleY };
-  if (id === "process_websocket") return { targetX: 55 * scaleX, targetY: 225 * scaleY };
-  if (id === "onopen") return { targetX: 15 * scaleX, targetY: 285 * scaleY };
-  if (id === "acquire_ws_buffer") return { targetX: 55 * scaleX, targetY: 285 * scaleY };
-  if (id === "ws_receive") return { targetX: 95 * scaleX, targetY: 285 * scaleY };
-  if (id === "ws_send") return { targetX: 20 * scaleX, targetY: 345 * scaleY };
-  if (id === "onclose") return { targetX: 55 * scaleX, targetY: 345 * scaleY };
-  if (id === "background_task") return { targetX: 90 * scaleX, targetY: 345 * scaleY };
-
-  // Cluster E: Worker & Tool Agents (Far-Right Sector)
-  if (id === "worker.py") return { targetX: 165 * scaleX, targetY: -80 * scaleY };
-  if (id === "FastMCPServer") return { targetX: 165 * scaleX, targetY: -15 * scaleY };
-  if (id === "setup_server") return { targetX: 165 * scaleX, targetY: 50 * scaleY };
-  if (id === "calculate_bmi") return { targetX: 145 * scaleX, targetY: 115 * scaleY };
-  if (id === "add") return { targetX: 185 * scaleX, targetY: 115 * scaleY };
-  if (id === "echo_prompt") return { targetX: 145 * scaleX, targetY: 175 * scaleY };
-  if (id === "get_greeting") return { targetX: 185 * scaleX, targetY: 175 * scaleY };
-  if (id === "on_fetch") return { targetX: 165 * scaleX, targetY: 235 * scaleY };
-  if (id === "shutdown") return { targetX: 165 * scaleX, targetY: 295 * scaleY };
-
-  // System Utilities (Lower Center)
-  if (id === "logger.py") return { targetX: -45 * scaleX, targetY: 140 * scaleY };
-  if (id === "exceptions.py") return { targetX: -10 * scaleX, targetY: 140 * scaleY };
-  if (id === "uvicorn.py") return { targetX: -30 * scaleX, targetY: 205 * scaleY };
-
+  // Fallback for any unexpected dynamic node
   const tier = getNodeVerticalTier(node).tier;
-  return { targetX: ((node.id.length % 5) - 2) * 40 * scaleX, targetY: (-200 + tier * 60) * scaleY };
+  return { targetX: ((node.id.length % 5) - 2) * 50 * scaleX, targetY: (-160 + tier * 55) * scaleY };
 }
 
 export default function NetworkGraphCanvas({
@@ -852,15 +787,9 @@ export default function NetworkGraphCanvas({
         };
 
         fgRef.current.d3Force("stablePhysics", stablePhysicsForce());
-        if (layoutMode === "cluster") {
-          // Increased line length and charge repulsion for structured, spaced-out layout
-          fgRef.current.d3Force("charge")?.strength?.(-120)?.distanceMax?.(300)?.distanceMin?.(20);
-          fgRef.current.d3Force("link")?.distance?.(70);
-        } else {
-          // Tree Mode: structured hierarchical branching with extended lines
-          fgRef.current.d3Force("charge")?.strength?.(-80)?.distanceMax?.(240)?.distanceMin?.(15);
-          fgRef.current.d3Force("link")?.distance?.(60);
-        }
+        // Identical balanced physics for both Tree & Cluster modes: perfectly distanced, zero drift
+        fgRef.current.d3Force("charge")?.strength?.(-90)?.distanceMax?.(260)?.distanceMin?.(18);
+        fgRef.current.d3Force("link")?.distance?.(68);
       } else if (viewMode === "flowchart") {
         fgRef.current.d3Force("stablePhysics", null);
         fgRef.current.d3Force("charge")?.strength?.(0); // Zero repulsive drift so cards stay fixed
@@ -902,13 +831,9 @@ export default function NetworkGraphCanvas({
     setLayoutMode(mode);
     setTimeout(() => {
       if (fgRef.current) {
-        if (mode === "cluster") {
-          fgRef.current.d3Force("charge")?.strength?.(-120)?.distanceMax?.(300)?.distanceMin?.(20);
-          fgRef.current.d3Force("link")?.distance?.(70);
-        } else {
-          fgRef.current.d3Force("charge")?.strength?.(-80)?.distanceMax?.(240)?.distanceMin?.(15);
-          fgRef.current.d3Force("link")?.distance?.(60);
-        }
+        // Identical balanced physics for both Tree & Cluster modes
+        fgRef.current.d3Force("charge")?.strength?.(-90)?.distanceMax?.(260)?.distanceMin?.(18);
+        fgRef.current.d3Force("link")?.distance?.(68);
         fgRef.current.d3ReheatSimulation?.();
         handleFit();
       }
@@ -1617,19 +1542,19 @@ export default function NetworkGraphCanvas({
             const label = String(node.label || node.id);
             const isImportant = isBig || isSelected || isHighlighted || isRealtimeChanged || isFileNode;
 
-            const targetScreenPx = isImportant ? 9.2 : 7.8;
-            const fontSize = Math.min(Math.max(targetScreenPx / globalScale, 4.0), 16.0);
+            const targetScreenPx = isImportant ? 8.6 : 7.2;
+            const fontSize = Math.min(Math.max(targetScreenPx / globalScale, 3.8), 15.0);
             ctx.font = `${isImportant ? "600 " : "400 "}${fontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
 
-            const displayLabel = (!isImportant && label.length > 20) ? `${label.slice(0, 18)}…` : label;
+            const displayLabel = (!isImportant && label.length > 17) ? `${label.slice(0, 15)}…` : label;
             const textWidth = ctx.measureText(displayLabel).width;
-            const labelX = node.x + radius + 3.5 / globalScale;
+            const labelX = node.x + radius + 3.0 / globalScale;
             const labelY = node.y;
 
-            const pillPadX = 3.5 / globalScale;
-            const pillPadY = 1.8 / globalScale;
+            const pillPadX = 2.8 / globalScale;
+            const pillPadY = 1.4 / globalScale;
             const pillWidth = textWidth + pillPadX * 2;
             const pillHeight = fontSize + pillPadY * 2;
 
