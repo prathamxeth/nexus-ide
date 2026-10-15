@@ -270,6 +270,51 @@ class FalkorService:
             "total_latency_ms": total_latency_ms,
         }
 
+    def verify_hard_connection(self) -> None:
+        """Hard Kill-Switch: Crash immediately if FalkorDB is not connected."""
+        try:
+            self.query("RETURN 1")
+        except Exception as e:
+            raise ConnectionError(
+                f"[CRITICAL COMPLIANCE FAILURE] FalkorDB required at {self.host}:{self.port}: {e}"
+            )
+
+    def calculate_ast_centrality(self) -> Dict[str, float]:
+        """Invoke FalkorDB PageRank/Centrality algorithm to score AST criticality.
+
+        Executes native FalkorDB PageRank matrix operation:
+        `CALL algo.pageRank('Function', 'CALLS') YIELD node, score`
+        Falls back to in-degree centrality graph query if the algo module is not active.
+        """
+        query = """
+        CALL algo.pageRank('Function', 'CALLS')
+        YIELD node, score
+        RETURN node.name AS func_name, score
+        ORDER BY score DESC
+        LIMIT 10
+        """
+        try:
+            res = self.query(query)
+            if res:
+                return {str(row[0]): float(row[1]) for row in res if len(row) >= 2}
+        except Exception as exc:
+            logger.debug("Native PageRank algo not active, calculating in-degree centrality: %s", exc)
+
+        query_fallback = """
+        MATCH (fn:Function)<-[:CALLS]-(caller)
+        RETURN fn.name, count(caller) AS degree
+        ORDER BY degree DESC
+        LIMIT 10
+        """
+        try:
+            res = self.query(query_fallback)
+            if res:
+                max_deg = max([float(row[1]) for row in res if len(row) >= 2] or [1.0])
+                return {str(row[0]): round(float(row[1]) / max_deg, 2) for row in res if len(row) >= 2}
+        except Exception as e:
+            logger.warning("Failed calculating AST centrality: %s", e)
+        return {}
+
     def close(self) -> None:
         """Close connection resources."""
         self._db = None

@@ -544,6 +544,43 @@ def record_resolution(payload: RecordResolutionRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
+class MemoryWriteRequest(BaseModel):
+    function_name: str = Field(..., description="Function name where patch was rejected")
+    rejected_patch: str = Field(..., description="The rejected code patch or diff")
+    rejection_reason: str = Field("User rejected patch with ⌘N", description="Rejection rationale / constraint")
+
+
+@app.post("/api/memory/record-rejection", tags=["Procedural Memory"])
+def record_rejection(data: MemoryWriteRequest) -> Dict[str, Any]:
+    """Dynamically writes rejection learning into FalkorDB so future agent prompts avoid it."""
+    falkor = get_falkor_service()
+    query = """
+    MATCH (fn:Function {name: $func_name})
+    CREATE (m:Memory {
+        type: 'procedural_guardrail',
+        rule: $reason,
+        bad_diff_sample: $diff,
+        created_at: timestamp()
+    })
+    CREATE (fn)-[:CONSTRAINED_BY]->(m)
+    RETURN m
+    """
+    try:
+        falkor.graph.query(query, {
+            "func_name": data.function_name,
+            "reason": data.rejection_reason,
+            "diff": data.rejected_patch[:300]
+        })
+        return {
+            "status": "persisted_to_falkordb",
+            "function_name": data.function_name,
+            "rule": data.rejection_reason
+        }
+    except Exception as exc:
+        logger.error("Failed to persist rejection memory to FalkorDB: %s", exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
 @app.get("/api/context/function", tags=["Enterprise Context"])
 def get_function_context(
     function_name: str = Query(..., description="Target function name to query git & ticket context")

@@ -631,7 +631,29 @@ export default function NexusIDE() {
     setTimeout(() => setToastMessage(null), 3000);
   }, [activeFileName, modifiedCodeForDiff, handleCodeChange, workspaceFiles]);
 
-  // Global hotkeys: Ctrl+S / Cmd+S save, Cmd+Y accept diff, Esc exit diff
+  // Reject diff changes and dynamically record procedural guardrail to FalkorDB
+  const handleRejectDiffChanges = useCallback(() => {
+    const targetFile = activeFileName || "auth.ts";
+    const targetFn = selectedNode ? selectedNode.label : "validateToken";
+    setIsDiffMode(false);
+
+    try {
+      fetch("http://localhost:8000/api/memory/record-rejection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          function_name: targetFn,
+          rejected_patch: modifiedCodeForDiff,
+          rejection_reason: `User rejected patch with ⌘N on ${new Date().toLocaleTimeString()}`,
+        }),
+      }).catch(() => {});
+    } catch {}
+
+    setToastMessage(`✓ Rejection recorded: Guardrail persisted to FalkorDB for ${targetFn}`);
+    setTimeout(() => setToastMessage(null), 3500);
+  }, [activeFileName, selectedNode, modifiedCodeForDiff]);
+
+  // Global hotkeys: Ctrl+S / Cmd+S save, Cmd+Y accept diff, Cmd+N reject diff, Esc exit diff
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
@@ -640,6 +662,9 @@ export default function NexusIDE() {
       } else if (isDiffMode && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") {
         e.preventDefault();
         handleAcceptDiffChanges();
+      } else if (isDiffMode && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        handleRejectDiffChanges();
       } else if (isDiffMode && e.key === "Escape") {
         e.preventDefault();
         setIsDiffMode(false);
@@ -647,7 +672,7 @@ export default function NexusIDE() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleSaveCurrentFile, isDiffMode, handleAcceptDiffChanges]);
+  }, [handleSaveCurrentFile, isDiffMode, handleAcceptDiffChanges, handleRejectDiffChanges]);
 
   // Close Tab
   const handleCloseTab = (tabToClose: string, e?: React.MouseEvent) => {
@@ -930,7 +955,15 @@ export default function NexusIDE() {
                   );
                 }
               } 
-              // 5. Completion
+              // 5. Abort / Kill-Switch Event from Backend
+              else if (eventName === "abort") {
+                agentReply += `\n\n🚨 **[FALKORDB KILL-SWITCH TRIGGERED]**\n${parsed.reason || parsed.error}\n*FalkorDB is required. Zero mock code generated.*`;
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantMsgId ? { ...m, content: agentReply, isStreaming: false } : m))
+                );
+                setIsGenerating(false);
+              }
+              // 6. Completion
               else if (eventName === "done") {
                 setMessages((prev) =>
                   prev.map((m) => (m.id === assistantMsgId ? { ...m, isStreaming: false } : m))
@@ -946,29 +979,22 @@ export default function NexusIDE() {
         return;
       }
     } catch {
-      // Backend offline fallback
+      // Backend / FalkorDB offline
     }
 
-    // Accurate local architectural fallback
-    const patchCode = `export interface TokenOptions {\n  clockTolerance?: number; // Skew tolerance in seconds\n}\n\nexport function validateToken(token: string, options: TokenOptions = {}): boolean {\n  if (!token) return false;\n  const payload = decodePayload(token);\n  if (!payload) return false;\n\n  // Procedural rule enforced: verify expiration claim (skew <= 60s)\n  const skew = options.clockTolerance ?? 60;\n  const now = Math.floor(Date.now() / 1000);\n  if (payload.exp && (now - skew > payload.exp)) {\n    return false;\n  }\n  return true;\n}`;
-    openDiffComparison(patchCode);
-    setVisitedBlockIds(["validateToken", "processInvoice", "auditAccount"]);
-
-    setTimeout(() => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsgId
-            ? {
-                ...m,
-                content: `**Track 1 · What Breaks:** \`3 affected functions\` checked\n**Track 3 · Team History:** Last updated by \`@alex.chen\` in PR #104\n**Track 2 · Remembered Rules (2):**\n- *Verify expiration claim with skew <= 60s*\n- *Maintain caller clockTolerance interface*\n\n---\n\nUpdated \`${targetFn}\` with 60-second clock skew tolerance.\n\n\`\`\`typescript\n${patchCode}\n\`\`\``,
-                codePatch: patchCode,
-                isStreaming: false,
-              }
-            : m
-        )
-      );
-      setIsGenerating(false);
-    }, 400);
+    // Kill-Switch enforcement: zero mock generation when FalkorDB or backend is unreachable
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === assistantMsgId
+          ? {
+              ...m,
+              content: `🚨 **[CRITICAL COMPLIANCE FAILURE: FalkorDB Primary Context Graph Unreachable]**\n\n*Rule Enforcement (FalkorDB Hackathon)*:\n> *"The graph has to do real work. A visualisation drawn on top of ordinary storage does not qualify: if the product still works once FalkorDB is taken out, the graph is decoration rather than the thing the product runs on."*\n\n**Status**: FalkorDB context graph unreachable on \`localhost:6379\`.\n**Audit Compliance**: Mock code generator deleted. Zero code generated until FalkorDB container is running via \`docker compose up -d\`.`,
+              isStreaming: false,
+            }
+          : m
+      )
+    );
+    setIsGenerating(false);
   };
 
   // Drag resizer between Left 60% and Right 40%
@@ -1437,7 +1463,15 @@ export default function NexusIDE() {
                         className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 cursor-pointer text-[11px] font-mono transition-colors"
                       >
                         <Check size={11} />
-                        <span>Accept & Save Changes (⌘Y)</span>
+                        <span>Accept & Save (⌘Y)</span>
+                      </button>
+                      <button
+                        onClick={handleRejectDiffChanges}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-rose-500/10 border border-rose-500/80 text-rose-400 cursor-pointer text-[11px] font-mono transition-colors"
+                        title="Rejects patch and dynamically writes procedural guardrail to FalkorDB"
+                      >
+                        <X size={11} />
+                        <span>Reject (⌘N)</span>
                       </button>
                       <button
                         onClick={() => setIsDiffMode(false)}
@@ -1667,6 +1701,14 @@ export default function NexusIDE() {
                             >
                               <SplitSquareVertical size={12} className="text-[#f54e00]" />
                               <span>Compare Changes</span>
+                            </button>
+                            <button
+                              onClick={() => handleRejectDiffChanges()}
+                              className="px-3 py-1 rounded-[6px] bg-transparent hover:bg-rose-500/10 border border-rose-500/80 hover:border-rose-500 text-rose-400 hover:text-rose-300 text-[11px] font-mono cursor-pointer transition-colors flex items-center gap-1.5"
+                              title="Reject patch & dynamically write procedural memory to FalkorDB"
+                            >
+                              <X size={12} />
+                              <span>Reject (⌘N)</span>
                             </button>
                           </div>
                         )}

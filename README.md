@@ -98,7 +98,18 @@ RETURN caller.name AS caller_name,
 ORDER BY hop_distance ASC
 ```
 
-### 2. Procedural Memory Guardrail Retrieval (Track 2)
+### 2. Native FalkorDB Graph Algorithms: PageRank & Criticality (Track 1)
+Calculates architectural node criticality using native FalkorDB PageRank GraphBLAS matrix operations:
+
+```cypher
+CALL algo.pageRank('Function', 'CALLS')
+YIELD node, score
+RETURN node.name AS func_name, score
+ORDER BY score DESC
+LIMIT 10
+```
+
+### 3. Procedural Memory Guardrail Retrieval (Track 2)
 Pulls historical error resolutions and constraints preventing regression loops:
 
 ```cypher
@@ -108,7 +119,22 @@ OPTIONAL MATCH (fn)<-[:FAILED_ON]-(s:Session)-[:VIOLATED_RULE]->(vr:ProceduralRu
 RETURN DISTINCT coalesce(rule.rule, vr.rule) AS guardrail_rule
 ```
 
-### 3. Company Brain Context & Author Attribution (Track 3)
+### 4. Dynamic Runtime Memory Writes (Track 2 Across Sessions)
+When an engineer rejects a proposed code patch (`⌘N` or UI Reject button), a procedural guardrail node is created dynamically in FalkorDB in real time:
+
+```cypher
+MATCH (fn:Function {name: $func_name})
+CREATE (m:Memory {
+    type: 'procedural_guardrail',
+    rule: $reason,
+    bad_diff_sample: $diff,
+    created_at: timestamp()
+})
+CREATE (fn)-[:CONSTRAINED_BY]->(m)
+RETURN m
+```
+
+### 5. Company Brain Context & Author Attribution (Track 3)
 Correlates the function with previous Pull Requests, tickets, and code authors:
 
 ```cypher
@@ -122,6 +148,33 @@ RETURN eng.handle AS author,
 ORDER BY pr.number DESC
 LIMIT 3
 ```
+
+---
+
+## 🔌 Model Context Protocol (FastMCP Server)
+
+NexusIDE exposes an open **Model Context Protocol (FastMCP)** server at `backend/mcp_server.py`. Standard external agents (Claude Desktop, Cursor, Open-Source Agent frameworks) can directly consume FalkorDB graph intelligence tools:
+
+```bash
+# Run standalone MCP server
+python backend/mcp_server.py
+```
+
+### Published MCP Tools:
+- `get_ast_blast_radius(function_name: str, max_depth: int = 4)`: Cypher multi-hop call graph traversal.
+- `retrieve_code_memory(function_name: str)`: Procedural guardrails and learned failure memories.
+- `get_ast_centrality()`: Native FalkorDB PageRank scoring for AST node criticality.
+- `query_code_provenance(function_name: str)`: Company Brain Git PR, Jira ticket, and engineer authorship lookup.
+
+---
+
+## 🛡️ Kill-Switch Compliance: "The Graph Does Real Work"
+
+Per Hackathon Rules: *"A visualisation drawn on top of ordinary storage does not qualify: if the product still works once FalkorDB is taken out, the graph is decoration rather than the thing the product runs on."*
+
+- **Hard Kill-Switch Enforced**: If FalkorDB on `localhost:6379` is stopped or unreachable, NexusIDE immediately aborts execution and explicitly emits an unhandled refusal event:
+  > `[CRITICAL COMPLIANCE FAILURE] FalkorDB required on port 6379: Zero code generated.`
+- **Zero Mock Decoration**: No mock fallback patches are generated if the database is disconnected. FalkorDB is the mandatory computational engine of NexusIDE.
 
 ---
 
