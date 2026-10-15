@@ -121,24 +121,88 @@ function getNodeLevel(node: NodeItem): number {
   return getNodeVerticalTier(node).tier;
 }
 
+function getTreeDepth(id: string): number {
+  if (id === "root") return 0;
+  if (id === "src" || id === "tests" || id.endsWith(".json") || id.endsWith(".toml") || id.endsWith(".md") || id.endsWith(".txt") || id.endsWith(".sh")) {
+    return 1;
+  }
+  if (id.endsWith(".ts") || id.endsWith(".py")) {
+    return 2;
+  }
+  if (id === "ASGI" || id === "FastMCPServer" || id === "background_task" || id === "validateToken" || id === "processInvoice" || id === "auditAccount" || id === "start_application" || id === "setup_server" || id === "process_websocket" || id === "fetch" || id === "websocket") {
+    return 3;
+  }
+  return 4;
+}
+
 // Computes strictly sequential vertical levels for Tree mode (strictly one above another)
 function computeSequentialTreeLevels(validNodes: NodeItem[]): Map<string, number> {
   const map = new Map<string, number>();
 
   const priorityOrder = [
-    "root", "src", "tests", "build.sh", "package.json", "README.md", "vendor.txt", "pyproject.toml",
-    // asgi.py and its pipeline
-    "asgi.py", "ASGI", "start_application", "process_websocket", "onopen", "acquire_ws_buffer", "ws_receive", "ws_send", "onclose", "fetch", "websocket",
-    // worker.py and its pipeline
-    "worker.py", "FastMCPServer", "setup_server", "run_worker", "calculate_bmi", "add", "echo_prompt", "get_greeting", "on_fetch",
-    // auth.ts and its functions
-    "auth.ts", "validateToken", "verifyToken", "decodePayload",
-    // billing.ts and its functions
-    "billing.ts", "Invoice", "processInvoice", "calculateTax", "persistInvoice",
-    // finance.ts and its functions
-    "finance.ts", "auditAccount",
-    // logger & exceptions
-    "logger.py", "exceptions.py", "uvicorn.py"
+    // 1. Root & project metadata
+    "root",
+    "package.json",
+    "package-lock.json",
+    "pyproject.toml",
+    "README.md",
+    "build.sh",
+    "vendor.txt",
+    "requirements-test.txt",
+    "tests",
+
+    // 2. Main source folder
+    "src",
+
+    // 3. auth.ts & security module
+    "auth.ts",
+    "validateToken",
+    "verifyToken",
+    "decodePayload",
+
+    // 4. billing.ts & invoice module
+    "billing.ts",
+    "processInvoice",
+    "calculateTax",
+
+    // 5. finance.ts & auditing module
+    "finance.ts",
+    "auditAccount",
+
+    // 6. asgi.py & web gateway pipeline
+    "asgi.py",
+    "ASGI",
+    "receive",
+    "send",
+    "getattr",
+    "start_application",
+    "process_request",
+    "onmessage",
+    "fetch",
+    "websocket",
+    "process_websocket",
+    "onopen",
+    "acquire_ws_buffer",
+    "ws_receive",
+    "ws_send",
+    "onclose",
+    "background_task",
+
+    // 7. worker.py & background jobs
+    "worker.py",
+    "FastMCPServer",
+    "setup_server",
+    "calculate_bmi",
+    "add",
+    "echo_prompt",
+    "get_greeting",
+    "on_fetch",
+    "shutdown",
+
+    // 8. system utilities
+    "logger.py",
+    "exceptions.py",
+    "uvicorn.py"
   ];
 
   let currentLevel = 0;
@@ -302,10 +366,11 @@ export default function NetworkGraphCanvas({
 
       if (layoutMode === "tree") {
         // Tree Mode: strictly one above another vertically (one above, one below)
-        const totalHeight = Math.max(totalTreeNodes * 25, 420);
-        targetY = -totalHeight / 2 + treeLvl * 25;
-        // Clean alternating subtle step: one above, one below, with micro lateral offset
-        targetX = (treeLvl % 2 === 0 ? -10 : 10);
+        const totalHeight = Math.max(totalTreeNodes * 23, 400);
+        targetY = -totalHeight / 2 + treeLvl * 23;
+        // Clean structural tree hierarchy indentation
+        const depth = getTreeDepth(n.id);
+        targetX = depth * 14;
       } else {
         // Cluster Mode: organic vertical cluster (fine in orientation, kept tightly inside canvas)
         const group = tierGroups[n.tier] || [n];
@@ -591,13 +656,24 @@ export default function NetworkGraphCanvas({
         // Lock flowchart zoom to Screenshot 1 size (~1.65) so it never diminishes
         const targetFlowZoom = Math.min(Math.max((dimensions.width * 0.62) / 120, 1.55), 1.85);
         fitZoom = targetFlowZoom;
+        fgRef.current.centerAt(midX, midY, 260);
+        fgRef.current.zoom(fitZoom, 260);
       } else {
-        // Full graph fills max canvas space vertically & horizontally without shrinking
-        fitZoom = Math.min(Math.max(fitZoom, 0.65), 1.35);
-      }
+        // Graph view: start with very little spacing from left end of canvas (Image 1)
+        const leftSpacing = 28; // Small, clean spacing from left edge of canvas
+        const labelMarginRight = 130; // Room for labels extending rightward
+        const totalSpanX = Math.max((maxX - minX) + labelMarginRight, 160);
+        const availW = Math.max(dimensions.width - leftSpacing - 20, 100);
+        const availH = Math.max(dimensions.height - 48, 100);
+        fitZoom = Math.min(availW / totalSpanX, availH / (maxY - minY + 40));
+        fitZoom = Math.min(Math.max(fitZoom, 0.70), 1.30);
 
-      fgRef.current.centerAt(midX, midY, 260);
-      fgRef.current.zoom(fitZoom, 260);
+        // Position camera so minX is placed at leftSpacing px from left canvas border
+        const cameraX = minX + (dimensions.width / 2 - leftSpacing) / fitZoom;
+        const cameraY = midY;
+        fgRef.current.centerAt(cameraX, cameraY, 260);
+        fgRef.current.zoom(fitZoom, 260);
+      }
     } else {
       fgRef.current.zoomToFit(260, 32);
     }
@@ -624,8 +700,8 @@ export default function NetworkGraphCanvas({
         const stablePhysicsForce = () => {
           let fNodes: any[] = [];
           const force = (alpha: number) => {
-            const boundX = Math.max(dimensions.width / 2 - 45, 60);
-            const boundY = Math.max(dimensions.height / 2 - 40, 80);
+            const boundX = 400;
+            const boundY = Math.max(fNodes.length * 28, 800);
 
             for (let i = 0; i < fNodes.length; i++) {
               const node = fNodes[i];
