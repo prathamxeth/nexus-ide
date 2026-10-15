@@ -574,17 +574,80 @@ export default function NexusIDE() {
     setTimeout(() => setToastMessage(null), 3000);
   }, [activeFileName, workspaceFiles]);
 
-  // Global Ctrl+S / Cmd+S save hotkey
+  // Open Side-by-Side Diff Comparison
+  const openDiffComparison = useCallback((patchCodeToCompare?: string) => {
+    const targetFile = "auth.ts";
+    if (activeFileName !== targetFile) {
+      setActiveFileName(targetFile);
+      if (!openTabs.includes(targetFile)) {
+        setOpenTabs((prev) => [...prev, targetFile]);
+      }
+    }
+
+    const originalBaseline = INITIAL_WORKSPACE_FILES["auth.ts"]?.code || "";
+    const patchText = patchCodeToCompare || modifiedCodeForDiff || `export interface TokenOptions {\n  clockTolerance?: number; // Skew tolerance in seconds\n}\n\nexport function validateToken(token: string, options: TokenOptions = {}): boolean {\n  if (!token) return false;\n  const payload = decodePayload(token);\n  if (!payload) return false;\n\n  // Procedural rule enforced: verify expiration claim (skew <= 60s)\n  const skew = options.clockTolerance ?? 60;\n  const now = Math.floor(Date.now() / 1000);\n  if (payload.exp && (now - skew > payload.exp)) {\n    return false;\n  }\n  return true;\n}`;
+
+    const fullPatched = patchText.includes("verifyToken")
+      ? patchText
+      : `${patchText.trim()}\n\nexport function verifyToken(token: string): boolean {\n  return validateToken(token);\n}\n\nfunction decodePayload(token: string) {\n  try {\n    return JSON.parse(atob(token.split('.')[1] || '{}'));\n  } catch {\n    return null;\n  }\n}\n`;
+
+    setOriginalCodeForDiff(originalBaseline);
+    setModifiedCodeForDiff(fullPatched);
+    setIsDiffMode(true);
+    setToastMessage("✓ Side-by-Side Diff Active: Original auth.ts (Left) vs Agent Patch (Right)");
+    setTimeout(() => setToastMessage(null), 3500);
+  }, [activeFileName, openTabs, modifiedCodeForDiff]);
+
+  // Accept and apply diff changes to workspace
+  const handleAcceptDiffChanges = useCallback(() => {
+    const targetFile = activeFileName || "auth.ts";
+    const codeToSave = modifiedCodeForDiff;
+    if (!codeToSave) {
+      setIsDiffMode(false);
+      return;
+    }
+    handleCodeChange(codeToSave);
+    setIsDiffMode(false);
+    setWorkspaceFiles((prev) => ({
+      ...prev,
+      [targetFile]: {
+        ...prev[targetFile],
+        code: codeToSave,
+        modified: true,
+      },
+    }));
+    try {
+      fetch("http://localhost:8000/api/graph/index-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: workspaceFiles[targetFile]?.path || `src/${targetFile}`,
+          content: codeToSave,
+          language: workspaceFiles[targetFile]?.language || "typescript",
+        }),
+      }).catch(() => {});
+    } catch {}
+    setToastMessage(`✓ Accepted & saved patch to ${targetFile}!`);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, [activeFileName, modifiedCodeForDiff, handleCodeChange, workspaceFiles]);
+
+  // Global hotkeys: Ctrl+S / Cmd+S save, Cmd+Y accept diff, Esc exit diff
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
         handleSaveCurrentFile();
+      } else if (isDiffMode && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        handleAcceptDiffChanges();
+      } else if (isDiffMode && e.key === "Escape") {
+        e.preventDefault();
+        setIsDiffMode(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleSaveCurrentFile]);
+  }, [handleSaveCurrentFile, isDiffMode, handleAcceptDiffChanges]);
 
   // Close Tab
   const handleCloseTab = (tabToClose: string, e?: React.MouseEvent) => {
@@ -855,9 +918,7 @@ export default function NexusIDE() {
               // 4. Code Patch
               else if (eventName === "code_patch") {
                 if (parsed.modified_code) {
-                  setOriginalCodeForDiff(activeFile.code);
-                  setModifiedCodeForDiff(parsed.modified_code);
-                  setIsDiffMode(true);
+                  openDiffComparison(parsed.modified_code);
 
                   agentReply += `\n\n\`\`\`typescript\n// Updated Code for ${parsed.target_function}\n${parsed.modified_code.trim()}\n\`\`\`\n`;
                   setMessages((prev) =>
@@ -890,9 +951,7 @@ export default function NexusIDE() {
 
     // Accurate local architectural fallback
     const patchCode = `export interface TokenOptions {\n  clockTolerance?: number; // Skew tolerance in seconds\n}\n\nexport function validateToken(token: string, options: TokenOptions = {}): boolean {\n  if (!token) return false;\n  const payload = decodePayload(token);\n  if (!payload) return false;\n\n  // Procedural rule enforced: verify expiration claim (skew <= 60s)\n  const skew = options.clockTolerance ?? 60;\n  const now = Math.floor(Date.now() / 1000);\n  if (payload.exp && (now - skew > payload.exp)) {\n    return false;\n  }\n  return true;\n}`;
-    setOriginalCodeForDiff(activeFile.code);
-    setModifiedCodeForDiff(patchCode);
-    setIsDiffMode(true);
+    openDiffComparison(patchCode);
     setVisitedBlockIds(["validateToken", "processInvoice", "auditAccount"]);
 
     setTimeout(() => {
@@ -1010,18 +1069,11 @@ export default function NexusIDE() {
             {/* Split Diff Toggle */}
             <button
               onClick={() => {
-                if (!modifiedCodeForDiff) {
-                  setOriginalCodeForDiff(activeFile.code);
-                  setModifiedCodeForDiff(
-                    activeFile.code.includes("TokenOptions")
-                      ? activeFile.code
-                      : activeFile.code.replace(
-                          "export function validateToken(token: string): boolean {",
-                          "export interface TokenOptions { clockTolerance?: number; }\nexport function validateToken(token: string, options: TokenOptions = {}): boolean {"
-                        )
-                  );
+                if (isDiffMode) {
+                  setIsDiffMode(false);
+                } else {
+                  openDiffComparison();
                 }
-                setIsDiffMode(!isDiffMode);
               }}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] text-[11px] font-mono border transition-colors cursor-pointer ${
                 isDiffMode
@@ -1381,42 +1433,17 @@ export default function NexusIDE() {
                     <span className="text-amber-300 truncate">Code Comparison: Current (Left) vs Updated (Right)</span>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
-                        onClick={() => {
-                          handleCodeChange(modifiedCodeForDiff);
-                          setIsDiffMode(false);
-                          setWorkspaceFiles((prev) => ({
-                            ...prev,
-                            [activeFileName]: {
-                              ...prev[activeFileName],
-                              code: modifiedCodeForDiff,
-                              modified: false,
-                            },
-                          }));
-                          // Sync to knowledge graph backend
-                          try {
-                            fetch("http://localhost:8000/api/graph/index-code", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                path: workspaceFiles[activeFileName]?.path || `src/${activeFileName}`,
-                                content: modifiedCodeForDiff,
-                                language: workspaceFiles[activeFileName]?.language || "typescript",
-                              }),
-                            }).catch(() => {});
-                          } catch {}
-                          setToastMessage(`✓ Agent patch saved to ${activeFileName} without any error!`);
-                          setTimeout(() => setToastMessage(null), 3000);
-                        }}
+                        onClick={handleAcceptDiffChanges}
                         className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-emerald-500/10 border border-emerald-500/80 text-emerald-400 cursor-pointer text-[11px] font-mono transition-colors"
                       >
                         <Check size={11} />
-                        <span>Accept & Save Changes</span>
+                        <span>Accept & Save Changes (⌘Y)</span>
                       </button>
                       <button
                         onClick={() => setIsDiffMode(false)}
                         className="px-2.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#383838] text-neutral-400 hover:text-white cursor-pointer text-[11px] font-mono transition-colors"
                       >
-                        Cancel
+                        Exit Diff (Esc)
                       </button>
                     </div>
                   </div>
@@ -1610,25 +1637,36 @@ export default function NexusIDE() {
                           <div className="mt-2.5 pt-2 border-t border-[#202020] flex items-center gap-2">
                             <button
                               onClick={() => {
-                                handleCodeChange(m.codePatch!);
+                                const targetFile = "auth.ts";
+                                const patchText = m.codePatch || "";
+                                const fullPatched = patchText.includes("verifyToken")
+                                  ? patchText
+                                  : `${patchText.trim()}\n\nexport function verifyToken(token: string): boolean {\n  return validateToken(token);\n}\n\nfunction decodePayload(token: string) {\n  try {\n    return JSON.parse(atob(token.split('.')[1] || '{}'));\n  } catch {\n    return null;\n  }\n}\n`;
+
+                                handleCodeChange(fullPatched);
+                                setWorkspaceFiles((prev) => ({
+                                  ...prev,
+                                  [targetFile]: {
+                                    ...prev[targetFile],
+                                    code: fullPatched,
+                                    modified: true,
+                                  },
+                                }));
                                 setIsDiffMode(false);
-                                setToastMessage(`✓ Saved changes to ${activeFileName}!`);
+                                setToastMessage(`✓ Saved patch to ${targetFile}!`);
                                 setTimeout(() => setToastMessage(null), 3000);
                               }}
                               className="px-3 py-1 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-[11px] font-mono font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
                             >
                               <Check size={12} />
-                              <span>Save to {activeFileName}</span>
+                              <span>Save to auth.ts</span>
                             </button>
                             <button
-                              onClick={() => {
-                                setOriginalCodeForDiff(activeFile.code);
-                                setModifiedCodeForDiff(m.codePatch!);
-                                setIsDiffMode(true);
-                              }}
-                              className="px-3 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#3d3d3d] text-neutral-300 hover:text-white text-[11px] font-mono cursor-pointer transition-colors"
+                              onClick={() => openDiffComparison(m.codePatch)}
+                              className="px-3 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#3d3d3d] text-neutral-300 hover:text-white text-[11px] font-mono cursor-pointer transition-colors flex items-center gap-1.5"
                             >
-                              Compare Changes
+                              <SplitSquareVertical size={12} className="text-[#f54e00]" />
+                              <span>Compare Changes</span>
                             </button>
                           </div>
                         )}

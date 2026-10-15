@@ -30,7 +30,7 @@ from services.agent_tools import (
 logger = logging.getLogger("nexus.services.orchestrator")
 
 SYSTEM_PROMPT_MANDATE = (
-    "You are GraphiCode Agent. You have NO native file reading tools. "
+    "You are NexusIDE Agent. You have NO native file reading tools. "
     "You MUST invoke `falkor_blast_radius` before generating any patch. "
     "If FalkorDB returns no context or is unreachable, you must refuse to write code."
 )
