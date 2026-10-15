@@ -620,29 +620,22 @@ export default function NetworkGraphCanvas({
     if (!fgRef.current || currentGraphData.nodes.length === 0) return;
     try {
       if (viewMode === "graph") {
-        // Dynamic oscillation & boundary containment force (oscillates dynamically, no still, nothing out of canvas)
-        let oscillationAngle = 0;
-        const dynamicPhysicsForce = () => {
+        // Vertical layout & boundary containment force (smooth stable layout, zero oscillation, strictly bounded)
+        const stablePhysicsForce = () => {
           let fNodes: any[] = [];
           const force = (alpha: number) => {
-            oscillationAngle += 0.035;
             const boundX = Math.max(dimensions.width / 2 - 45, 60);
             const boundY = Math.max(dimensions.height / 2 - 40, 80);
 
             for (let i = 0; i < fNodes.length; i++) {
               const node = fNodes[i];
-              // Target coordinate attraction
+              // Target coordinate attraction (smoothly guides nodes to vertical positions)
               if (node.targetY !== undefined) {
                 node.vy += (node.targetY - node.y) * 0.28 * alpha;
               }
               if (node.targetX !== undefined) {
                 node.vx += (node.targetX - node.x) * 0.32 * alpha;
               }
-
-              // Gentle organic dynamic oscillation (never freezes still)
-              const phase = i * 0.5 + oscillationAngle;
-              node.vx += Math.sin(phase) * 0.16;
-              node.vy += Math.cos(phase * 0.7) * 0.12;
 
               // Absolute boundary containment: nothing out of canvas
               if (node.x > boundX) {
@@ -667,7 +660,7 @@ export default function NetworkGraphCanvas({
           return force;
         };
 
-        fgRef.current.d3Force("dynamicPhysics", dynamicPhysicsForce());
+        fgRef.current.d3Force("stablePhysics", stablePhysicsForce());
         if (layoutMode === "cluster") {
           fgRef.current.d3Force("charge")?.strength?.(-40)?.distanceMax?.(160)?.distanceMin?.(15);
           fgRef.current.d3Force("link")?.distance?.(34);
@@ -677,7 +670,7 @@ export default function NetworkGraphCanvas({
           fgRef.current.d3Force("link")?.distance?.(24);
         }
       } else if (viewMode === "flowchart") {
-        fgRef.current.d3Force("dynamicPhysics", null);
+        fgRef.current.d3Force("stablePhysics", null);
         fgRef.current.d3Force("charge")?.strength?.(0); // Zero repulsive drift so cards stay fixed
         fgRef.current.d3Force("link")?.distance?.(48);
       }
@@ -1134,10 +1127,10 @@ export default function NetworkGraphCanvas({
             }
           }}
           onBackgroundClick={() => onSelectNode(null)}
-          cooldownTicks={viewMode === "flowchart" ? 120 : Infinity}
+          cooldownTicks={120}
           warmupTicks={30}
-          d3VelocityDecay={0.35}
-          d3AlphaDecay={viewMode === "flowchart" ? 0.03 : 0.002}
+          d3VelocityDecay={0.4}
+          d3AlphaDecay={0.03}
           onEngineStop={() => {
             if (viewMode === "graph") {
               handleFit();
