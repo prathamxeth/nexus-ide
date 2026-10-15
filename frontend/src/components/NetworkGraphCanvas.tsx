@@ -222,7 +222,7 @@ function computeSequentialTreeLevels(validNodes: NodeItem[]): Map<string, number
   return map;
 }
 
-// Unified High-Precision Graph Layout: Perfectly spaced 5-lane branches with identical geometry for both Tree & Cluster modes
+// Distinct RAG Agent Knowledge Graph & Hierarchical AST Layout (Tree: Vertical Waterfall vs Cluster: Radial Islands)
 function getNodeLayoutCoords(
   node: NodeItem,
   layoutMode: "tree" | "cluster",
@@ -236,78 +236,142 @@ function getNodeLayoutCoords(
   const scaleY = halfH / 280;
 
   // =========================================================================
-  // 1. TOP ROOT & PROJECT CONFIGURATION FAN-OUT (Y = -270 to -190)
+  // 1. TREE MODE: STRICT HIERARCHICAL TOP-DOWN CASCADE (Equidistant 5-Lane DAG)
+  // Clean, straight vertical waterfall lanes where branches descend top-to-bottom
   // =========================================================================
-  if (id === "root") return { targetX: 0, targetY: -265 * scaleY };
-  if (id === "src") return { targetX: 0, targetY: -190 * scaleY };
+  if (layoutMode === "tree") {
+    // Level 0 & 1: Root & Configs
+    if (id === "root") return { targetX: 0, targetY: -260 * scaleY };
+    if (id === "src") return { targetX: 0, targetY: -190 * scaleY };
 
-  // Symmetrically spaced top configs across full horizontal width
-  if (id === "package-lock.json") return { targetX: -190 * scaleX, targetY: -225 * scaleY };
-  if (id === "package.json") return { targetX: -135 * scaleX, targetY: -225 * scaleY };
-  if (id === "pyproject.toml") return { targetX: -80 * scaleX, targetY: -225 * scaleY };
-  if (id === "tests") return { targetX: -30 * scaleX, targetY: -225 * scaleY };
-  if (id === "README.md") return { targetX: 30 * scaleX, targetY: -225 * scaleY };
-  if (id === "requirements-test.txt") return { targetX: 80 * scaleX, targetY: -225 * scaleY };
-  if (id === "build.sh") return { targetX: 135 * scaleX, targetY: -225 * scaleY };
-  if (id === "vendor.txt") return { targetX: 190 * scaleX, targetY: -225 * scaleY };
+    if (id === "package-lock.json") return { targetX: -190 * scaleX, targetY: -225 * scaleY };
+    if (id === "package.json") return { targetX: -135 * scaleX, targetY: -225 * scaleY };
+    if (id === "pyproject.toml") return { targetX: -80 * scaleX, targetY: -225 * scaleY };
+    if (id === "tests") return { targetX: -30 * scaleX, targetY: -225 * scaleY };
+    if (id === "README.md") return { targetX: 30 * scaleX, targetY: -225 * scaleY };
+    if (id === "requirements-test.txt") return { targetX: 80 * scaleX, targetY: -225 * scaleY };
+    if (id === "build.sh") return { targetX: 135 * scaleX, targetY: -225 * scaleY };
+    if (id === "vendor.txt") return { targetX: 190 * scaleX, targetY: -225 * scaleY };
+
+    // 5 Clean Vertical Waterfall Lanes (Centers at -170, -85, 0, +85, +170)
+    // Lane 1: Auth (Far-Left)
+    if (id === "auth.ts") return { targetX: -170 * scaleX, targetY: -125 * scaleY };
+    if (id === "validateToken") return { targetX: -170 * scaleX, targetY: -50 * scaleY };
+    if (id === "verifyToken") return { targetX: -192 * scaleX, targetY: 25 * scaleY };
+    if (id === "decodePayload") return { targetX: -148 * scaleX, targetY: 25 * scaleY };
+
+    // Lane 2: Billing (Mid-Left)
+    if (id === "billing.ts") return { targetX: -85 * scaleX, targetY: -125 * scaleY };
+    if (id === "processInvoice") return { targetX: -85 * scaleX, targetY: -50 * scaleY };
+    if (id === "calculateTax") return { targetX: -85 * scaleX, targetY: 25 * scaleY };
+
+    // Lane 3: Finance & Utilities (Center)
+    if (id === "finance.ts") return { targetX: 0, targetY: -125 * scaleY };
+    if (id === "auditAccount") return { targetX: 0, targetY: -50 * scaleY };
+    if (id === "logger.py") return { targetX: -28 * scaleX, targetY: 35 * scaleY };
+    if (id === "exceptions.py") return { targetX: 28 * scaleX, targetY: 35 * scaleY };
+    if (id === "uvicorn.py") return { targetX: 0, targetY: 110 * scaleY };
+
+    // Lane 4: ASGI Pipeline (Mid-Right)
+    if (id === "asgi.py") return { targetX: 85 * scaleX, targetY: -125 * scaleY };
+    if (id === "ASGI") return { targetX: 65 * scaleX, targetY: -55 * scaleY };
+    if (id === "start_application") return { targetX: 105 * scaleX, targetY: -55 * scaleY };
+    if (id === "process_request") return { targetX: 65 * scaleX, targetY: 5 * scaleY };
+    if (id === "onmessage") return { targetX: 105 * scaleX, targetY: 5 * scaleY };
+    if (id === "receive") return { targetX: 65 * scaleX, targetY: 65 * scaleY };
+    if (id === "send") return { targetX: 105 * scaleX, targetY: 65 * scaleY };
+    if (id === "getattr") return { targetX: 85 * scaleX, targetY: 125 * scaleY };
+    if (id === "fetch") return { targetX: 65 * scaleX, targetY: 185 * scaleY };
+    if (id === "websocket") return { targetX: 105 * scaleX, targetY: 185 * scaleY };
+    if (id === "process_websocket") return { targetX: 85 * scaleX, targetY: 240 * scaleY };
+    if (id === "onopen") return { targetX: 50 * scaleX, targetY: 295 * scaleY };
+    if (id === "acquire_ws_buffer") return { targetX: 85 * scaleX, targetY: 295 * scaleY };
+    if (id === "ws_receive") return { targetX: 120 * scaleX, targetY: 295 * scaleY };
+    if (id === "ws_send") return { targetX: 50 * scaleX, targetY: 350 * scaleY };
+    if (id === "onclose") return { targetX: 85 * scaleX, targetY: 350 * scaleY };
+    if (id === "background_task") return { targetX: 120 * scaleX, targetY: 350 * scaleY };
+
+    // Lane 5: Worker MCP Service (Far-Right)
+    if (id === "worker.py") return { targetX: 170 * scaleX, targetY: -125 * scaleY };
+    if (id === "FastMCPServer") return { targetX: 170 * scaleX, targetY: -55 * scaleY };
+    if (id === "setup_server") return { targetX: 170 * scaleX, targetY: 5 * scaleY };
+    if (id === "calculate_bmi") return { targetX: 150 * scaleX, targetY: 65 * scaleY };
+    if (id === "add") return { targetX: 190 * scaleX, targetY: 65 * scaleY };
+    if (id === "echo_prompt") return { targetX: 150 * scaleX, targetY: 125 * scaleY };
+    if (id === "get_greeting") return { targetX: 190 * scaleX, targetY: 125 * scaleY };
+    if (id === "on_fetch") return { targetX: 170 * scaleX, targetY: 185 * scaleY };
+    if (id === "shutdown") return { targetX: 170 * scaleX, targetY: 240 * scaleY };
+
+    const tier = getNodeVerticalTier(node).tier;
+    return { targetX: ((node.id.length % 5) - 2) * 50 * scaleX, targetY: (-160 + tier * 55) * scaleY };
+  }
 
   // =========================================================================
-  // 2. EQUIDISTANT 5 MAJOR CODE BRANCH LANES (-170, -85, 0, +85, +170)
-  // Both Tree and Cluster modes share identical, perfectly distanced geometry
+  // 2. CLUSTER MODE: RADIAL COMMUNITY CLUSTERS (Force-Directed Knowledge Islands)
+  // Distinct orbital clusters grouped by system module with circular satellites
   // =========================================================================
+  // Cluster 1: Root & Environment Community (Upper Center Orbit)
+  if (id === "root") return { targetX: 0, targetY: -210 * scaleY };
+  if (id === "src") return { targetX: 0, targetY: -140 * scaleY };
+  if (id === "package.json") return { targetX: -85 * scaleX, targetY: -220 * scaleY };
+  if (id === "package-lock.json") return { targetX: -140 * scaleX, targetY: -190 * scaleY };
+  if (id === "pyproject.toml") return { targetX: -60 * scaleX, targetY: -165 * scaleY };
+  if (id === "tests") return { targetX: -30 * scaleX, targetY: -210 * scaleY };
+  if (id === "README.md") return { targetX: 30 * scaleX, targetY: -210 * scaleY };
+  if (id === "requirements-test.txt") return { targetX: 60 * scaleX, targetY: -165 * scaleY };
+  if (id === "build.sh") return { targetX: 95 * scaleX, targetY: -215 * scaleY };
+  if (id === "vendor.txt") return { targetX: 140 * scaleX, targetY: -185 * scaleY };
 
-  // LANE 1: SECURITY & AUTHENTICATION (Far-Left Column: Center X = -170)
-  if (id === "auth.ts") return { targetX: -170 * scaleX, targetY: -125 * scaleY };
-  if (id === "validateToken") return { targetX: -170 * scaleX, targetY: -50 * scaleY };
-  if (id === "verifyToken") return { targetX: -192 * scaleX, targetY: 25 * scaleY };
-  if (id === "decodePayload") return { targetX: -148 * scaleX, targetY: 25 * scaleY };
+  // Cluster 2: Security & Auth Orbital Island (Left Orbit: Centered at X=-140, Y=-30)
+  if (id === "auth.ts") return { targetX: -140 * scaleX, targetY: -35 * scaleY };
+  if (id === "validateToken") return { targetX: -140 * scaleX, targetY: 25 * scaleY };
+  if (id === "verifyToken") return { targetX: -185 * scaleX, targetY: -20 * scaleY };
+  if (id === "decodePayload") return { targetX: -95 * scaleX, targetY: -20 * scaleY };
 
-  // LANE 2: BILLING & COMMERCE (Mid-Left Column: Center X = -85)
-  if (id === "billing.ts") return { targetX: -85 * scaleX, targetY: -125 * scaleY };
-  if (id === "processInvoice") return { targetX: -85 * scaleX, targetY: -50 * scaleY };
-  if (id === "calculateTax") return { targetX: -85 * scaleX, targetY: 25 * scaleY };
+  // Cluster 3: Commerce & Financial Audit Orbital Island (Lower-Left Orbit: Centered at X=-95, Y=145)
+  if (id === "billing.ts") return { targetX: -125 * scaleX, targetY: 110 * scaleY };
+  if (id === "finance.ts") return { targetX: -65 * scaleX, targetY: 110 * scaleY };
+  if (id === "processInvoice") return { targetX: -145 * scaleX, targetY: 175 * scaleY };
+  if (id === "calculateTax") return { targetX: -100 * scaleX, targetY: 210 * scaleY };
+  if (id === "auditAccount") return { targetX: -45 * scaleX, targetY: 175 * scaleY };
 
-  // LANE 3: FINANCE & AUDIT & CORE UTILITIES (Center Column: Center X = 0)
-  if (id === "finance.ts") return { targetX: 0, targetY: -125 * scaleY };
-  if (id === "auditAccount") return { targetX: 0, targetY: -50 * scaleY };
-  // Symmetrically balanced utilities under Lane 3
-  if (id === "logger.py") return { targetX: -28 * scaleX, targetY: 35 * scaleY };
-  if (id === "exceptions.py") return { targetX: 28 * scaleX, targetY: 35 * scaleY };
-  if (id === "uvicorn.py") return { targetX: 0, targetY: 110 * scaleY };
+  // Cluster 4: ASGI Server & WebSocket Gateway Island (Mid-Right Orbit: Centered at X=65, Y=35)
+  if (id === "asgi.py") return { targetX: 65 * scaleX, targetY: -30 * scaleY };
+  if (id === "ASGI") return { targetX: 65 * scaleX, targetY: 25 * scaleY };
+  if (id === "start_application") return { targetX: 115 * scaleX, targetY: -25 * scaleY };
+  if (id === "process_request") return { targetX: 120 * scaleX, targetY: 25 * scaleY };
+  if (id === "onmessage") return { targetX: 110 * scaleX, targetY: 80 * scaleY };
+  if (id === "receive") return { targetX: 15 * scaleX, targetY: -5 * scaleY };
+  if (id === "send") return { targetX: 15 * scaleX, targetY: 55 * scaleY };
+  if (id === "getattr") return { targetX: 65 * scaleX, targetY: 80 * scaleY };
+  if (id === "fetch") return { targetX: 20 * scaleX, targetY: 135 * scaleY };
+  if (id === "websocket") return { targetX: 95 * scaleX, targetY: 135 * scaleY };
+  if (id === "process_websocket") return { targetX: 60 * scaleX, targetY: 175 * scaleY };
+  if (id === "onopen") return { targetX: 15 * scaleX, targetY: 220 * scaleY };
+  if (id === "acquire_ws_buffer") return { targetX: 60 * scaleX, targetY: 220 * scaleY };
+  if (id === "ws_receive") return { targetX: 105 * scaleX, targetY: 220 * scaleY };
+  if (id === "ws_send") return { targetX: 15 * scaleX, targetY: 270 * scaleY };
+  if (id === "onclose") return { targetX: 60 * scaleX, targetY: 270 * scaleY };
+  if (id === "background_task") return { targetX: 105 * scaleX, targetY: 270 * scaleY };
 
-  // LANE 4: ASGI GATEWAY & WEBSOCKETS (Mid-Right Column: Center X = +85)
-  if (id === "asgi.py") return { targetX: 85 * scaleX, targetY: -125 * scaleY };
-  if (id === "ASGI") return { targetX: 65 * scaleX, targetY: -55 * scaleY };
-  if (id === "start_application") return { targetX: 105 * scaleX, targetY: -55 * scaleY };
-  if (id === "process_request") return { targetX: 65 * scaleX, targetY: 5 * scaleY };
-  if (id === "onmessage") return { targetX: 105 * scaleX, targetY: 5 * scaleY };
-  if (id === "receive") return { targetX: 65 * scaleX, targetY: 65 * scaleY };
-  if (id === "send") return { targetX: 105 * scaleX, targetY: 65 * scaleY };
-  if (id === "getattr") return { targetX: 85 * scaleX, targetY: 125 * scaleY };
-  if (id === "fetch") return { targetX: 65 * scaleX, targetY: 185 * scaleY };
-  if (id === "websocket") return { targetX: 105 * scaleX, targetY: 185 * scaleY };
-  if (id === "process_websocket") return { targetX: 85 * scaleX, targetY: 240 * scaleY };
-  if (id === "onopen") return { targetX: 50 * scaleX, targetY: 295 * scaleY };
-  if (id === "acquire_ws_buffer") return { targetX: 85 * scaleX, targetY: 295 * scaleY };
-  if (id === "ws_receive") return { targetX: 120 * scaleX, targetY: 295 * scaleY };
-  if (id === "ws_send") return { targetX: 50 * scaleX, targetY: 350 * scaleY };
-  if (id === "onclose") return { targetX: 85 * scaleX, targetY: 350 * scaleY };
-  if (id === "background_task") return { targetX: 120 * scaleX, targetY: 350 * scaleY };
+  // Cluster 5: Worker MCP Tools Community Island (Far-Right Orbit: Centered at X=165, Y=115)
+  if (id === "worker.py") return { targetX: 165 * scaleX, targetY: 35 * scaleY };
+  if (id === "FastMCPServer") return { targetX: 165 * scaleX, targetY: 95 * scaleY };
+  if (id === "setup_server") return { targetX: 165 * scaleX, targetY: 150 * scaleY };
+  if (id === "calculate_bmi") return { targetX: 125 * scaleX, targetY: 90 * scaleY };
+  if (id === "add") return { targetX: 200 * scaleX, targetY: 90 * scaleY };
+  if (id === "echo_prompt") return { targetX: 125 * scaleX, targetY: 145 * scaleY };
+  if (id === "get_greeting") return { targetX: 200 * scaleX, targetY: 145 * scaleY };
+  if (id === "on_fetch") return { targetX: 140 * scaleX, targetY: 205 * scaleY };
+  if (id === "shutdown") return { targetX: 185 * scaleX, targetY: 205 * scaleY };
 
-  // LANE 5: WORKER DAEMON & MCP TOOLS (Far-Right Column: Center X = +170)
-  if (id === "worker.py") return { targetX: 170 * scaleX, targetY: -125 * scaleY };
-  if (id === "FastMCPServer") return { targetX: 170 * scaleX, targetY: -55 * scaleY };
-  if (id === "setup_server") return { targetX: 170 * scaleX, targetY: 5 * scaleY };
-  if (id === "calculate_bmi") return { targetX: 150 * scaleX, targetY: 65 * scaleY };
-  if (id === "add") return { targetX: 190 * scaleX, targetY: 65 * scaleY };
-  if (id === "echo_prompt") return { targetX: 150 * scaleX, targetY: 125 * scaleY };
-  if (id === "get_greeting") return { targetX: 190 * scaleX, targetY: 125 * scaleY };
-  if (id === "on_fetch") return { targetX: 170 * scaleX, targetY: 185 * scaleY };
-  if (id === "shutdown") return { targetX: 170 * scaleX, targetY: 240 * scaleY };
+  // Utilities Island (Lower Center)
+  if (id === "logger.py") return { targetX: -25 * scaleX, targetY: 275 * scaleY };
+  if (id === "exceptions.py") return { targetX: 25 * scaleX, targetY: 275 * scaleY };
+  if (id === "uvicorn.py") return { targetX: 0, targetY: 325 * scaleY };
 
-  // Fallback for any unexpected dynamic node
   const tier = getNodeVerticalTier(node).tier;
-  return { targetX: ((node.id.length % 5) - 2) * 50 * scaleX, targetY: (-160 + tier * 55) * scaleY };
+  return { targetX: ((node.id.length % 5) - 2) * 45 * scaleX, targetY: (-140 + tier * 50) * scaleY };
 }
 
 export default function NetworkGraphCanvas({
@@ -455,8 +519,8 @@ export default function NetworkGraphCanvas({
         level: layoutMode === "tree" ? treeLvl : n.tier,
         targetY,
         targetX,
-        x: n.x ?? targetX,
-        y: n.y ?? targetY,
+        x: targetX,
+        y: targetY,
       };
     });
 
@@ -787,9 +851,15 @@ export default function NetworkGraphCanvas({
         };
 
         fgRef.current.d3Force("stablePhysics", stablePhysicsForce());
-        // Identical balanced physics for both Tree & Cluster modes: perfectly distanced, zero drift
-        fgRef.current.d3Force("charge")?.strength?.(-90)?.distanceMax?.(260)?.distanceMin?.(18);
-        fgRef.current.d3Force("link")?.distance?.(68);
+        if (layoutMode === "cluster") {
+          // Cluster mode: expansive force-directed orbital community physics
+          fgRef.current.d3Force("charge")?.strength?.(-130)?.distanceMax?.(320)?.distanceMin?.(22);
+          fgRef.current.d3Force("link")?.distance?.(76);
+        } else {
+          // Tree mode: crisp vertical hierarchical tree DAG
+          fgRef.current.d3Force("charge")?.strength?.(-65)?.distanceMax?.(220)?.distanceMin?.(15);
+          fgRef.current.d3Force("link")?.distance?.(52);
+        }
       } else if (viewMode === "flowchart") {
         fgRef.current.d3Force("stablePhysics", null);
         fgRef.current.d3Force("charge")?.strength?.(0); // Zero repulsive drift so cards stay fixed
@@ -831,13 +901,19 @@ export default function NetworkGraphCanvas({
     setLayoutMode(mode);
     setTimeout(() => {
       if (fgRef.current) {
-        // Identical balanced physics for both Tree & Cluster modes
-        fgRef.current.d3Force("charge")?.strength?.(-90)?.distanceMax?.(260)?.distanceMin?.(18);
-        fgRef.current.d3Force("link")?.distance?.(68);
+        if (mode === "cluster") {
+          // Cluster mode: expansive force-directed orbital springs
+          fgRef.current.d3Force("charge")?.strength?.(-130)?.distanceMax?.(320)?.distanceMin?.(22);
+          fgRef.current.d3Force("link")?.distance?.(76);
+        } else {
+          // Tree mode: crisp vertical hierarchical tree DAG
+          fgRef.current.d3Force("charge")?.strength?.(-65)?.distanceMax?.(220)?.distanceMin?.(15);
+          fgRef.current.d3Force("link")?.distance?.(52);
+        }
         fgRef.current.d3ReheatSimulation?.();
         handleFit();
       }
-    }, 80);
+    }, 60);
   };
 
   // Handle node click: zoom smoothly into specified content
