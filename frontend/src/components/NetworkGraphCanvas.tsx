@@ -1312,9 +1312,6 @@ export default function NetworkGraphCanvas({
                 <Network size={11} className="text-[#f54e00]" />
                 <span>Full Graph</span>
               </button>
-              <span className="text-[10px] font-mono text-neutral-500 hidden sm:inline">
-                {activeFileName ? `Flowchart: ${activeFileName}` : "File DAG"}
-              </span>
             </div>
           )}
 
