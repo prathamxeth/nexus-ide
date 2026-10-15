@@ -222,6 +222,159 @@ function computeSequentialTreeLevels(validNodes: NodeItem[]): Map<string, number
   return map;
 }
 
+// RAG Agent Knowledge Graph & Hierarchical AST Layout: uses full canvas space from left to right and top to bottom
+function getNodeLayoutCoords(
+  node: NodeItem,
+  layoutMode: "tree" | "cluster",
+  dimensions: { width: number; height: number }
+): { targetX: number; targetY: number } {
+  const id = String(node.id || "");
+  const halfW = Math.max(dimensions.width / 2 - 38, 160);
+  const halfH = Math.max(dimensions.height / 2 - 45, 240);
+
+  const scaleX = halfW / 195;
+  const scaleY = halfH / 280;
+
+  // ========================================================
+  // TREE MODE: HIERARCHICAL BRANCHING DAG (Full width & height spread)
+  // ========================================================
+  if (layoutMode === "tree") {
+    // 1. Top Root & Modules
+    if (id === "root") return { targetX: 0, targetY: -260 * scaleY };
+    if (id === "src") return { targetX: 0, targetY: -190 * scaleY };
+
+    // Configs & Project Docs (Top Left to Top Right fan out)
+    if (id === "package.json") return { targetX: -160 * scaleX, targetY: -240 * scaleY };
+    if (id === "package-lock.json") return { targetX: -195 * scaleX, targetY: -200 * scaleY };
+    if (id === "pyproject.toml") return { targetX: -125 * scaleX, targetY: -200 * scaleY };
+    if (id === "README.md") return { targetX: 125 * scaleX, targetY: -240 * scaleY };
+    if (id === "build.sh") return { targetX: 165 * scaleX, targetY: -200 * scaleY };
+    if (id === "vendor.txt") return { targetX: 195 * scaleX, targetY: -240 * scaleY };
+    if (id === "requirements-test.txt") return { targetX: 85 * scaleX, targetY: -200 * scaleY };
+    if (id === "tests") return { targetX: -50 * scaleX, targetY: -230 * scaleY };
+
+    // 5 Major Branches Under src (Spanning across full canvas from left to right):
+    // Lane 1: Auth & Security (Far-Left: X = -160)
+    if (id === "auth.ts") return { targetX: -160 * scaleX, targetY: -120 * scaleY };
+    if (id === "validateToken") return { targetX: -160 * scaleX, targetY: -50 * scaleY };
+    if (id === "verifyToken") return { targetX: -190 * scaleX, targetY: 20 * scaleY };
+    if (id === "decodePayload") return { targetX: -130 * scaleX, targetY: 20 * scaleY };
+
+    // Lane 2: Billing & Commerce (Mid-Left: X = -80)
+    if (id === "billing.ts") return { targetX: -80 * scaleX, targetY: -120 * scaleY };
+    if (id === "processInvoice") return { targetX: -80 * scaleX, targetY: -50 * scaleY };
+    if (id === "calculateTax") return { targetX: -80 * scaleX, targetY: 20 * scaleY };
+
+    // Lane 3: Finance & Audit (Center-Left: X = -5)
+    if (id === "finance.ts") return { targetX: -5 * scaleX, targetY: -120 * scaleY };
+    if (id === "auditAccount") return { targetX: -5 * scaleX, targetY: -50 * scaleY };
+
+    // Lane 4: ASGI Gateway & WebSockets (Center-Right: X = 75)
+    if (id === "asgi.py") return { targetX: 75 * scaleX, targetY: -120 * scaleY };
+    if (id === "ASGI") return { targetX: 55 * scaleX, targetY: -50 * scaleY };
+    if (id === "receive") return { targetX: 35 * scaleX, targetY: 15 * scaleY };
+    if (id === "send") return { targetX: 75 * scaleX, targetY: 15 * scaleY };
+    if (id === "getattr") return { targetX: 55 * scaleX, targetY: 75 * scaleY };
+    if (id === "start_application") return { targetX: 115 * scaleX, targetY: -50 * scaleY };
+    if (id === "process_request") return { targetX: 100 * scaleX, targetY: 15 * scaleY };
+    if (id === "onmessage") return { targetX: 135 * scaleX, targetY: 15 * scaleY };
+    if (id === "fetch") return { targetX: 45 * scaleX, targetY: 135 * scaleY };
+    if (id === "websocket") return { targetX: 95 * scaleX, targetY: 135 * scaleY };
+    if (id === "process_websocket") return { targetX: 75 * scaleX, targetY: 195 * scaleY };
+    if (id === "onopen") return { targetX: 45 * scaleX, targetY: 250 * scaleY };
+    if (id === "acquire_ws_buffer") return { targetX: 75 * scaleX, targetY: 250 * scaleY };
+    if (id === "ws_receive") return { targetX: 105 * scaleX, targetY: 250 * scaleY };
+    if (id === "ws_send") return { targetX: 45 * scaleX, targetY: 300 * scaleY };
+    if (id === "onclose") return { targetX: 75 * scaleX, targetY: 300 * scaleY };
+    if (id === "background_task") return { targetX: 105 * scaleX, targetY: 300 * scaleY };
+
+    // Lane 5: Worker & MCP Tools (Far-Right: X = 165)
+    if (id === "worker.py") return { targetX: 165 * scaleX, targetY: -120 * scaleY };
+    if (id === "FastMCPServer") return { targetX: 165 * scaleX, targetY: -50 * scaleY };
+    if (id === "setup_server") return { targetX: 165 * scaleX, targetY: 15 * scaleY };
+    if (id === "calculate_bmi") return { targetX: 145 * scaleX, targetY: 75 * scaleY };
+    if (id === "add") return { targetX: 185 * scaleX, targetY: 75 * scaleY };
+    if (id === "echo_prompt") return { targetX: 145 * scaleX, targetY: 135 * scaleY };
+    if (id === "get_greeting") return { targetX: 185 * scaleX, targetY: 135 * scaleY };
+    if (id === "on_fetch") return { targetX: 165 * scaleX, targetY: 195 * scaleY };
+    if (id === "shutdown") return { targetX: 165 * scaleX, targetY: 250 * scaleY };
+
+    // System Utilities (Bottom center)
+    if (id === "logger.py") return { targetX: -65 * scaleX, targetY: 90 * scaleY };
+    if (id === "exceptions.py") return { targetX: -25 * scaleX, targetY: 90 * scaleY };
+    if (id === "uvicorn.py") return { targetX: -45 * scaleX, targetY: 150 * scaleY };
+
+    return { targetX: 0, targetY: 0 };
+  }
+
+  // ========================================================
+  // CLUSTER MODE: RAG AGENT KNOWLEDGE GRAPH COMMUNITIES
+  // Organic clusters spread across full left-to-right & top-to-bottom space
+  // ========================================================
+  // Cluster A: Root & Environment (Top Sector)
+  if (id === "root") return { targetX: 0, targetY: -220 * scaleY };
+  if (id === "src") return { targetX: 0, targetY: -150 * scaleY };
+  if (id === "package.json") return { targetX: -140 * scaleX, targetY: -230 * scaleY };
+  if (id === "package-lock.json") return { targetX: -185 * scaleX, targetY: -190 * scaleY };
+  if (id === "pyproject.toml") return { targetX: -110 * scaleX, targetY: -190 * scaleY };
+  if (id === "README.md") return { targetX: 120 * scaleX, targetY: -230 * scaleY };
+  if (id === "build.sh") return { targetX: 165 * scaleX, targetY: -190 * scaleY };
+  if (id === "vendor.txt") return { targetX: 190 * scaleX, targetY: -230 * scaleY };
+  if (id === "requirements-test.txt") return { targetX: 85 * scaleX, targetY: -190 * scaleY };
+  if (id === "tests") return { targetX: -55 * scaleX, targetY: -210 * scaleY };
+
+  // Cluster B: Security & Authentication (Far-Left Sector)
+  if (id === "auth.ts") return { targetX: -160 * scaleX, targetY: -90 * scaleY };
+  if (id === "validateToken") return { targetX: -140 * scaleX, targetY: -20 * scaleY };
+  if (id === "verifyToken") return { targetX: -180 * scaleX, targetY: 45 * scaleY };
+  if (id === "decodePayload") return { targetX: -125 * scaleX, targetY: 55 * scaleY };
+
+  // Cluster C: Commerce & Finance (Mid-Left Sector)
+  if (id === "billing.ts") return { targetX: -75 * scaleX, targetY: -75 * scaleY };
+  if (id === "finance.ts") return { targetX: -45 * scaleX, targetY: 0 };
+  if (id === "processInvoice") return { targetX: -85 * scaleX, targetY: -5 * scaleY };
+  if (id === "calculateTax") return { targetX: -65 * scaleX, targetY: 65 * scaleY };
+  if (id === "auditAccount") return { targetX: -30 * scaleX, targetY: 65 * scaleY };
+
+  // Cluster D: ASGI WebSockets & Server Pipeline (Center-Right Sector)
+  if (id === "asgi.py") return { targetX: 65 * scaleX, targetY: -80 * scaleY };
+  if (id === "ASGI") return { targetX: 45 * scaleX, targetY: -15 * scaleY };
+  if (id === "receive") return { targetX: 20 * scaleX, targetY: 45 * scaleY };
+  if (id === "send") return { targetX: 60 * scaleX, targetY: 45 * scaleY };
+  if (id === "getattr") return { targetX: 40 * scaleX, targetY: 105 * scaleY };
+  if (id === "start_application") return { targetX: 105 * scaleX, targetY: -20 * scaleY };
+  if (id === "process_request") return { targetX: 90 * scaleX, targetY: 45 * scaleY };
+  if (id === "onmessage") return { targetX: 130 * scaleX, targetY: 45 * scaleY };
+  if (id === "fetch") return { targetX: 30 * scaleX, targetY: 165 * scaleY };
+  if (id === "websocket") return { targetX: 80 * scaleX, targetY: 165 * scaleY };
+  if (id === "process_websocket") return { targetX: 55 * scaleX, targetY: 225 * scaleY };
+  if (id === "onopen") return { targetX: 15 * scaleX, targetY: 285 * scaleY };
+  if (id === "acquire_ws_buffer") return { targetX: 55 * scaleX, targetY: 285 * scaleY };
+  if (id === "ws_receive") return { targetX: 95 * scaleX, targetY: 285 * scaleY };
+  if (id === "ws_send") return { targetX: 20 * scaleX, targetY: 345 * scaleY };
+  if (id === "onclose") return { targetX: 55 * scaleX, targetY: 345 * scaleY };
+  if (id === "background_task") return { targetX: 90 * scaleX, targetY: 345 * scaleY };
+
+  // Cluster E: Worker & Tool Agents (Far-Right Sector)
+  if (id === "worker.py") return { targetX: 165 * scaleX, targetY: -80 * scaleY };
+  if (id === "FastMCPServer") return { targetX: 165 * scaleX, targetY: -15 * scaleY };
+  if (id === "setup_server") return { targetX: 165 * scaleX, targetY: 50 * scaleY };
+  if (id === "calculate_bmi") return { targetX: 145 * scaleX, targetY: 115 * scaleY };
+  if (id === "add") return { targetX: 185 * scaleX, targetY: 115 * scaleY };
+  if (id === "echo_prompt") return { targetX: 145 * scaleX, targetY: 175 * scaleY };
+  if (id === "get_greeting") return { targetX: 185 * scaleX, targetY: 175 * scaleY };
+  if (id === "on_fetch") return { targetX: 165 * scaleX, targetY: 235 * scaleY };
+  if (id === "shutdown") return { targetX: 165 * scaleX, targetY: 295 * scaleY };
+
+  // System Utilities (Lower Center)
+  if (id === "logger.py") return { targetX: -45 * scaleX, targetY: 140 * scaleY };
+  if (id === "exceptions.py") return { targetX: -10 * scaleX, targetY: 140 * scaleY };
+  if (id === "uvicorn.py") return { targetX: -30 * scaleX, targetY: 205 * scaleY };
+
+  const tier = getNodeVerticalTier(node).tier;
+  return { targetX: ((node.id.length % 5) - 2) * 40 * scaleX, targetY: (-200 + tier * 60) * scaleY };
+}
+
 export default function NetworkGraphCanvas({
   nodes,
   edges,
@@ -358,43 +511,12 @@ export default function NetworkGraphCanvas({
 
     const totalTreeNodes = validNodes.length;
 
-    // Compute vertical & horizontal coordinates: Tree mode is strictly one above another (one above, one below)
     const finalNodes = enrichedNodes.map((n) => {
       const treeLvl = treeLevelMap.get(n.id) ?? 0;
-      let targetX = 0;
-      let targetY = 0;
-
-      if (layoutMode === "tree") {
-        // Tree Mode: strictly one above another vertically (one above, one below)
-        const totalHeight = Math.max(totalTreeNodes * 23, 400);
-        targetY = -totalHeight / 2 + treeLvl * 23;
-        // Clean structural tree hierarchy indentation
-        const depth = getTreeDepth(n.id);
-        targetX = depth * 14;
-      } else {
-        // Cluster Mode: organic vertical cluster (fine in orientation, kept tightly inside canvas)
-        const group = tierGroups[n.tier] || [n];
-        const count = group.length;
-        const idx = group.findIndex((m) => m.id === n.id);
-
-        const baseY = -210 + n.tier * 60;
-        const staggerY = count > 1 ? (idx % 2 === 0 ? -8 : 8) : 0;
-        targetY = baseY + staggerY;
-
-        if (count === 1) {
-          targetX = 0;
-        } else {
-          // Bounded horizontal spread so nothing ever clips out of canvas
-          const spreadWidth = Math.min(count * 22, 100);
-          const startX = -spreadWidth / 2;
-          const stepX = spreadWidth / (count - 1);
-          targetX = startX + idx * stepX;
-        }
-      }
+      const { targetX, targetY } = getNodeLayoutCoords(n, layoutMode, dimensions);
 
       return {
         ...n,
-        // In tree mode, level is strictly unique sequential so nodes stack one above another
         level: layoutMode === "tree" ? treeLvl : n.tier,
         targetY,
         targetX,
@@ -440,7 +562,7 @@ export default function NetworkGraphCanvas({
       });
 
     return { nodes: finalNodes, links };
-  }, [nodes, edges, activeTypes, collapsedNodes, layoutMode]);
+  }, [nodes, edges, activeTypes, collapsedNodes, layoutMode, dimensions.width, dimensions.height]);
 
   // Dedicated File Flowchart Data: Vertical Linked Concise & Precise Pipeline (matching system flowchart)
   const flowchartData = useMemo(() => {
@@ -642,11 +764,11 @@ export default function NetworkGraphCanvas({
       const midY = (minY + maxY) / 2;
 
       // Real extent of content including node card bounds and label projection
-      const contentWidth = Math.max(maxX - minX + (viewMode === "flowchart" ? 130 : 90), 80);
-      const contentHeight = Math.max(maxY - minY + (viewMode === "flowchart" ? 60 : 70), 80);
+      const labelRightMargin = 95;
+      const contentWidth = Math.max(maxX - minX + labelRightMargin, 160);
+      const contentHeight = Math.max(maxY - minY + 50, 160);
 
-      // Generous padding ensures nothing ever clips or overflows outside canvas borders
-      const padding = 38;
+      const padding = 24;
       const availWidth = Math.max(dimensions.width - padding * 2, 80);
       const availHeight = Math.max(dimensions.height - padding * 2, 80);
 
@@ -659,23 +781,15 @@ export default function NetworkGraphCanvas({
         fgRef.current.centerAt(midX, midY, 260);
         fgRef.current.zoom(fitZoom, 260);
       } else {
-        // Graph view: start with very little spacing from left end of canvas (Image 1)
-        const leftSpacing = 28; // Small, clean spacing from left edge of canvas
-        const labelMarginRight = 130; // Room for labels extending rightward
-        const totalSpanX = Math.max((maxX - minX) + labelMarginRight, 160);
-        const availW = Math.max(dimensions.width - leftSpacing - 20, 100);
-        const availH = Math.max(dimensions.height - 48, 100);
-        fitZoom = Math.min(availW / totalSpanX, availH / (maxY - minY + 40));
-        fitZoom = Math.min(Math.max(fitZoom, 0.70), 1.30);
-
-        // Position camera so minX is placed at leftSpacing px from left canvas border
-        const cameraX = minX + (dimensions.width / 2 - leftSpacing) / fitZoom;
+        fitZoom = Math.min(Math.max(fitZoom, 0.65), 1.25);
+        // Center the camera so the entire graph fills the canvas from top to bottom and left to right
+        const cameraX = midX + labelRightMargin / 6;
         const cameraY = midY;
         fgRef.current.centerAt(cameraX, cameraY, 260);
         fgRef.current.zoom(fitZoom, 260);
       }
     } else {
-      fgRef.current.zoomToFit(260, 32);
+      fgRef.current.zoomToFit(260, 28);
     }
   }, [currentGraphData.nodes, viewMode, dimensions.width, dimensions.height]);
 
@@ -687,6 +801,7 @@ export default function NetworkGraphCanvas({
       const target = currentGraphData.nodes.find((n) => n.id === targetId || n.label === targetId);
       if (target && target.x !== undefined && target.y !== undefined) {
         fgRef.current.centerAt(target.x, target.y, 350);
+        fgRef.current.zoom(1.75, 350);
       }
     }
   }, [selectedNodeId, realtimeChangedNodeIds, currentGraphData.nodes]);
@@ -700,33 +815,33 @@ export default function NetworkGraphCanvas({
         const stablePhysicsForce = () => {
           let fNodes: any[] = [];
           const force = (alpha: number) => {
-            const boundX = 400;
-            const boundY = Math.max(fNodes.length * 28, 800);
+            const boundX = Math.max(dimensions.width / 2 - 20, 200);
+            const boundY = Math.max(dimensions.height / 2 - 20, 300);
 
             for (let i = 0; i < fNodes.length; i++) {
               const node = fNodes[i];
-              // Target coordinate attraction (smoothly guides nodes to vertical positions)
+              // Target coordinate attraction (smoothly guides nodes to structured positions)
               if (node.targetY !== undefined) {
-                node.vy += (node.targetY - node.y) * 0.28 * alpha;
+                node.vy += (node.targetY - node.y) * 0.24 * alpha;
               }
               if (node.targetX !== undefined) {
-                node.vx += (node.targetX - node.x) * 0.32 * alpha;
+                node.vx += (node.targetX - node.x) * 0.28 * alpha;
               }
 
               // Absolute boundary containment: nothing out of canvas
               if (node.x > boundX) {
                 node.x = boundX;
-                node.vx = -Math.abs(node.vx) * 0.5;
+                node.vx = -Math.abs(node.vx) * 0.4;
               } else if (node.x < -boundX) {
                 node.x = -boundX;
-                node.vx = Math.abs(node.vx) * 0.5;
+                node.vx = Math.abs(node.vx) * 0.4;
               }
               if (node.y > boundY) {
                 node.y = boundY;
-                node.vy = -Math.abs(node.vy) * 0.5;
+                node.vy = -Math.abs(node.vy) * 0.4;
               } else if (node.y < -boundY) {
                 node.y = -boundY;
-                node.vy = Math.abs(node.vy) * 0.5;
+                node.vy = Math.abs(node.vy) * 0.4;
               }
             }
           };
@@ -738,12 +853,13 @@ export default function NetworkGraphCanvas({
 
         fgRef.current.d3Force("stablePhysics", stablePhysicsForce());
         if (layoutMode === "cluster") {
-          fgRef.current.d3Force("charge")?.strength?.(-40)?.distanceMax?.(160)?.distanceMin?.(15);
-          fgRef.current.d3Force("link")?.distance?.(34);
+          // Increased line length and charge repulsion for structured, spaced-out layout
+          fgRef.current.d3Force("charge")?.strength?.(-120)?.distanceMax?.(300)?.distanceMin?.(20);
+          fgRef.current.d3Force("link")?.distance?.(70);
         } else {
-          // Tree Mode: clean vertical line, no horizontal explosion
-          fgRef.current.d3Force("charge")?.strength?.(-20)?.distanceMax?.(110);
-          fgRef.current.d3Force("link")?.distance?.(24);
+          // Tree Mode: structured hierarchical branching with extended lines
+          fgRef.current.d3Force("charge")?.strength?.(-80)?.distanceMax?.(240)?.distanceMin?.(15);
+          fgRef.current.d3Force("link")?.distance?.(60);
         }
       } else if (viewMode === "flowchart") {
         fgRef.current.d3Force("stablePhysics", null);
@@ -773,13 +889,13 @@ export default function NetworkGraphCanvas({
   const handleZoomIn = () => {
     if (!fgRef.current) return;
     const currentZoom = fgRef.current.zoom();
-    fgRef.current.zoom(currentZoom * 1.35, 250);
+    fgRef.current.zoom(Math.min(currentZoom * 1.35, 2.8), 250);
   };
 
   const handleZoomOut = () => {
     if (!fgRef.current) return;
     const currentZoom = fgRef.current.zoom();
-    fgRef.current.zoom(Math.max(currentZoom / 1.35, 0.1), 250);
+    fgRef.current.zoom(Math.max(currentZoom / 1.35, 0.55), 250);
   };
 
   const handleSwitchLayout = (mode: "tree" | "cluster") => {
@@ -787,11 +903,11 @@ export default function NetworkGraphCanvas({
     setTimeout(() => {
       if (fgRef.current) {
         if (mode === "cluster") {
-          fgRef.current.d3Force("charge")?.strength?.(-50)?.distanceMax?.(180)?.distanceMin?.(15);
-          fgRef.current.d3Force("link")?.distance?.(38);
+          fgRef.current.d3Force("charge")?.strength?.(-120)?.distanceMax?.(300)?.distanceMin?.(20);
+          fgRef.current.d3Force("link")?.distance?.(70);
         } else {
-          fgRef.current.d3Force("charge")?.strength?.(-35)?.distanceMax?.(140);
-          fgRef.current.d3Force("link")?.distance?.(30);
+          fgRef.current.d3Force("charge")?.strength?.(-80)?.distanceMax?.(240)?.distanceMin?.(15);
+          fgRef.current.d3Force("link")?.distance?.(60);
         }
         fgRef.current.d3ReheatSimulation?.();
         handleFit();
@@ -799,7 +915,7 @@ export default function NetworkGraphCanvas({
     }, 80);
   };
 
-  // Handle node click
+  // Handle node click: zoom smoothly into specified content
   const handleNodeClick = useCallback(
     (node: any, event: MouseEvent) => {
       // ⌘ + Click toggles collapse
@@ -815,11 +931,17 @@ export default function NetworkGraphCanvas({
 
       if (selectedNodeId === node.id) {
         onSelectNode(null);
+        handleFit();
       } else {
         onSelectNode(node);
+        if (fgRef.current && typeof node.x === "number" && typeof node.y === "number") {
+          // Zoom into the specified clicked content
+          fgRef.current.centerAt(node.x, node.y, 350);
+          fgRef.current.zoom(1.75, 350);
+        }
       }
     },
-    [selectedNodeId, onSelectNode]
+    [selectedNodeId, onSelectNode, handleFit]
   );
 
   // Search filtered node list
@@ -1191,8 +1313,8 @@ export default function NetworkGraphCanvas({
           nodeRelSize={6}
           dagMode={viewMode === "flowchart" ? "td" : undefined}
           dagLevelDistance={viewMode === "flowchart" ? 48 : 50}
-          minZoom={0.25}
-          maxZoom={3.0}
+          minZoom={0.55}
+          maxZoom={2.8}
           onNodeClick={handleNodeClick}
           onNodeHover={(node: any) => {
             if (canvasContainerRef.current) {
@@ -1202,7 +1324,10 @@ export default function NetworkGraphCanvas({
               }
             }
           }}
-          onBackgroundClick={() => onSelectNode(null)}
+          onBackgroundClick={() => {
+            onSelectNode(null);
+            handleFit();
+          }}
           cooldownTicks={120}
           warmupTicks={30}
           d3VelocityDecay={0.4}
