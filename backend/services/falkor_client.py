@@ -170,6 +170,106 @@ class FalkorService:
             logger.error("Error executing Cypher query [%s]: %s", cypher, exc)
             raise
 
+    def get_blast_radius(self, function_name: str, max_depth: int = 4) -> Dict[str, Any]:
+        """Execute multi-hop Cypher traversal to compute upstream callers and blast radius.
+
+        Finds all functions that directly or transitively call the target function
+        up to `max_depth` hops away.
+        """
+        start_time = time.perf_counter()
+        cypher = f"""
+        MATCH (target:Function {{name: $name}})
+        OPTIONAL MATCH path = (caller:Function)-[:CALLS*1..{max_depth}]->(target)
+        WITH target, caller, length(path) AS depth
+        WHERE caller IS NOT NULL
+        RETURN 
+            caller.name AS caller_name,
+            caller.file AS caller_file,
+            min(depth) AS min_depth
+        ORDER BY min_depth ASC
+        """
+        try:
+            results = self.query(cypher, {"name": function_name})
+            callers = []
+            for row in results:
+                if len(row) >= 3 and row[0]:
+                    callers.append({
+                        "name": str(row[0]),
+                        "file": str(row[1]) if row[1] else "",
+                        "depth": int(row[2]) if row[2] else 1,
+                    })
+
+            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            return {
+                "target_function": function_name,
+                "callers": callers,
+                "total_callers": len(callers),
+                "max_depth": max_depth,
+                "latency_ms": latency_ms,
+            }
+        except Exception as exc:
+            logger.warning("Error computing blast radius for '%s': %s", function_name, exc)
+            return {
+                "target_function": function_name,
+                "callers": [],
+                "total_callers": 0,
+                "max_depth": max_depth,
+                "latency_ms": 0.0,
+                "error": str(exc),
+            }
+
+    def get_episodic_memory(self, function_name: str) -> Dict[str, Any]:
+        """Retrieve procedural memory rules and historical failure records for a function."""
+        start_time = time.perf_counter()
+        cypher = """
+        MATCH (fn:Function {name: $name})
+        OPTIONAL MATCH (fn)-[:HAS_RULE]->(m:Memory)
+        OPTIONAL MATCH (a:Action)-[:FAILED_ON]->(fn)
+        RETURN 
+            collect(DISTINCT m.rule) AS rules,
+            collect(DISTINCT a.error) AS previous_errors
+        """
+        try:
+            results = self.query(cypher, {"name": function_name})
+            rules: List[str] = []
+            errors: List[str] = []
+            if results and len(results) > 0:
+                raw_rules = results[0][0] or []
+                raw_errors = results[0][1] or []
+                rules = [str(r) for r in raw_rules if r]
+                errors = [str(e) for e in raw_errors if e]
+
+            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            return {
+                "function_name": function_name,
+                "rules": rules,
+                "previous_errors": errors,
+                "latency_ms": latency_ms,
+            }
+        except Exception as exc:
+            logger.warning("Error retrieving episodic memory for '%s': %s", function_name, exc)
+            return {
+                "function_name": function_name,
+                "rules": [],
+                "previous_errors": [],
+                "latency_ms": 0.0,
+                "error": str(exc),
+            }
+
+    def get_refactor_context(self, function_name: str) -> Dict[str, Any]:
+        """Unified sub-millisecond graph query gathering blast radius + procedural memory."""
+        start_time = time.perf_counter()
+        blast_radius = self.get_blast_radius(function_name)
+        memory = self.get_episodic_memory(function_name)
+        total_latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+        return {
+            "target_function": function_name,
+            "blast_radius": blast_radius,
+            "memory": memory,
+            "total_latency_ms": total_latency_ms,
+        }
+
     def close(self) -> None:
         """Close connection resources."""
         self._db = None
