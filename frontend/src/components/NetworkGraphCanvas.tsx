@@ -294,32 +294,33 @@ export default function NetworkGraphCanvas({
 
     const totalTreeNodes = validNodes.length;
 
-    // Compute vertical & horizontal coordinates: Tree mode is strictly one above another
+    // Compute vertical & horizontal coordinates: Tree mode is strictly one above another (one above, one below)
     const finalNodes = enrichedNodes.map((n) => {
       const treeLvl = treeLevelMap.get(n.id) ?? 0;
       let targetX = 0;
       let targetY = 0;
 
       if (layoutMode === "tree") {
-        // Tree Mode: strictly one above another vertically along a clean column
-        const totalHeight = Math.max(totalTreeNodes * 28, 450);
-        targetY = -totalHeight / 2 + treeLvl * 28;
-        // Subtle stepped indent: Module -> File -> Function
-        targetX = n.type === "Module" ? -30 : n.type === "File" ? -10 : 15;
+        // Tree Mode: strictly one above another vertically (one above, one below)
+        const totalHeight = Math.max(totalTreeNodes * 25, 420);
+        targetY = -totalHeight / 2 + treeLvl * 25;
+        // Clean alternating subtle step: one above, one below, with micro lateral offset
+        targetX = (treeLvl % 2 === 0 ? -10 : 10);
       } else {
-        // Cluster Mode: organic vertical cluster (fine in orientation)
+        // Cluster Mode: organic vertical cluster (fine in orientation, kept tightly inside canvas)
         const group = tierGroups[n.tier] || [n];
         const count = group.length;
         const idx = group.findIndex((m) => m.id === n.id);
 
-        const baseY = -220 + n.tier * 65;
-        const staggerY = count > 1 ? (idx % 2 === 0 ? -10 : 10) : 0;
+        const baseY = -210 + n.tier * 60;
+        const staggerY = count > 1 ? (idx % 2 === 0 ? -8 : 8) : 0;
         targetY = baseY + staggerY;
 
         if (count === 1) {
           targetX = 0;
         } else {
-          const spreadWidth = Math.min(count * 38, 160);
+          // Bounded horizontal spread so nothing ever clips out of canvas
+          const spreadWidth = Math.min(count * 22, 100);
           const startX = -spreadWidth / 2;
           const stepX = spreadWidth / (count - 1);
           targetX = startX + idx * stepX;
@@ -575,11 +576,12 @@ export default function NetworkGraphCanvas({
       const midX = (minX + maxX) / 2;
       const midY = (minY + maxY) / 2;
 
-      // Real extent of content including node card bounds
-      const contentWidth = Math.max(maxX - minX + (viewMode === "flowchart" ? 130 : 70), 80);
+      // Real extent of content including node card bounds and label projection
+      const contentWidth = Math.max(maxX - minX + (viewMode === "flowchart" ? 130 : 90), 80);
       const contentHeight = Math.max(maxY - minY + (viewMode === "flowchart" ? 60 : 70), 80);
 
-      const padding = 24;
+      // Generous padding ensures nothing ever clips or overflows outside canvas borders
+      const padding = 38;
       const availWidth = Math.max(dimensions.width - padding * 2, 80);
       const availHeight = Math.max(dimensions.height - padding * 2, 80);
 
@@ -618,19 +620,44 @@ export default function NetworkGraphCanvas({
     if (!fgRef.current || currentGraphData.nodes.length === 0) return;
     try {
       if (viewMode === "graph") {
-        // Custom vertical constraint force to spread strictly from top to bottom
-        const verticalForce = () => {
+        // Dynamic oscillation & boundary containment force (oscillates dynamically, no still, nothing out of canvas)
+        let oscillationAngle = 0;
+        const dynamicPhysicsForce = () => {
           let fNodes: any[] = [];
           const force = (alpha: number) => {
+            oscillationAngle += 0.035;
+            const boundX = Math.max(dimensions.width / 2 - 45, 60);
+            const boundY = Math.max(dimensions.height / 2 - 40, 80);
+
             for (let i = 0; i < fNodes.length; i++) {
               const node = fNodes[i];
+              // Target coordinate attraction
               if (node.targetY !== undefined) {
                 node.vy += (node.targetY - node.y) * 0.28 * alpha;
               }
               if (node.targetX !== undefined) {
                 node.vx += (node.targetX - node.x) * 0.32 * alpha;
-              } else {
-                node.vx += (0 - node.x) * 0.25 * alpha;
+              }
+
+              // Gentle organic dynamic oscillation (never freezes still)
+              const phase = i * 0.5 + oscillationAngle;
+              node.vx += Math.sin(phase) * 0.16;
+              node.vy += Math.cos(phase * 0.7) * 0.12;
+
+              // Absolute boundary containment: nothing out of canvas
+              if (node.x > boundX) {
+                node.x = boundX;
+                node.vx = -Math.abs(node.vx) * 0.5;
+              } else if (node.x < -boundX) {
+                node.x = -boundX;
+                node.vx = Math.abs(node.vx) * 0.5;
+              }
+              if (node.y > boundY) {
+                node.y = boundY;
+                node.vy = -Math.abs(node.vy) * 0.5;
+              } else if (node.y < -boundY) {
+                node.y = -boundY;
+                node.vy = Math.abs(node.vy) * 0.5;
               }
             }
           };
@@ -640,16 +667,17 @@ export default function NetworkGraphCanvas({
           return force;
         };
 
-        fgRef.current.d3Force("verticalSpread", verticalForce());
+        fgRef.current.d3Force("dynamicPhysics", dynamicPhysicsForce());
         if (layoutMode === "cluster") {
-          fgRef.current.d3Force("charge")?.strength?.(-45)?.distanceMax?.(170)?.distanceMin?.(15);
-          fgRef.current.d3Force("link")?.distance?.(36);
+          fgRef.current.d3Force("charge")?.strength?.(-40)?.distanceMax?.(160)?.distanceMin?.(15);
+          fgRef.current.d3Force("link")?.distance?.(34);
         } else {
-          fgRef.current.d3Force("charge")?.strength?.(-35)?.distanceMax?.(140);
-          fgRef.current.d3Force("link")?.distance?.(30);
+          // Tree Mode: clean vertical line, no horizontal explosion
+          fgRef.current.d3Force("charge")?.strength?.(-20)?.distanceMax?.(110);
+          fgRef.current.d3Force("link")?.distance?.(24);
         }
       } else if (viewMode === "flowchart") {
-        fgRef.current.d3Force("verticalSpread", null);
+        fgRef.current.d3Force("dynamicPhysics", null);
         fgRef.current.d3Force("charge")?.strength?.(0); // Zero repulsive drift so cards stay fixed
         fgRef.current.d3Force("link")?.distance?.(48);
       }
@@ -1092,8 +1120,8 @@ export default function NetworkGraphCanvas({
           graphData={currentGraphData}
           backgroundColor="#000000"
           nodeRelSize={6}
-          dagMode={viewMode === "flowchart" ? "td" : layoutMode === "tree" ? "td" : undefined}
-          dagLevelDistance={viewMode === "flowchart" ? 48 : layoutMode === "tree" ? 28 : 52}
+          dagMode={viewMode === "flowchart" ? "td" : undefined}
+          dagLevelDistance={viewMode === "flowchart" ? 48 : 50}
           minZoom={0.25}
           maxZoom={3.0}
           onNodeClick={handleNodeClick}
@@ -1106,10 +1134,10 @@ export default function NetworkGraphCanvas({
             }
           }}
           onBackgroundClick={() => onSelectNode(null)}
-          cooldownTicks={120}
-          warmupTicks={50}
+          cooldownTicks={viewMode === "flowchart" ? 120 : Infinity}
+          warmupTicks={30}
           d3VelocityDecay={0.35}
-          d3AlphaDecay={0.03}
+          d3AlphaDecay={viewMode === "flowchart" ? 0.03 : 0.002}
           onEngineStop={() => {
             if (viewMode === "graph") {
               handleFit();
@@ -1140,36 +1168,45 @@ export default function NetworkGraphCanvas({
             if (viewMode === "flowchart") {
               const tgt = typeof link.target === "object" ? link.target.id : link.target;
               if (realtimeChangedSet.has(tgt) || Boolean(isModified)) return "#e5c07b";
-              return "#383838";
+              return "#555555";
             }
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
             if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
-              return "#f54e00"; // highlighted link
+              return "#f54e00"; // Glowing orange for active/selected path
             }
-            return "#4d4d4d"; // High visibility line (clearly visible, not invisible #141414!)
+            return "rgba(255, 255, 255, 0.45)"; // Highly visible, crisp white-slate line
           }}
           linkWidth={(link: any) => {
-            if (viewMode === "flowchart") return 1.5;
+            if (viewMode === "flowchart") return 1.6;
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
             if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
-              return 2.4;
+              return 2.5;
             }
-            return 1.3;
+            return 1.4;
           }}
-          linkDirectionalArrowLength={viewMode === "flowchart" ? 6 : layoutMode === "tree" ? 4.5 : 0}
-          linkDirectionalArrowRelPos={1}
+          linkDirectionalArrowLength={viewMode === "flowchart" ? 6 : 4.5}
+          linkDirectionalArrowRelPos={0.96}
           linkDirectionalArrowColor={(link: any) => {
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
             if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
               return "#f54e00";
             }
-            return "#666666";
+            return "rgba(255, 255, 255, 0.70)";
           }}
-          linkDirectionalParticles={viewMode === "flowchart" ? 2 : 0}
-          linkDirectionalParticleSpeed={0.008}
+          linkDirectionalParticles={viewMode === "flowchart" ? 2 : 1}
+          linkDirectionalParticleSpeed={0.006}
+          linkDirectionalParticleWidth={1.8}
+          linkDirectionalParticleColor={(link: any) => {
+            const s = typeof link.source === "object" ? link.source.id : link.source;
+            const t = typeof link.target === "object" ? link.target.id : link.target;
+            if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
+              return "#f54e00";
+            }
+            return "#38bdf8";
+          }}
           linkCurvature={0}
           // Custom Node Painting
           nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
