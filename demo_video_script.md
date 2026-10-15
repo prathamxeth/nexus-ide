@@ -32,10 +32,11 @@
 **[Action]**: Click the **↑** submit button.
 
 **[Narrator]**:
-> "Look at that. In **under 2 milliseconds**, FalkorDB executes a multi-hop Cypher traversal.  
+> "Look at that. In **under 2 milliseconds**, FalkorDB executes a multi-hop Cypher traversal and native **PageRank GraphBLAS algorithms**.  
 > Instead of guessing, the graph engine immediately traverses the AST and highlights all impacted callers in **pulsing red**:
 > - `processInvoice` in `billing.ts` at Hop 1
 > - `auditAccount` in `finance.ts` at Hop 2  
+> - And calculates `validateToken`'s centrality score at **0.89**—identifying it as a high-risk architectural hub.
 > 
 > NexusIDE knows the exact blast radius *before* writing a single line of code."
 
@@ -47,32 +48,36 @@
 **[Narrator]**:
 > "This is where NexusIDE hits **all three FalkorDB tracks** simultaneously:
 > 
-> 1. **Track 1 (Connected Data)**: The blue focus node `validateToken` is connected directly to its multi-hop AST call tree via Tree-sitter and FalkorDB GraphBLAS queries.
+> 1. **Track 1 (Connected Data)**: The AST call tree is traversed in real-time, exposed via an open **FastMCP Server** (`backend/mcp_server.py`) so external agents like Claude or Cursor can query blast radius and centrality via standard MCP tools.
 > 
 > 2. **Track 2 (Agent Memory & Coordination)**: Look at this amber node. NexusIDE queried procedural memory and surfaced a rule from a past incident: *'Must check exp claim with clock skew <= 60s'*. The agent is physically prevented from generating a naive patch.
 > 
-> 3. **Track 3 (Company Brain)**: Notice the emerald node. FalkorDB correlated the code syntax with Git commit history and Jira tickets—surfacing `PR #104` authored by `@alex.chen` (`SEC-402`), giving the AI the original author's intent."
+> 3. **Track 3 (Company Brain)**: Notice the emerald node. FalkorDB correlated code syntax with Git commit history and Jira tickets—surfacing `PR #104` authored by `@alex.chen` (`SEC-402`), preserving the original author's intent."
 
 ---
 
-### Segment 4: Monaco Split-Diff & Hotkey Resolution (2:15 – 2:45)
-**[Visual]**: Monaco Diff view activates side-by-side with additions in green and deletions in red. Show the floating action bar.
+### Segment 4: Monaco Split-Diff & Dynamic Memory Rejection (2:15 – 2:45)
+**[Visual]**: Monaco Diff view activates side-by-side. Point out the Reject (⌘N) and Accept & Save (⌘Y) buttons.
 
 **[Narrator]**:
-> "Now look at the editor. NexusIDE toggled Monaco's side-by-side Diff view.  
-> It injected the fail-closed null checks, respected the 60-second skew tolerance from procedural memory, and avoided any signature breaking changes.  
+> "Now look at the editor. NexusIDE opens Monaco's side-by-side Diff view.  
+> It injected the fail-closed null checks, respected the 60-second skew tolerance, and avoided breaking caller signatures.  
 > 
-> I can review the patch, press **`Cmd+Y`** to accept... and notice what happens in the graph: FalkorDB re-indexes the AST in real-time.  
-> Now let's click `billing.ts` on the graph—it instantly jumps our editor directly to the caller line."
+> But what if the user rejects a patch? Watch this: I hit **Reject (⌘N)**.  
+> In real time, NexusIDE executes a dynamic Cypher write to FalkorDB, persisting this rejection as a new procedural guardrail node. Future agent sessions immediately learn this constraint!  
+> 
+> When I hit **Accept & Save (⌘Y)**, the code is patched and FalkorDB re-indexes the AST instantly."
 
 ---
 
-### Segment 5: One-Command Architecture & Conclusion (2:45 – 3:00)
-**[Visual]**: Flash the terminal running `./run.sh` and the architectural flow diagram.
+### Segment 5: The Kill-Switch & One-Command Architecture (2:45 – 3:00)
+**[Visual]**: Flash the terminal running `docker compose up -d` or `./run.sh`, showing FalkorDB running.
 
 **[Narrator]**:
-> "Best of all: NexusIDE is a **one-command deployment**. A single `./run.sh` builds FalkorDB, the FastAPI backend, and the Next.js frontend, seeding all AST and PR data with zero configuration.  
+> "Most importantly, NexusIDE passes the hackathon's strictest litmus test: **The Kill-Switch**.  
+> The graph is not decoration—if FalkorDB is offline, the agent strictly refuses to generate code.  
 > 
-> By replacing flat vector embeddings with FalkorDB's sub-millisecond graph intelligence, NexusIDE turns AI from a dangerous code guesser into an enterprise-grade software engineer.  
+> Everything runs in one command via `./run.sh` or `docker compose up -d`.  
+> By replacing flat vector embeddings with FalkorDB's sub-millisecond graph intelligence, NexusIDE turns AI code editors from dangerous guessers into true enterprise software engineers.  
 > 
 > Thank you, and welcome to the graph-native future of software development."
