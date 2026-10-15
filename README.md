@@ -1,38 +1,51 @@
-# ⚡ NexusIDE: The Graph-Native Agentic IDE Powered by FalkorDB
+# ⚡ NexusIDE (GraphiCode)
+### The Graph-Native Agentic IDE Powered by FalkorDB
 
 > **Context-aware code refactoring with zero blast-radius hallucinations.**  
-> Built for the **FalkorDB Hackathon 2026** — hitting **all 3 challenge tracks** in a unified, one-command deployment.
+> Built for the **FalkorDB Graph Hacks Hackathon 2026** — seamlessly delivering on **all 3 challenge tracks** in a unified, one-command deployment.
 
-[![FalkorDB](https://img.shields.io/badge/Powered_by-FalkorDB-red.svg)](https://falkordb.com)
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-black.svg)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/Language-TypeScript_&_Python-blue.svg)](https://www.typescriptlang.org)
+[![FalkorDB](https://img.shields.io/badge/Graph_Engine-FalkorDB_(GraphBLAS_<2ms)-red.svg)](https://falkordb.com)
+[![FastMCP](https://img.shields.io/badge/Agent_Protocol-Model_Context_Protocol_(FastMCP)-purple.svg)](https://modelcontextprotocol.io)
+[![Track 1](https://img.shields.io/badge/Track_1-Connected_Data_&_Graph--RAG-blue.svg)](https://www.wemakedevs.org/hackathons/falkordb/rules)
+[![Track 2](https://img.shields.io/badge/Track_2-Agent_Memory_&_Coordination-yellow.svg)](https://www.wemakedevs.org/hackathons/falkordb/rules)
+[![Track 3](https://img.shields.io/badge/Track_3-Company_Brain_&_Context-green.svg)](https://www.wemakedevs.org/hackathons/falkordb/rules)
+[![Next.js 16](https://img.shields.io/badge/Frontend-Next.js_16_+_Monaco-black.svg)](https://nextjs.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## 🚨 The Problem: Why Vector RAG Fails for Codebases
-
-Standard AI code editors rely on **Vector RAG** (embeddings + semantic similarity). While vector search is adequate for answering generic documentation questions, it fails when executing refactoring in production codebases:
-
-1. **Topological Blindness**: Vector embeddings treat code as flat text chunks. When an AI modifies a function signature (e.g. `validateToken`), it is blind to the fact that `billing.ts` and `finance.ts` call that function across multiple hops.
-2. **Amnesia on Regressions**: LLMs repeatedly produce patches with known bugs because vector retrieval lacks episodic and procedural memory of past failed deployments or breaking changes.
-3. **No Organizational Context**: Code does not exist in a vacuum. Semantic search cannot correlate syntax with Git pull requests, Jira tickets, security compliance mandates, or author ownership.
-
-**NexusIDE solves this by embedding FalkorDB directly into the inner loop of the agentic IDE.**
+## 📌 Quick Links for Judges
+- 🎬 **Demo Video Script**: [`demo_video_script.md`](./demo_video_script.md) *(3-minute high-impact walkthrough)*
+- 📝 **Technical Blog Post**: [`blog_post.md`](./blog_post.md) *(In-depth architectural breakdown)*
+- 🔌 **FastMCP Server**: [`backend/mcp_server.py`](./backend/mcp_server.py) *(Open agent protocol tool server)*
+- 🚀 **1-Command Bootstrap**: [`run.sh`](./run.sh) / [`docker-compose.yml`](./docker-compose.yml)
 
 ---
 
-## 🏆 How NexusIDE Conquers All 3 Tracks
+## 🚨 The Core Problem: Why Vector RAG Fails for Code
+
+Standard AI coding tools (Copilot, Cursor, Windsurf) rely on **Vector RAG** (embeddings + semantic similarity). While vector search retrieves similar text, it is catastrophically blind to codebase topology:
+
+| Capability | Vector RAG (Cursor / Copilot) | NexusIDE (FalkorDB Graph-RAG) |
+| :--- | :--- | :--- |
+| **Multi-Hop Dependency Blast Radius** | ❌ Blind (Cannot trace `auth.ts` ➔ `billing.ts` ➔ `finance.ts`) | ✅ **<2ms** multi-hop Cypher traversal |
+| **Architectural Node Criticality** | ❌ None (Treats all functions as flat text chunks) | ✅ **Native FalkorDB PageRank** (`algo.pageRank`) |
+| **Episodic & Procedural Memory** | ❌ Hallucinates past bugs repeatedly across sessions | ✅ **Live Session Writes** on patch rejection (`⌘N`) |
+| **Company Provenance & Intent** | ❌ Stripped away from vector text slices | ✅ **Company Brain** (PRs, Tickets, Git blame) |
+| **External Agent Extensibility** | ❌ Closed proprietary prompt loops | ✅ **Standard FastMCP Server** tools |
+
+---
+
+## 🏆 Hackathon Tracks Alignment
 
 ```
                ┌────────────────────────────────────────────────────────┐
-               │                      Nexus IDE                         │
+               │              NexusIDE Interactive Studio               │
                │   (Monaco Split-Diff + Real-time Interactive Graph)    │
                └───────────────────────────▲────────────────────────────┘
                                            │ SSE Live Stream
                ┌───────────────────────────┴────────────────────────────┐
-               │          Dual-Agent Orchestrator (FastAPI)             │
+               │          FastAPI Orchestrator & FastMCP Server         │
                └───────▲───────────────────▲───────────────────▲────────┘
                        │                   │                   │
              ┌─────────┴─────────┐ ┌───────┴─────────┐ ┌───────┴─────────┐
@@ -47,46 +60,47 @@ Standard AI code editors rely on **Vector RAG** (embeddings + semantic similarit
       └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1. Track 1: Connected Data & Graph-RAG (Code Topology & Blast Radius)
-- **Tree-sitter AST Extraction**: Ingests TypeScript and TSX into syntactic entities (`File`, `Function`, `Class`, `Method`, `CALLS`, `IMPORTS`).
-- **Multi-Hop Cypher Traversal**: Calculates reverse dependency call-chains in **<2ms**, identifying callers up to 4 hops away.
-- **Pulsing Visual Blast Radius**: Highlights all affected nodes in pulsing red in the UI graph canvas before synthesizing modifications.
+### 🔹 Track 1: Connected Data & Graph-RAG
+- **Tree-sitter AST Graph Extraction**: Synthesizes files, functions, classes, calls, and imports into a typed property graph.
+- **Sub-2ms Blast Radius Cypher**: Traverses callers up to 4 hops away, highlighting them in pulsing red before editing code.
+- **Native FalkorDB PageRank**: Uses GraphBLAS matrix multiplication (`CALL algo.pageRank('Function', 'CALLS')`) to score function centrality (e.g. `validateToken: 0.89`).
 
-### 2. Track 2: Agent Memory & Multi-Agent Coordination (Procedural Guardrails)
-- **Episodic Failure Tracking**: Records past deployment failures, test errors, and rejected diffs as graph nodes linked to target functions.
-- **Procedural Rule Injection**: Enforces organizational guardrails (e.g., *"Must check exp with clock skew <= 60s"*) directly into the agent context, preventing regressions.
+### 🔹 Track 2: Agent Memory & Multi-Agent Coordination
+- **Procedural Guardrails**: Enforces incident rules (e.g., *"Must verify exp claim with clock skew <= 60s"*) directly in the agent context.
+- **Live Dynamic Memory Writes**: When an engineer rejects a proposed diff via **Reject (`⌘N`)**, NexusIDE dynamically writes a `(:Memory {type: 'procedural_guardrail'})` node linked to the function in real time. Future agent prompts automatically respect this learned constraint!
 
-### 3. Track 3: Company Brain & Enterprise Context (Git & Ticket Attribution)
-- **Git & Jira Knowledge Graph**: Connects AST syntax nodes to PR history (`PR #104`), commit metadata, and security tickets (`SEC-402`).
-- **Engineer Attribution**: Identifies original authors (`@alex.chen`) and architectural rationales to inform code generation.
+### 🔹 Track 3: Company Brain & Enterprise Context
+- **Git & Jira Provenance**: Correlates code syntax with Pull Requests (`PR #104`), commit history, and Jira security tickets (`SEC-402`).
+- **Human Attribution**: Automatically surfaces author ownership (`@alex.chen`) and architectural rationales.
 
 ---
 
 ## ⚡ Quickstart (One Command)
 
-Judges can launch the entire stack with zero configuration:
+Launch the entire stack with zero external dependencies:
 
 ```bash
-git clone https://github.com/your-username/nexus-ide.git
+git clone https://github.com/prathamxeth/nexus-ide.git
 cd nexus-ide
 chmod +x run.sh && ./run.sh
 ```
 
+Or run directly with Docker Compose:
+```bash
+docker compose up -d
+```
+
 The bootstrap script will automatically:
-1. Build and run `falkordb`, `backend`, and `frontend` via `docker-compose.yml`.
-2. Wait for FalkorDB and the FastAPI backend healthcheck probe.
-3. Execute `seed_demo_data.py` to index the AST call-graph, procedural rules, and PR metadata.
-4. Launch the interface at **`http://localhost:3000`**.
+1. Spin up **FalkorDB**, the **FastAPI + FastMCP backend**, and the **Next.js 16 frontend**.
+2. Run database healthchecks and initialize indexed schemas.
+3. Seed the AST knowledge graph, procedural rules, and enterprise provenance via `seed_demo_data.py`.
+4. Open the interface at **`http://localhost:3000`**.
 
 ---
 
-## 🔍 FalkorDB Cypher Query Showcase
+## 🔍 Core FalkorDB Cypher Queries
 
-Here are the real production Cypher queries executed inside NexusIDE:
-
-### 1. Multi-Hop Reverse Blast Radius Query (Track 1)
-Traverses the AST dependency graph to detect all upstream caller functions that will break if a target function is modified:
-
+### 1. Multi-Hop Dependency Blast Radius (Track 1)
 ```cypher
 MATCH (target:Function {name: $target_function})
 OPTIONAL MATCH path = (caller:Function)-[:CALLS*1..4]->(target)
@@ -98,9 +112,7 @@ RETURN caller.name AS caller_name,
 ORDER BY hop_distance ASC
 ```
 
-### 2. Native FalkorDB Graph Algorithms: PageRank & Criticality (Track 1)
-Calculates architectural node criticality using native FalkorDB PageRank GraphBLAS matrix operations:
-
+### 2. Native FalkorDB PageRank Criticality (Track 1)
 ```cypher
 CALL algo.pageRank('Function', 'CALLS')
 YIELD node, score
@@ -109,19 +121,7 @@ ORDER BY score DESC
 LIMIT 10
 ```
 
-### 3. Procedural Memory Guardrail Retrieval (Track 2)
-Pulls historical error resolutions and constraints preventing regression loops:
-
-```cypher
-MATCH (fn:Function {name: $target_function})
-OPTIONAL MATCH (fn)-[:ASSOCIATED_WITH]->(rule:ProceduralRule)
-OPTIONAL MATCH (fn)<-[:FAILED_ON]-(s:Session)-[:VIOLATED_RULE]->(vr:ProceduralRule)
-RETURN DISTINCT coalesce(rule.rule, vr.rule) AS guardrail_rule
-```
-
-### 4. Dynamic Runtime Memory Writes (Track 2 Across Sessions)
-When an engineer rejects a proposed code patch (`⌘N` or UI Reject button), a procedural guardrail node is created dynamically in FalkorDB in real time:
-
+### 3. Dynamic Procedural Memory Persistence on Rejection (Track 2)
 ```cypher
 MATCH (fn:Function {name: $func_name})
 CREATE (m:Memory {
@@ -134,9 +134,7 @@ CREATE (fn)-[:CONSTRAINED_BY]->(m)
 RETURN m
 ```
 
-### 5. Company Brain Context & Author Attribution (Track 3)
-Correlates the function with previous Pull Requests, tickets, and code authors:
-
+### 4. Company Brain & Author Provenance (Track 3)
 ```cypher
 MATCH (fn:Function {name: $target_function})
 OPTIONAL MATCH (eng:Engineer)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(fn)
@@ -153,59 +151,55 @@ LIMIT 3
 
 ## 🔌 Model Context Protocol (FastMCP Server)
 
-NexusIDE exposes an open **Model Context Protocol (FastMCP)** server at `backend/mcp_server.py`. Standard external agents (Claude Desktop, Cursor, Open-Source Agent frameworks) can directly consume FalkorDB graph intelligence tools:
+NexusIDE exposes an open **Model Context Protocol (FastMCP)** server at [`backend/mcp_server.py`](./backend/mcp_server.py). Any external agent (Claude Desktop, Cursor, or LangChain / CrewAI agents) can query FalkorDB graph intelligence tools over standard stdio / SSE:
 
 ```bash
-# Run standalone MCP server
+# Run standalone FastMCP server
 python backend/mcp_server.py
 ```
 
 ### Published MCP Tools:
-- `get_ast_blast_radius(function_name: str, max_depth: int = 4)`: Cypher multi-hop call graph traversal.
-- `retrieve_code_memory(function_name: str)`: Procedural guardrails and learned failure memories.
-- `get_ast_centrality()`: Native FalkorDB PageRank scoring for AST node criticality.
-- `query_code_provenance(function_name: str)`: Company Brain Git PR, Jira ticket, and engineer authorship lookup.
+- `get_ast_blast_radius(function_name, max_depth)`: Multi-hop AST caller graph traversal.
+- `retrieve_code_memory(function_name)`: Procedural guardrails and learned failure rules.
+- `get_ast_centrality()`: Native FalkorDB PageRank node criticality scoring.
+- `query_code_provenance(function_name)`: Git PR, Jira ticket, and engineer authorship history.
 
 ---
 
 ## 🛡️ Kill-Switch Compliance: "The Graph Does Real Work"
 
-Per Hackathon Rules: *"A visualisation drawn on top of ordinary storage does not qualify: if the product still works once FalkorDB is taken out, the graph is decoration rather than the thing the product runs on."*
+> **Hackathon Disqualification Litmus Test**: *"The graph has to do real work. A visualisation drawn on top of ordinary storage does not qualify: if the product still works once FalkorDB is taken out, the graph is decoration rather than the thing the product runs on."*
 
 - **Hard Kill-Switch Enforced**: If FalkorDB on `localhost:6379` is stopped or unreachable, NexusIDE immediately aborts execution and explicitly emits an unhandled refusal event:
-  > `[CRITICAL COMPLIANCE FAILURE] FalkorDB required on port 6379: Zero code generated.`
-- **Zero Mock Decoration**: No mock fallback patches are generated if the database is disconnected. FalkorDB is the mandatory computational engine of NexusIDE.
+  > `🚨 [CRITICAL COMPLIANCE FAILURE] FalkorDB required on port 6379: Zero code generated.`
+- **Zero Mock Decoration**: All silent mock fallbacks were deleted. FalkorDB is the mandatory computational engine of NexusIDE.
 
 ---
 
-## 🎬 3-Minute Demo Walkthrough
+## 🎬 3-Minute Demo Flow
 
-1. **The Agony (0:00 - 0:30)**:
-   - Try refactoring `validateToken` in standard AI editors. The AI changes `auth.ts`, but breaks `billing.ts` and `finance.ts` because it has no topological awareness.
-2. **The FalkorDB Advantage (0:30 - 1:30)**:
-   - Open NexusIDE at `http://localhost:3000`.
-   - Issue prompt: *"Harden validateToken with expiration validation."*
-   - Watch the interactive graph instantly light up in **<2ms**, identifying `processInvoice` and `auditAccount` as blast-radius callers in pulsing red.
-3. **The Trifecta Verification (1:30 - 2:15)**:
-   - **Track 1**: Call-chain traversal displayed in the bottom graph.
-   - **Track 2**: Yellow node enforces procedural rule: *`Must check exp with clock skew <= 60s`*.
-   - **Track 3**: Green node traces PR #104 by `@alex.chen` (`SEC-402`).
-4. **Monaco Side-by-Side Diff (2:15 - 2:45)**:
-   - Review live side-by-side diff in Monaco Editor.
-   - Press **`Cmd+Y`** to accept the patch and automatically synchronize the graph.
+1. **The Agony (0:00 - 0:30)**: Attempting to refactor `validateToken` with standard vector RAG breaks `billing.ts` and `finance.ts`.
+2. **FalkorDB Sub-Millisecond Traversal (0:30 - 1:30)**: In **<2ms**, FalkorDB calculates the full blast radius, pulses `processInvoice` and `auditAccount` in red, and outputs `validateToken`'s PageRank criticality score (0.89).
+3. **The 3 Tracks in Action (1:30 - 2:15)**:
+   - **Track 1**: Real-time AST call tree and FastMCP tool exposure.
+   - **Track 2**: Amber procedural node blocks naive patches lacking clock skew tolerance.
+   - **Track 3**: Emerald node attributes original intent to `@alex.chen` in `PR #104` (`SEC-402`).
+4. **Live Memory Write & Hotkeys (2:15 - 2:45)**: Hit **Reject (`⌘N`)** on a patch to write a dynamic memory node to FalkorDB; hit **Accept (`⌘Y`)** to patch and re-index.
+5. **Kill-Switch Verification (2:45 - 3:00)**: Kill the FalkorDB container and show the agent refusing to generate code.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 🛠️ Tech Stack
 
-- **Graph Engine**: [FalkorDB](https://falkordb.com) (Redis-compatible graph database using GraphBLAS matrices for sub-millisecond Cypher traversals).
-- **Static Analysis**: [Tree-sitter](https://tree-sitter.github.io) (C/Python bindings for full AST extraction of TypeScript & Python).
-- **Backend API**: [FastAPI](https://fastapi.tiangolo.com) with Server-Sent Events (SSE) streaming.
-- **Frontend IDE**: [Next.js 16](https://nextjs.org), [Monaco Editor](https://microsoft.github.io/monaco-editor/), [ForceGraph2D](https://github.com/vasturiano/react-force-graph), and Tailwind CSS.
-- **Orchestration**: Docker Compose with multi-stage builds.
+- **Graph Database**: [FalkorDB](https://falkordb.com) (GraphBLAS in-memory engine, sub-millisecond Cypher, native algorithms)
+- **Agent Protocol**: Python `mcp` / `FastMCP` standard
+- **Static AST Extraction**: [Tree-sitter](https://tree-sitter.github.io) (C/Python bindings for full AST extraction)
+- **Backend**: FastAPI with async Server-Sent Events (SSE) streaming
+- **Frontend**: Next.js 16 (App Router), Monaco Code & Diff Editor, `@gravity-ui/graph`
+- **Orchestration**: Docker Compose multi-stage builds
 
 ---
 
 ## 📜 License
 
-Apache 2.0 License. Designed and built for the FalkorDB Hackathon 2026.
+Apache 2.0 License. Designed and built for the FalkorDB Graph Hacks Hackathon 2026.
