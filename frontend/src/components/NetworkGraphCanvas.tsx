@@ -74,16 +74,36 @@ const COLOR_MAP: Record<string, string> = {
   Function: "#dfa88f",  // Cursor timeline-thinking (peach)
 };
 
-// Topological hierarchy ranking for DAG Tree mode
+// Vertical multi-tier topological hierarchy ranking for DAG Tree mode
 function getNodeLevel(node: NodeItem): number {
   const t = node.type || "";
-  const id = node.id || "";
+  const id = String(node.id || "");
+
+  // Tier 0: Workspace Module Root
   if (t === "Module" || id === "root" || id === "src" || id === "tests") return 0;
-  if (t === "File" || id.endsWith(".ts") || id.endsWith(".py") || id.endsWith(".json") || id.endsWith(".md") || id.endsWith(".sh")) return 1;
-  if (t === "Class") return 2;
-  if (t === "Function") return 3;
-  if (t === "Endpoint") return 4;
-  return 3;
+
+  // Tier 1: Core Daemon & Entrypoint Files
+  if (id === "asgi.py" || id === "worker.py" || id.includes("main") || id.includes("index")) return 1;
+
+  // Tier 2: Domain Source Files
+  if (t === "File" || id.endsWith(".ts") || id.endsWith(".py") || id.endsWith(".json")) return 2;
+
+  // Tier 3: Core Service Classes & Primary Inbound Handlers
+  if (t === "Class" || id === "ASGI" || id === "FastMCPServer" || id === "auditAccount" || id === "validateToken") return 3;
+
+  // Tier 4: Business Logic Operations
+  if (id === "processInvoice" || id === "calculateTax" || id === "start_application" || id === "setup_server") return 4;
+
+  // Tier 5: Internal Workers & Verification Functions
+  if (id === "verifyToken" || id === "decodePayload" || id === "acquire_ws_buffer" || id === "process_websocket") return 5;
+
+  // Tier 6: Leaf Endpoints, Callbacks & Return models
+  if (t === "Endpoint" || id === "onopen" || id === "onclose" || id === "Invoice" || id.includes("Status")) return 6;
+
+  // Distribute remaining functions across tiers 3 to 6 to keep vertical column balanced
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xff;
+  return 3 + (hash % 4);
 }
 
 export default function NetworkGraphCanvas({
@@ -247,90 +267,102 @@ export default function NetworkGraphCanvas({
     return { nodes: validNodes, links };
   }, [nodes, edges, activeTypes, collapsedNodes, layoutMode]);
 
-  // Dedicated File Flowchart Data (Focused on exact active file, its functions, changes & callers)
+  // Dedicated File Flowchart Data: Vertical Linked Concise & Precise Pipeline (matching system flowchart)
   const flowchartData = useMemo(() => {
     if (!activeFileName) return null;
 
-    const fileFnIds = new Set<string>();
-    for (const n of nodes) {
-      if (n.properties?.file === activeFileName) {
-        fileFnIds.add(n.id);
-      } else if (activeFileName === "auth.ts" && (n.id === "validateToken" || n.id === "verifyToken" || n.id === "decodePayload")) {
-        fileFnIds.add(n.id);
-      } else if (activeFileName === "billing.ts" && (n.id === "processInvoice" || n.id === "Invoice")) {
-        fileFnIds.add(n.id);
-      } else if (activeFileName === "finance.ts" && (n.id === "auditAccount" || n.id === "calculateTax")) {
-        fileFnIds.add(n.id);
-      } else if (activeFileName === "asgi.py" && (n.id.includes("websocket") || n.id.includes("ASGI") || n.id.includes("ws_"))) {
-        fileFnIds.add(n.id);
-      } else if (activeFileName === "worker.py" && (n.id.includes("worker") || n.id.includes("FastMCP") || n.id.includes("setup_server"))) {
-        fileFnIds.add(n.id);
+    interface FlowStep {
+      id: string;
+      label: string;
+      desc: string;
+      category?: "entry" | "core" | "logic" | "calc" | "output" | "side";
+      accentColor?: string;
+      isSPI?: boolean;
+      isSideBranch?: boolean;
+    }
+
+    let pipelineSteps: FlowStep[] = [];
+    let sideSteps: { step: FlowStep; connectedTo: string }[] = [];
+
+    if (activeFileName === "finance.ts") {
+      pipelineSteps = [
+        { id: "file:finance.ts", label: "finance.ts", desc: "Financial Compliance SPI", category: "entry", isSPI: true, accentColor: "#c084fc" },
+        { id: "auditAccount", label: "auditAccount()", desc: "Validates Authorization & Token", category: "core", accentColor: "#38bdf8" },
+        { id: "validateToken", label: "validateToken()", desc: "Inbound JWT Security Check", category: "logic", accentColor: "#a855f7" },
+        { id: "calculateTax", label: "calculateTax()", desc: "Applies 8% Compliant Tax Rate", category: "calc", accentColor: "#10b981" },
+        { id: "auditResult", label: "Status: COMPLIANT", desc: "Audited Ledger Output Record", category: "output", accentColor: "#34d399" },
+      ];
+    } else if (activeFileName === "asgi.py") {
+      pipelineSteps = [
+        { id: "file:asgi.py", label: "asgi.py", desc: "FastAPI ASGI Daemon Entry", category: "entry", isSPI: true, accentColor: "#c084fc" },
+        { id: "ASGI", label: "ASGI.__init__()", desc: "Worker Lifecycle Initialization", category: "core", accentColor: "#38bdf8" },
+        { id: "start_application", label: "start_application()", desc: "Starts FastMCP Worker Daemon", category: "logic", accentColor: "#2dd4bf" },
+        { id: "process_websocket", label: "process_websocket()", desc: "Async WebSocket Frame Router", category: "core", accentColor: "#38bdf8" },
+        { id: "acquire_ws_buffer", label: "acquire_ws_buffer()", desc: "Buffers Client Connection Frames", category: "calc", accentColor: "#10b981" },
+        { id: "onclose", label: "onclose()", desc: "Graceful Connection Teardown", category: "output", accentColor: "#94a3b8" },
+      ];
+      sideSteps = [
+        { step: { id: "onopen", label: "onopen()", desc: "Handshake Hook", category: "side", accentColor: "#fb923c", isSideBranch: true }, connectedTo: "process_websocket" }
+      ];
+    } else if (activeFileName === "auth.ts") {
+      pipelineSteps = [
+        { id: "file:auth.ts", label: "auth.ts", desc: "Security Gateway SPI", category: "entry", isSPI: true, accentColor: "#c084fc" },
+        { id: "validateToken", label: "validateToken()", desc: "Validates Bearer Credentials", category: "core", accentColor: "#38bdf8" },
+        { id: "verifyToken", label: "verifyToken()", desc: "Clock Skew <= 60s & Expiry Check", category: "logic", accentColor: "#10b981" },
+        { id: "decodePayload", label: "decodePayload()", desc: "Decodes JWT Claims & Subject", category: "calc", accentColor: "#2dd4bf" },
+        { id: "authState", label: "Session: AUTHORIZED", desc: "Security Handshake Verified", category: "output", accentColor: "#34d399" },
+      ];
+    } else if (activeFileName === "billing.ts") {
+      pipelineSteps = [
+        { id: "file:billing.ts", label: "billing.ts", desc: "Billing & Invoicing Engine", category: "entry", isSPI: true, accentColor: "#c084fc" },
+        { id: "processInvoice", label: "processInvoice()", desc: "Parses Items & Tax Liability", category: "core", accentColor: "#38bdf8" },
+        { id: "calculateTax", label: "calculateTax()", desc: "External Regional Tax Formula", category: "calc", accentColor: "#a855f7" },
+        { id: "persistInvoice", label: "persistInvoice()", desc: "Commits Invoice to Database", category: "logic", accentColor: "#10b981" },
+        { id: "billingState", label: "State: PROCESSED", desc: "Emits Transaction Dispatched", category: "output", accentColor: "#34d399" },
+      ];
+      sideSteps = [
+        { step: { id: "Invoice", label: "Invoice Model", desc: "Typed Schema Definition", category: "side", accentColor: "#fb923c", isSideBranch: true }, connectedTo: "processInvoice" }
+      ];
+    } else if (activeFileName === "worker.py") {
+      pipelineSteps = [
+        { id: "file:worker.py", label: "worker.py", desc: "FastMCP Worker Service SPI", category: "entry", isSPI: true, accentColor: "#c084fc" },
+        { id: "FastMCPServer", label: "FastMCPServer()", desc: "Protocol Server Instance", category: "core", accentColor: "#38bdf8" },
+        { id: "setup_server", label: "setup_server()", desc: "Registers Tools & Prompts", category: "logic", accentColor: "#2dd4bf" },
+        { id: "run_worker", label: "run_worker()", desc: "Executes Long-Running Loop", category: "calc", accentColor: "#10b981" },
+        { id: "workerState", label: "Status: RUNNING", desc: "Listening for MCP Clients", category: "output", accentColor: "#34d399" },
+      ];
+    } else {
+      // Dynamic fallback for any other file
+      const rawFns: string[] = [];
+      if (activeFileCode) {
+        const fnRegex = /(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_]+)/g;
+        let m;
+        while ((m = fnRegex.exec(activeFileCode)) !== null) rawFns.push(m[1]);
       }
-    }
-
-    if (activeFileCode) {
-      const fnRegex = /(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_]+)/g;
-      let m;
-      while ((m = fnRegex.exec(activeFileCode)) !== null) {
-        fileFnIds.add(m[1]);
+      if (rawFns.length === 0) {
+        rawFns.push(activeFileName.replace(/\.[^/.]+$/, ""));
       }
+
+      pipelineSteps = [
+        { id: `file:${activeFileName}`, label: activeFileName, desc: "Source Entry Point", category: "entry", isSPI: true, accentColor: "#c084fc" },
+        ...rawFns.map((fn, i) => ({
+          id: fn,
+          label: `${fn}()`,
+          desc: i === 0 ? "Entry Handler" : i === rawFns.length - 1 ? "Output Return" : "Logic Step",
+          category: (i === 0 ? "core" : i === rawFns.length - 1 ? "output" : "logic") as any,
+          accentColor: i % 2 === 0 ? "#38bdf8" : "#10b981"
+        }))
+      ];
     }
 
-    if (fileFnIds.size === 0) {
-      fileFnIds.add(activeFileName.replace(/\.[^/.]+$/, ""));
-    }
-
-    // Inbound callers from other files that call functions in this file
-    const inboundCallerIds = new Set<string>();
-    for (const e of edges) {
-      const src = typeof e.source === "object" ? e.source.id : e.source;
-      const tgt = typeof e.target === "object" ? e.target.id : e.target;
-      if (fileFnIds.has(tgt) && !fileFnIds.has(src)) {
-        inboundCallerIds.add(src);
-      }
-    }
-
+    // Build Nodes with sequential vertical levels (Level 0, 1, 2, 3...)
     const fNodes: any[] = [];
-    const fNodeIds = new Set<string>();
+    const fLinks: any[] = [];
 
-    // 1. File Root Node (Level 0)
-    const fileRootId = `file:${activeFileName}`;
-    fNodes.push({
-      id: fileRootId,
-      label: activeFileName,
-      type: "File",
-      level: 0,
-      isFileRoot: true,
-      desc: activeFileName.endsWith(".ts") ? "TypeScript Source" : "Python Source",
-    });
-    fNodeIds.add(fileRootId);
-
-    // 2. Inbound Caller Nodes (Level 0)
-    for (const callerId of inboundCallerIds) {
-      const orig = nodes.find((n) => n.id === callerId);
-      const label = orig ? orig.label : callerId;
-      fNodes.push({
-        id: callerId,
-        label: `${label}()`,
-        type: "Caller",
-        level: 0,
-        isCaller: true,
-        desc: "Inbound Caller",
-        isHighlighted: highlightedNodeIds
-          ? (highlightedNodeIds instanceof Set ? highlightedNodeIds.has(callerId) : highlightedNodeIds.includes(callerId))
-          : false,
-      });
-      fNodeIds.add(callerId);
-    }
-
-    // 3. Functions defined in this file (Level 1+)
-    let idx = 0;
-    for (const fnId of fileFnIds) {
-      const orig = nodes.find((n) => n.id === fnId);
-      const label = orig ? orig.label : fnId;
-      const isEdited = realtimeChangedSet.has(fnId) || realtimeChangedSet.has(activeFileName) || Boolean(isModified);
+    pipelineSteps.forEach((step, idx) => {
+      const isEdited = realtimeChangedSet.has(step.id) || realtimeChangedSet.has(activeFileName) || (idx === 1 && Boolean(isModified));
       const isHighlighted = highlightedNodeIds
-        ? (highlightedNodeIds instanceof Set ? highlightedNodeIds.has(fnId) : highlightedNodeIds.includes(fnId))
+        ? (highlightedNodeIds instanceof Set ? highlightedNodeIds.has(step.id) : highlightedNodeIds.includes(step.id))
         : false;
 
       let changeSnippet: string | undefined = undefined;
@@ -349,44 +381,51 @@ export default function NetworkGraphCanvas({
       }
 
       fNodes.push({
-        id: fnId,
-        label: `${label}()`,
-        type: "Function",
-        level: 1 + Math.floor(idx / 3),
+        id: step.id,
+        label: step.label,
+        desc: step.desc,
+        level: idx, // Strictly sequential vertical level!
+        type: step.category === "entry" ? "EntrySPI" : step.category === "output" ? "Result" : "Function",
+        isSPI: step.isSPI,
+        isResult: step.category === "output",
+        accentColor: step.accentColor,
         isEdited,
         isHighlighted,
         changeSnippet,
-        desc: isEdited ? "Modified in Real-time" : "Local Definition",
       });
-      fNodeIds.add(fnId);
-      idx++;
-    }
 
-    // 4. Directional Links
-    const fLinks: any[] = [];
-    const linkSet = new Set<string>();
-
-    // File root -> functions
-    for (const fnId of fileFnIds) {
-      const key = `${fileRootId}->${fnId}`;
-      if (!linkSet.has(key)) {
-        fLinks.push({ source: fileRootId, target: fnId, relationship: "EXPORTS" });
-        linkSet.add(key);
+      // Sequential Downward Link (Step i -> Step i+1)
+      if (idx > 0) {
+        const prevStep = pipelineSteps[idx - 1];
+        fLinks.push({
+          source: prevStep.id,
+          target: step.id,
+          relationship: "FLOWS_TO"
+        });
       }
-    }
+    });
 
-    // Inbound callers -> functions
-    for (const e of edges) {
-      const src = typeof e.source === "object" ? e.source.id : e.source;
-      const tgt = typeof e.target === "object" ? e.target.id : e.target;
-      if (fNodeIds.has(src) && fNodeIds.has(tgt)) {
-        const key = `${src}->${tgt}`;
-        if (!linkSet.has(key)) {
-          fLinks.push({ source: src, target: tgt, relationship: e.relationship || "CALLS" });
-          linkSet.add(key);
-        }
-      }
-    }
+    // Add any side branch nodes (e.g. notifications / schema on the side)
+    sideSteps.forEach(({ step, connectedTo }) => {
+      const parentNode = fNodes.find(n => n.id === connectedTo);
+      const parentLevel = parentNode ? parentNode.level : 2;
+      fNodes.push({
+        id: step.id,
+        label: step.label,
+        desc: step.desc,
+        level: parentLevel, // Sits on same level as connected parent
+        type: "SideBranch",
+        isSideBranch: true,
+        accentColor: step.accentColor,
+        isEdited: realtimeChangedSet.has(step.id),
+      });
+
+      fLinks.push({
+        source: connectedTo,
+        target: step.id,
+        relationship: "NOTIFIES"
+      });
+    });
 
     return { nodes: fNodes, links: fLinks };
   }, [activeFileName, activeFileCode, nodes, edges, realtimeChangedSet, highlightedNodeIds, isModified]);
@@ -428,28 +467,29 @@ export default function NetworkGraphCanvas({
       }
       const midX = (minX + maxX) / 2;
       const midY = (minY + maxY) / 2;
-      const spanX = Math.max(maxX - minX, 40);
-      const spanY = Math.max(maxY - minY, 40);
 
-      const availWidth = Math.max(dimensions.width - 64, 120);
-      const availHeight = Math.max(dimensions.height - 64, 120);
+      // Real extent of content including node card bounds
+      const contentWidth = Math.max(maxX - minX + (viewMode === "flowchart" ? 130 : 70), 80);
+      const contentHeight = Math.max(maxY - minY + (viewMode === "flowchart" ? 60 : 70), 80);
 
-      let targetZoom = Math.min(availWidth / spanX, availHeight / spanY);
+      const padding = 24;
+      const availWidth = Math.max(dimensions.width - padding * 2, 80);
+      const availHeight = Math.max(dimensions.height - padding * 2, 80);
+
+      let fitZoom = Math.min(availWidth / contentWidth, availHeight / contentHeight);
 
       if (viewMode === "flowchart") {
-        // In flowchart mode, strictly clamp zoom between 0.85 and 1.05
-        // Never allow zoom to explode to 3.5x for small 4-node flowcharts!
-        targetZoom = Math.min(Math.max(targetZoom, 0.85), 1.05);
+        // Comfortably fill canvas vertically without oversized text
+        fitZoom = Math.min(Math.max(fitZoom, 0.78), 1.25);
       } else {
-        // In graph mode, strictly clamp zoom between 0.55 and 1.15
-        // Never allow zoom to collapse to 0.18x for full graphs!
-        targetZoom = Math.min(Math.max(targetZoom, 0.55), 1.15);
+        // Full graph fills max canvas space vertically & horizontally
+        fitZoom = Math.min(Math.max(fitZoom, 0.52), 1.35);
       }
 
       fgRef.current.centerAt(midX, midY, 260);
-      fgRef.current.zoom(targetZoom, 260);
+      fgRef.current.zoom(fitZoom, 260);
     } else {
-      fgRef.current.zoomToFit(260, viewMode === "flowchart" ? 44 : 32);
+      fgRef.current.zoomToFit(260, 32);
     }
   }, [currentGraphData.nodes, viewMode, dimensions.width, dimensions.height]);
 
@@ -471,13 +511,13 @@ export default function NetworkGraphCanvas({
     try {
       if (viewMode === "graph") {
         if (layoutMode === "cluster") {
-          fgRef.current.d3Force("charge")?.strength?.(-80)?.distanceMax?.(220)?.distanceMin?.(20);
+          fgRef.current.d3Force("charge")?.strength?.(-80)?.distanceMax?.(240)?.distanceMin?.(20);
           fgRef.current.d3Force("link")?.distance?.(45);
         } else {
-          fgRef.current.d3Force("charge")?.strength?.(-60)?.distanceMax?.(180);
+          fgRef.current.d3Force("charge")?.strength?.(-65)?.distanceMax?.(200);
         }
       } else if (viewMode === "flowchart") {
-        fgRef.current.d3Force("charge")?.strength?.(-110)?.distanceMax?.(240);
+        fgRef.current.d3Force("charge")?.strength?.(-90)?.distanceMax?.(200);
       }
     } catch {
       // Safe fallback
@@ -916,9 +956,9 @@ export default function NetworkGraphCanvas({
           backgroundColor="#000000"
           nodeRelSize={6}
           dagMode={viewMode === "flowchart" ? "td" : layoutMode === "tree" ? "td" : undefined}
-          dagLevelDistance={viewMode === "flowchart" ? 48 : layoutMode === "tree" ? 42 : 55}
-          minZoom={viewMode === "flowchart" ? 0.65 : 0.45}
-          maxZoom={viewMode === "flowchart" ? 1.2 : 1.6}
+          dagLevelDistance={viewMode === "flowchart" ? 44 : layoutMode === "tree" ? 44 : 52}
+          minZoom={0.25}
+          maxZoom={3.0}
           onNodeClick={handleNodeClick}
           onNodeHover={(node: any) => {
             if (canvasContainerRef.current) {
@@ -939,10 +979,9 @@ export default function NetworkGraphCanvas({
           // Hit area detection matching world coordinates
           nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
             if (viewMode === "flowchart") {
-              const isFile = Boolean(node.isFileRoot);
               const isEdited = Boolean(node.isEdited) || realtimeChangedSet.has(String(node.id));
-              const cardWidth = isFile ? 78 : (isEdited && node.changeSnippet) ? 116 : 90;
-              const cardHeight = (isEdited && node.changeSnippet) ? 24 : 17;
+              const cardWidth = isEdited && node.changeSnippet ? 124 : 106;
+              const cardHeight = isEdited && node.changeSnippet ? 28 : 22;
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.rect(node.x - cardWidth / 2, node.y - cardHeight / 2, cardWidth, cardHeight);
@@ -950,7 +989,7 @@ export default function NetworkGraphCanvas({
             } else {
               const nid = String(node.id);
               const isBig = nid === "root" || nid === "src";
-              const radius = isBig ? 13 : 8;
+              const radius = isBig ? 14 : 9;
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
@@ -979,11 +1018,11 @@ export default function NetworkGraphCanvas({
             const t = typeof link.target === "object" ? link.target.id : link.target;
             return connectedNeighbors.has(s) && connectedNeighbors.has(t) ? 2.0 : 0.4;
           }}
-          linkDirectionalArrowLength={viewMode === "flowchart" ? 5.5 : 0}
+          linkDirectionalArrowLength={viewMode === "flowchart" ? 6 : 0}
           linkDirectionalArrowRelPos={1}
           linkDirectionalParticles={viewMode === "flowchart" ? 2 : 0}
-          linkDirectionalParticleSpeed={0.007}
-          linkCurvature={viewMode === "flowchart" ? 0.08 : 0}
+          linkDirectionalParticleSpeed={0.008}
+          linkCurvature={0}
           // Custom Node Painting
           nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
             const nid = String(node.id);
@@ -991,18 +1030,19 @@ export default function NetworkGraphCanvas({
             const nName = String(node.name || "");
 
             // ========================================================
-            // FLOWCHART MODE: RENDER RECTANGULAR FLOWCHART CARDS
+            // FLOWCHART MODE: RENDER VERTICAL LINKED PIPELINE CARDS
+            // (Strictly styled like the system architecture flowchart)
             // ========================================================
             if (viewMode === "flowchart") {
               const isSelected = selectedNodeId === nid || selectedNodeId === nLabel.replace("()", "");
               const isEdited = Boolean(node.isEdited) || realtimeChangedSet.has(nid) || realtimeChangedSet.has(nLabel.replace("()", ""));
               const isHighlighted = Boolean(node.isHighlighted);
-              const isCaller = Boolean(node.isCaller);
-              const isFile = Boolean(node.isFileRoot);
+              const isSPI = Boolean(node.isSPI) || node.type === "EntrySPI";
+              const isResult = Boolean(node.isResult) || node.type === "Result";
 
-              // Proportional world dimensions (dagLevelDistance ~48)
-              const cardWidth = isFile ? 78 : (isEdited && node.changeSnippet) ? 116 : 90;
-              const cardHeight = (isEdited && node.changeSnippet) ? 24 : 17;
+              // Clean uniform card dimensions
+              const cardWidth = isEdited && node.changeSnippet ? 124 : 106;
+              const cardHeight = isEdited && node.changeSnippet ? 28 : 22;
               const halfW = cardWidth / 2;
               const halfH = cardHeight / 2;
 
@@ -1011,57 +1051,68 @@ export default function NetworkGraphCanvas({
               // Card Glow
               if (isEdited) {
                 ctx.shadowColor = "rgba(229, 192, 123, 0.85)";
-                ctx.shadowBlur = 5;
+                ctx.shadowBlur = 6;
               } else if (isHighlighted) {
                 ctx.shadowColor = "rgba(239, 68, 68, 0.85)";
-                ctx.shadowBlur = 5;
+                ctx.shadowBlur = 6;
               } else if (isSelected) {
                 ctx.shadowColor = "rgba(245, 78, 0, 0.85)";
-                ctx.shadowBlur = 5;
+                ctx.shadowBlur = 6;
               }
 
               // Card Background
               ctx.fillStyle = isEdited
-                ? "rgba(24, 18, 9, 0.96)"
+                ? "rgba(26, 20, 10, 0.96)"
                 : isHighlighted
                 ? "rgba(35, 12, 16, 0.96)"
                 : isSelected
-                ? "rgba(28, 12, 6, 0.96)"
-                : "rgba(14, 14, 14, 0.95)";
+                ? "rgba(28, 14, 8, 0.96)"
+                : isSPI
+                ? "rgba(28, 16, 40, 0.95)"
+                : isResult
+                ? "rgba(16, 28, 24, 0.95)"
+                : "rgba(13, 17, 23, 0.95)";
 
               ctx.beginPath();
               if (typeof ctx.roundRect === "function") {
-                ctx.roundRect(node.x - halfW, node.y - halfH, cardWidth, cardHeight, 3);
+                ctx.roundRect(node.x - halfW, node.y - halfH, cardWidth, cardHeight, 4);
               } else {
                 ctx.rect(node.x - halfW, node.y - halfH, cardWidth, cardHeight);
               }
               ctx.fill();
 
               // Card Border
+              if (isSPI) {
+                ctx.setLineDash([3, 2]);
+              } else {
+                ctx.setLineDash([]);
+              }
+
               ctx.strokeStyle = isEdited
                 ? "#e5c07b"
                 : isHighlighted
                 ? "#ef4444"
                 : isSelected
                 ? "#f54e00"
-                : isFile
-                ? "#3c3c3c"
-                : isCaller
-                ? "#63478c"
-                : "#242424";
-              ctx.lineWidth = (isEdited || isHighlighted || isSelected) ? 1.4 : 0.9;
+                : isSPI
+                ? "#c084fc"
+                : isResult
+                ? "#34d399"
+                : (node.accentColor || "#38bdf8");
+              ctx.lineWidth = (isEdited || isHighlighted || isSelected) ? 1.4 : 1.0;
               ctx.stroke();
 
+              // Reset line dash & shadow
+              ctx.setLineDash([]);
               ctx.shadowBlur = 0;
 
-              // Title Text with truncation
-              const titleFontSize = 5.6;
+              // Title Text (Centered horizontally)
+              const titleFontSize = 5.8;
               ctx.font = `600 ${titleFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
-              ctx.textAlign = "left";
+              ctx.textAlign = "center";
               ctx.textBaseline = "middle";
 
-              const paddingX = 5;
-              const titleY = (isEdited && node.changeSnippet) ? node.y - 4.2 : node.y;
+              const titleY = node.desc || (isEdited && node.changeSnippet) ? node.y - 4.0 : node.y;
 
               ctx.fillStyle = isEdited
                 ? "#ffe2a3"
@@ -1069,45 +1120,48 @@ export default function NetworkGraphCanvas({
                 ? "#fca5a5"
                 : isSelected
                 ? "#ffffff"
-                : isFile
-                ? "#e4e4e7"
-                : "#d4d4d8";
+                : isSPI
+                ? "#e9d5ff"
+                : isResult
+                ? "#a7f3d0"
+                : "#f1f5f9";
 
               const rawTitle = nLabel || nid;
-              const maxTitleLen = (isEdited && node.changeSnippet) ? 14 : isFile ? 12 : 15;
+              const maxTitleLen = isEdited && node.changeSnippet ? 18 : 16;
               const displayTitle = rawTitle.length > maxTitleLen ? `${rawTitle.slice(0, maxTitleLen - 1)}…` : rawTitle;
-              ctx.fillText(displayTitle, node.x - halfW + paddingX, titleY);
+              ctx.fillText(displayTitle, node.x, titleY);
 
-              // Subtitle / Exact Change Detail
+              // Sub-caption / Exact Change Detail (Centered below title)
+              const subFontSize = 4.3;
+              ctx.font = `400 ${subFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+
               if (isEdited && node.changeSnippet) {
-                const subFontSize = 4.2;
-                ctx.font = `500 ${subFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.fillStyle = "#e5c07b";
                 const rawSnippet = String(node.changeSnippet);
-                const displaySnippet = rawSnippet.length > 24 ? `${rawSnippet.slice(0, 23)}…` : rawSnippet;
-                ctx.fillText(displaySnippet, node.x - halfW + paddingX, node.y + 4.8);
-              } else if (node.desc && isFile) {
-                const subFontSize = 4.0;
-                ctx.font = `400 ${subFontSize}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
-                ctx.fillStyle = "#71717a";
+                const displaySnippet = rawSnippet.length > 25 ? `${rawSnippet.slice(0, 24)}…` : rawSnippet;
+                ctx.fillText(displaySnippet, node.x, node.y + 4.8);
+              } else if (node.desc) {
+                ctx.fillStyle = isSPI ? "#d8b4fe" : isResult ? "#6ee7b7" : "#94a3b8";
                 const rawDesc = String(node.desc);
-                const displayDesc = rawDesc.length > 18 ? `${rawDesc.slice(0, 17)}…` : rawDesc;
-                ctx.fillText(displayDesc, node.x - halfW + paddingX, node.y + 4.6);
+                const displayDesc = rawDesc.length > 22 ? `${rawDesc.slice(0, 21)}…` : rawDesc;
+                ctx.fillText(displayDesc, node.x, node.y + 4.6);
               }
 
-              // Badges on right side
+              // Badges for Edited / Breaks
               if (isEdited) {
-                const badgeFont = 4.2;
+                const badgeFont = 4.0;
                 ctx.font = `700 ${badgeFont}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#e5c07b";
-                ctx.fillText("● EDITED", node.x + halfW - paddingX, titleY);
+                ctx.fillText("● EDITED", node.x + halfW - 4, titleY);
               } else if (isHighlighted) {
-                const badgeFont = 4.2;
+                const badgeFont = 4.0;
                 ctx.font = `700 ${badgeFont}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#ef4444";
-                ctx.fillText("● BREAKS", node.x + halfW - paddingX, titleY);
+                ctx.fillText("● BREAKS", node.x + halfW - 4, titleY);
               }
 
               ctx.restore();
