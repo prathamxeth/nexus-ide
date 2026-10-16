@@ -7,7 +7,7 @@ canonical_url: https://github.com/prathamxeth/nexus-ide/blob/main/blog_post.md
 cover_image: https://raw.githubusercontent.com/prathamxeth/nexus-ide/main/frontend/public/nexus-bg.jpg
 ---
 
-# Why Vector RAG Fails Coding Agents: Building a Graph-Native IDE with FalkorDB and FastMCP
+## Why Vector RAG Fails Coding Agents: Building a Graph-Native IDE with FalkorDB and FastMCP
 
 Every developer using modern AI coding assistants has lived through this exact moment:
 
