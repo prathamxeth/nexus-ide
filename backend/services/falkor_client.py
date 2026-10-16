@@ -38,24 +38,24 @@ class FalkorService:
         username: Optional[str] = None,
         ssl: Optional[bool] = None,
     ) -> None:
-        raw_host = host or os.getenv("FALKORDB_HOST", "localhost")
+        raw_host = (host or os.getenv("FALKORDB_HOST", "localhost")).strip().replace("\r", "").replace("\n", "")
         if "://" in raw_host:
             raw_host = raw_host.split("://", 1)[1]
-        raw_host = raw_host.rstrip("/").split("/", 1)[0]
+        raw_host = raw_host.rstrip("/").split("/", 1)[0].strip()
         parsed_port = None
         if ":" in raw_host:
             host_part, port_str = raw_host.split(":", 1)
-            raw_host = host_part
+            raw_host = host_part.strip()
             try:
-                parsed_port = int(port_str)
+                parsed_port = int(port_str.strip())
             except ValueError:
                 pass
-        self.host = raw_host
-        env_port = os.getenv("FALKORDB_PORT")
+        self.host = raw_host.strip()
+        env_port = (os.getenv("FALKORDB_PORT") or "").strip()
         self.port = port or (int(env_port) if env_port else (parsed_port or 6379))
-        self.password = password or os.getenv("FALKORDB_PASSWORD") or None
-        self.username = username or os.getenv("FALKORDB_USERNAME") or None
-        ssl_env = os.getenv("FALKORDB_SSL", "false").lower() in ("true", "1", "yes")
+        self.password = (password or os.getenv("FALKORDB_PASSWORD") or "").strip() or None
+        self.username = (username or os.getenv("FALKORDB_USERNAME") or "").strip() or None
+        ssl_env = os.getenv("FALKORDB_SSL", "false").lower().strip() in ("true", "1", "yes")
         self.ssl = ssl if ssl is not None else ssl_env
         self.graph_name = graph_name or os.getenv("FALKORDB_GRAPH", "nexus_code_graph")
         self._db: Optional[FalkorDB] = None

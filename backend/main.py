@@ -215,6 +215,17 @@ class BlastRadiusResponse(BaseModel):
 
 # ---------------- Endpoints ---------------- #
 
+@app.get("/", tags=["Root"])
+def root_endpoint() -> Dict[str, Any]:
+    """Root status endpoint returning service info and diagnostics URLs."""
+    return {
+        "service": "Nexus IDE Code Graph Intelligence Engine",
+        "status": "online",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @app.get("/health", response_model=HealthResponse, tags=["Diagnostics"])
 def health_check() -> HealthResponse:
     """Diagnostic health check verifying backend service, active nodes count, and latency in ms."""
