@@ -183,8 +183,8 @@ export function GraphViewer({
         x: cfg.baseX + offsetX,
         y: cfg.baseY + offsetY,
         // Give slight fixed force pull to maintain hierarchical topology
-        fx: rawNode.fx ?? (cfg.baseX + offsetX),
-        fy: rawNode.fy ?? (cfg.baseY + offsetY),
+        fx: typeof rawNode.fx === "number" ? rawNode.fx : (cfg.baseX + offsetX),
+        fy: typeof rawNode.fy === "number" ? rawNode.fy : (cfg.baseY + offsetY),
       };
     });
 

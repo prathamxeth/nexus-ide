@@ -79,7 +79,7 @@ export function AboutModal({
         {/* Content Body */}
         <div className="p-6 space-y-6 overflow-y-auto text-xs font-sans text-neutral-300 custom-scrollbar">
           {/* Mission statement */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-[#141414] to-[#101010] border border-[#222222] space-y-2">
+          <div className="p-4 rounded-xl bg-linear-to-r from-[#141414] to-[#101010] border border-[#222222] space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
                 <Flame size={14} className="text-[#f54e00]" />

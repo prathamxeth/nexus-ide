@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Search, FileCode, Network, Sparkles, Cpu, Cloud, 
-  Settings, ArrowRight, ShieldAlert, BookOpen, GitPullRequest,
-  Check, X, Info
+  Settings, ArrowRight, ShieldAlert, BookOpen,
+  X, Info
 } from "lucide-react";
 import { playUiSound } from "@/lib/sound";
 
@@ -51,9 +51,12 @@ export function CommandPalette({
   // Focus input on open
   useEffect(() => {
     if (isOpen) {
-      setQuery("");
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const timer = setTimeout(() => {
+        setQuery("");
+        setSelectedIndex(0);
+        inputRef.current?.focus();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -331,7 +334,7 @@ export function CommandPalette({
         </div>
 
         {/* Command List */}
-        <div ref={listRef} className="max-h-[380px] overflow-y-auto p-2 space-y-3">
+        <div ref={listRef} className="max-h-95 overflow-y-auto p-2 space-y-3">
           {filteredCommands.length === 0 ? (
             <div className="py-8 text-center text-xs font-mono text-neutral-500">
               No matching commands or files found for &quot;{query}&quot;

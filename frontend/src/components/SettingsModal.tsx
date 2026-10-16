@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
-  X, Check, AlertCircle, RefreshCw, Cpu, Cloud, Database, 
-  Eye, EyeOff, ShieldCheck, HardDrive, Key, ExternalLink 
+  X, Check, RefreshCw, Cpu, Cloud, Database, 
+  Eye, EyeOff, ShieldCheck, HardDrive 
 } from "lucide-react";
 import { playUiSound } from "@/lib/sound";
 
@@ -52,49 +52,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
   const [falkorStatus, setFalkorStatus] = useState<"idle" | "testing" | "connected" | "error">("idle");
   const [falkorMetrics, setFalkorMetrics] = useState<{ latency?: string; nodes?: number }>({});
 
-  // Load saved settings from localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedOllamaHost = localStorage.getItem("nexus_ollama_host");
-      if (savedOllamaHost) setOllamaHost(savedOllamaHost);
-
-      const savedOpenAi = localStorage.getItem("nexus_api_key_openai") || "";
-      const savedAnthropic = localStorage.getItem("nexus_api_key_anthropic") || "";
-      const savedOpenRouter = localStorage.getItem("nexus_api_key_openrouter") || "";
-
-      setOpenAiKey(savedOpenAi);
-      setAnthropicKey(savedAnthropic);
-      setOpenRouterKey(savedOpenRouter);
-
-      const savedFalkorUri = localStorage.getItem("nexus_falkordb_uri");
-      if (savedFalkorUri) setFalkorUri(savedFalkorUri);
-
-      const savedNamespace = localStorage.getItem("nexus_falkordb_namespace");
-      if (savedNamespace) setGraphNamespace(savedNamespace);
-    }
-  }, [isOpen]);
-
-  // Keyboard shortcut: Escape to close
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        playUiSound("reject");
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  // Auto-detect local Ollama models on mount/open
-  useEffect(() => {
-    if (isOpen && activeTab === "ollama") {
-      checkOllamaModels();
-    }
-  }, [isOpen, activeTab]);
-
-  const checkOllamaModels = async () => {
+  const checkOllamaModels = useCallback(async () => {
     setOllamaStatus("testing");
     setOllamaMessage("Querying local Ollama daemon...");
     try {
@@ -116,7 +74,55 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
       setOllamaStatus("idle");
       setOllamaMessage("Local daemon ready for verification");
     }
-  };
+  }, []);
+
+  // Load saved settings from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const timer = setTimeout(() => {
+        const savedOllamaHost = localStorage.getItem("nexus_ollama_host");
+        if (savedOllamaHost) setOllamaHost(savedOllamaHost);
+
+        const savedOpenAi = localStorage.getItem("nexus_api_key_openai") || "";
+        const savedAnthropic = localStorage.getItem("nexus_api_key_anthropic") || "";
+        const savedOpenRouter = localStorage.getItem("nexus_api_key_openrouter") || "";
+
+        setOpenAiKey(savedOpenAi);
+        setAnthropicKey(savedAnthropic);
+        setOpenRouterKey(savedOpenRouter);
+
+        const savedFalkorUri = localStorage.getItem("nexus_falkordb_uri");
+        if (savedFalkorUri) setFalkorUri(savedFalkorUri);
+
+        const savedNamespace = localStorage.getItem("nexus_falkordb_namespace");
+        if (savedNamespace) setGraphNamespace(savedNamespace);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Keyboard shortcut: Escape to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        playUiSound("reject");
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Auto-detect local Ollama models on mount/open
+  useEffect(() => {
+    if (isOpen && activeTab === "ollama") {
+      const timer = setTimeout(() => {
+        checkOllamaModels();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, activeTab, checkOllamaModels]);
 
   const testOllamaConnection = async () => {
     playUiSound("click");
@@ -141,7 +147,7 @@ export function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModa
         setOllamaStatus("error");
         setOllamaMessage(data.message || "Could not reach Ollama at " + ollamaHost);
       }
-    } catch (e: any) {
+    } catch {
       playUiSound("reject");
       setOllamaStatus("error");
       setOllamaMessage("Ollama offline or connection refused on " + ollamaHost);

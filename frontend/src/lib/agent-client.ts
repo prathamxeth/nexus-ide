@@ -3,14 +3,18 @@ export interface GraphNode {
   label: string;
   layer?: "ast" | "blast" | "memory" | "company" | string;
   file?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   type?: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   color?: string;
   val?: number;
   x?: number;
   y?: number;
-  [key: string]: any;
+  vx?: number;
+  vy?: number;
+  fx?: number;
+  fy?: number;
+  [key: string]: unknown;
 }
 
 export interface GraphEdge {
@@ -18,7 +22,7 @@ export interface GraphEdge {
   target: string | GraphNode;
   type?: "CALLS" | "IMPACTS" | "CONSTRAINED_BY" | "AUTHORED_BY" | string;
   relationship?: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 export interface GraphData {
@@ -72,7 +76,7 @@ export interface StreamRefactorOptions {
   onContextResolved?: (context: ContextResolvedPayload) => void;
   onReasoningChunk?: (chunk: string) => void;
   onCodePatch?: (patch: CodePatchPayload) => void;
-  onDone?: (data: any) => void;
+  onDone?: (data: unknown) => void;
   onError?: (error: Error) => void;
   signal?: AbortSignal;
 }
@@ -194,12 +198,13 @@ export async function streamRefactor({
         }
       }
     }
-  } catch (error: any) {
-    if (error.name === "AbortError") {
+  } catch (error: unknown) {
+    const err = error as Error;
+    if (err.name === "AbortError") {
       console.log("SSE Stream aborted by user");
       return;
     }
-    console.error("Agent SSE stream error:", error);
-    onError?.(error);
+    console.error("Agent SSE stream error:", err);
+    onError?.(err);
   }
 }
