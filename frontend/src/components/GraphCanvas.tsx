@@ -282,7 +282,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
           >
             <ZoomOut size={12} />
           </button>
-          <div className="w-[1px] h-3 bg-[#334155]/60 mx-0.5" />
+          <div className="w-px h-3 bg-[#334155]/60 mx-0.5" />
           <button
             onClick={() => {
               try {
@@ -357,16 +357,16 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
             >
               {/* Top Accent Gradient Bar */}
               <div 
-                className={`absolute top-0 left-0 right-0 h-[2px] ${
+                className={`absolute top-0 left-0 right-0 h-0.5 ${
                   isVisited
-                    ? "bg-gradient-to-r from-red-500 via-rose-400 to-red-600"
+                    ? "bg-linear-to-r from-red-500 via-rose-400 to-red-600"
                     : isBlast
-                    ? "bg-gradient-to-r from-rose-500 via-red-400 to-transparent"
+                    ? "bg-linear-to-r from-rose-500 via-red-400 to-transparent"
                     : isMemory
-                    ? "bg-gradient-to-r from-amber-500 via-orange-400 to-transparent"
+                    ? "bg-linear-to-r from-amber-500 via-orange-400 to-transparent"
                     : isPR
-                    ? "bg-gradient-to-r from-emerald-500 via-teal-400 to-transparent"
-                    : "bg-gradient-to-r from-[#f54e00] via-orange-400 to-transparent"
+                    ? "bg-linear-to-r from-emerald-500 via-teal-400 to-transparent"
+                    : "bg-linear-to-r from-[#f54e00] via-orange-400 to-transparent"
                 }`}
               />
 

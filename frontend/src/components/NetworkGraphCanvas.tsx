@@ -1034,7 +1034,7 @@ export default function NetworkGraphCanvas({
               title={`File logic flowchart for ${activeFileName || "current file"}`}
             >
               <Workflow size={11} className={viewMode === "flowchart" ? "text-[#f54e00]" : "text-neutral-400"} />
-              <span className="truncate max-w-[80px]">{activeFileName ? `Flow: ${activeFileName}` : "Flowchart"}</span>
+              <span className="truncate max-w-20">{activeFileName ? `Flow: ${activeFileName}` : "Flowchart"}</span>
               {realtimeChangedSet.size > 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#e5c07b] animate-pulse" />}
             </button>
           </div>
@@ -1043,7 +1043,7 @@ export default function NetworkGraphCanvas({
           {hasHighlighted ? (
             <div className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-950/90 border border-red-500/60 text-[10px] font-mono text-red-200 animate-pulse truncate shadow-sm shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 shadow-[0_0_6px_#ef4444]" />
-              <span className="truncate max-w-[90px] font-medium">{highlightedCount} Affected</span>
+              <span className="truncate max-w-22.5 font-medium">{highlightedCount} Affected</span>
             </div>
           ) : realtimeChangedSet.size > 0 ? (
             <div className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#e5c07b]/15 border border-[#e5c07b]/40 text-[10px] font-mono text-[#e5c07b] animate-pulse truncate shadow-sm shrink-0 font-medium">
@@ -1057,11 +1057,11 @@ export default function NetworkGraphCanvas({
         <div ref={searchDropdownRef} className="relative shrink-0">
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="flex items-center gap-1 text-[11px] font-mono text-neutral-300 hover:text-white cursor-pointer px-2 py-1 rounded-[6px] bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] transition-colors shrink-0"
+            className="flex items-center gap-1 text-[11px] font-mono text-neutral-300 hover:text-white cursor-pointer px-2 py-1 rounded-md bg-[#121212] hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] transition-colors shrink-0"
             title="Search code nodes"
           >
             <Search size={11} className="text-neutral-400 shrink-0" />
-            <span className="max-w-[70px] truncate text-neutral-200">{selectedNodeId || "Search"}</span>
+            <span className="max-w-17.5 truncate text-neutral-200">{selectedNodeId || "Search"}</span>
             <ChevronDown size={10} className="text-neutral-500 shrink-0" />
           </button>
 
@@ -1165,7 +1165,7 @@ export default function NetworkGraphCanvas({
                   const activeNode = graphData.nodes.find((n) => n.id === selectedNodeId);
                   if (activeNode) onSelectNode(activeNode);
                 }}
-                className="px-1.5 py-0.5 rounded text-[#f54e00] bg-[#f54e00]/10 border border-[#f54e00]/30 shrink-0 font-medium cursor-pointer text-[10px] max-w-[130px] truncate"
+                className="px-1.5 py-0.5 rounded text-[#f54e00] bg-[#f54e00]/10 border border-[#f54e00]/30 shrink-0 font-medium cursor-pointer text-[10px] max-w-32.5 truncate"
                 title={`Active Function: ${selectedNodeId}`}
               >
                 {selectedNodeId}
@@ -1774,7 +1774,7 @@ export default function NetworkGraphCanvas({
                   setViewMode("graph");
                   setTimeout(() => fgRef.current?.zoomToFit(380, 36), 80);
                 }}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-[#141414] hover:bg-[#1f1f1f] border border-[#282828] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#141414] hover:bg-[#1f1f1f] border border-[#282828] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
                 title="Return to full codebase graph"
               >
                 <Network size={11} className="text-[#f54e00]" />
@@ -1786,7 +1786,7 @@ export default function NetworkGraphCanvas({
           {/* Fit to View Button */}
           <button
             onClick={handleFit}
-            className="flex items-center gap-1 px-1.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer shrink-0"
             title="Center and fit all nodes inside view"
           >
             <Maximize2 size={11} className="text-neutral-400" />
@@ -1797,7 +1797,7 @@ export default function NetworkGraphCanvas({
           <div ref={filterDropdownRef} className="relative shrink-0">
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-1 px-1.5 py-1 rounded-[6px] bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-transparent hover:bg-[#1a1a1a] border border-[#262626] hover:border-[#383838] text-[11px] font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
               title="Filter node layers"
             >
               <Filter size={11} className="text-neutral-400" />
@@ -1844,7 +1844,7 @@ export default function NetworkGraphCanvas({
               const target = currentGraphData.nodes.find((n) => n.id === selectedNodeId) || null;
               onRunAction?.(target);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-xs font-mono font-medium transition-colors cursor-pointer shadow-xs shrink-0 whitespace-nowrap min-w-[64px]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-transparent hover:bg-[#f54e00]/10 border border-[#f54e00]/80 hover:border-[#f54e00] text-[#f54e00] hover:text-[#ff6a26] text-xs font-mono font-medium transition-colors cursor-pointer shadow-xs shrink-0 whitespace-nowrap min-w-16"
             title="Run analysis on selected function with AI Agent"
           >
             <Play size={11} className="text-[#f54e00] fill-[#f54e00] shrink-0" />

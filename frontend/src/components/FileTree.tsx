@@ -104,7 +104,7 @@ export function FileTree({
   }
 
   return (
-    <aside className="w-[240px] h-full bg-[#181818] border-r border-[#282828] flex flex-col justify-between select-none shrink-0">
+    <aside className="w-60 h-full bg-[#181818] border-r border-[#282828] flex flex-col justify-between select-none shrink-0">
       {/* Top Header */}
       <div className="flex flex-col">
         <div className="h-9 px-3 border-b border-[#282828] flex items-center justify-between text-xs tracking-wider uppercase font-semibold text-[#888888]">
