@@ -15,7 +15,11 @@ import os
 # Ensure backend root is in python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except (ImportError, ModuleNotFoundError):
+    from mcp.server.mcpserver import MCPServer as FastMCP
+
 from services.falkor_client import get_falkor_service
 
 mcp = FastMCP("FalkorDB-AST-Orchestrator")

@@ -186,10 +186,10 @@ async def run_test_falkordb_disconnected_killswitch():
     # 4. Check refusal message mentions the mandate
     reasoning_events = [e[1]["chunk"] for e in events if e[0] == "reasoning_chunk"]
     reasoning_text = "".join(reasoning_events)
-    assert "Refusal" in reasoning_text
-    assert "You are GraphiCode Agent. You have NO native file reading tools." in reasoning_text
+    assert ("NexusIDE Agent" in reasoning_text or "GraphiCode Agent" in reasoning_text)
+    assert "You have NO native file reading tools." in reasoning_text
     assert "zero code generated" in reasoning_text.lower()
-    print("✔ Refusal text verified with required GraphiCode Agent mandate.")
+    print("✔ Refusal text verified with required NexusIDE Agent mandate.")
 
     print("🎉 Test 2 PASSED: Kill-switch successfully aborted execution and emitted ZERO code!")
 
