@@ -73,8 +73,8 @@ class FalkorService:
             connect_kwargs: Dict[str, Any] = {
                 "host": self.host,
                 "port": self.port,
-                "socket_connect_timeout": 5.0,
-                "socket_timeout": 5.0,
+                "socket_connect_timeout": 15.0,
+                "socket_timeout": 15.0,
             }
             if self.password:
                 connect_kwargs["password"] = self.password
