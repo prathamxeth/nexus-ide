@@ -1,352 +1,155 @@
 ---
 title: "Why Vector RAG Fails Coding Agents: Building a Graph-Native IDE with FalkorDB and FastMCP"
 published: true
-description: "How we built NexusIDE: A Graph-Native Agentic IDE powered by FalkorDB in-memory Cypher traversals, FastMCP tools, native PageRank centrality, and real-time AST canvas."
-tags: ai, graphdatabase, python, webdev
+description: "Why today's AI coding tools break downstream code, and how we built NexusIDE—a graph-native IDE with FalkorDB that understands codebase topology, learns from human rejection, and refactors with zero blast-radius hallucinations."
+tags: ai, webdev, programming, opensource
 canonical_url: https://github.com/prathamxeth/nexus-ide/blob/main/blog_post.md
 cover_image: https://raw.githubusercontent.com/prathamxeth/nexus-ide/main/frontend/public/nexus-bg.jpg
 ---
 
 # Why Vector RAG Fails Coding Agents: Building a Graph-Native IDE with FalkorDB and FastMCP
 
-> *How we built **NexusIDE**: A Graph-Native Agentic IDE powered by FalkorDB in-memory Cypher traversals, the Model Context Protocol (FastMCP), native PageRank node centrality, and real-time `@gravity-ui/graph` topological visualization.*
->
-> **🏆 FalkorDB Graph Hacks Hackathon 2026 Submission**  
-> **Challenge Tracks Unified**:  
-> 1. *Connected Data & Graph-RAG*  
-> 2. *Agent Memory & Multi-Agent Coordination*  
-> 3. *Company Brain & Enterprise Context*  
-> 
-> **Live GitHub Repository**: [https://github.com/prathamxeth/nexus-ide](https://github.com/prathamxeth/nexus-ide)  
-> **Demo Walkthrough Video**: [Watch 3-Minute Demo on Loom / YouTube](https://github.com/prathamxeth/nexus-ide#demo-video)
+Every developer using modern AI coding assistants has lived through this exact moment:
+
+You ask your AI assistant to make what looks like a straightforward change:
+> *"Harden `validateToken` in `auth.ts` to enforce a strict clock-skew tolerance."*
+
+The AI proudly writes the patch. The local file looks pristine. It compiles. You commit. 
+
+Ten minutes later, your build alerts blow up. Two downstream services—`billing.ts` and `finance.ts`—just crashed in staging. They were calling `validateToken` with a legacy timestamp format that the AI didn't know existed.
+
+How did a state-of-the-art LLM that writes poetry and passes the bar exam fail at a simple code refactor?
+
+Because under the hood, **virtually every AI coding tool is built on Vector RAG**—and code is not text.
 
 ---
 
-## 1. The Core Dilemma: Why Vector RAG Breaks Down on Code
+## The Fatal Flaw of Modern AI IDEs
 
-If you’ve used Cursor, GitHub Copilot Workspace, or Windsurf on a non-trivial production codebase, you have inevitably encountered this scenario:
+When tools like Copilot, Cursor, or Windsurf index your project, they slice your code into arbitrary text chunks (typically 500-token blocks) and convert them into numerical vectors. 
 
-You issue a deceptively simple instruction:
-```text
-"Harden validateToken in src/auth.ts to enforce a 60-second clock skew tolerance and reject algorithm 'none'."
+When you ask a question, the tool searches for chunks with similar words using cosine similarity.
+
+This works wonders for natural language. If you search for *"how to reset a password"*, finding documents that talk about *"credential recovery"* is useful.
+
+**But code isn't natural language.**
+
+Code is a deterministic, typed, interconnected web of relationships.
+
+```
+       [ auth.ts: validateToken ]
+                   │
+                   ▼ (called by)
+      [ billing.ts: processInvoice ]
+                   │
+                   ▼ (called by)
+      [ finance.ts: auditAccount ]
 ```
 
-The agent edits `src/auth.ts`. The local file compiles. You commit. Five minutes later, CI redlines across three downstream microservices: `billing.ts` was passing unparsed timestamps, and `finance.ts:auditAccount` crashed because its caller contract was silently violated.
+When you refactor `validateToken`, the `finance.ts` file doesn't contain words like *"token skew"* or *"JWT validator"*. To a vector search engine, `finance.ts` has **zero semantic relevance** to your prompt. 
 
-Why did state-of-the-art LLMs fail at basic refactoring? Because they rely on **Vector RAG**.
+Vector RAG is fundamentally blind to:
+- **Multi-hop call chains**: It cannot trace dependencies across files.
+- **Contract blast radius**: It doesn't know who calls what or what contracts they expect.
+- **Institutional memory**: If bypassing token expiration caused a production outage last month, vector search has no structured way to remember that lesson.
+- **Human context**: It discards Git blame, pull requests, and the architectural intent behind why code was written in the first place.
 
-```
-[ Vector RAG: Lexical & Semantic Similarity Blindness ]
-
-PROMPT: "Refactor validateToken"
-           │
-           ▼
-┌──────────────────────┐  ANN Cosine Sim   ┌───────────────────────────┐
-│ Vector Embedding     ├──────────────────►│ "token.ts" (Word Match)   │
-│ (Bag of Word Chunks) │                   │ "validator.ts" (Word Match)│
-└──────────────────────┘                   └───────────────────────────┘
-                                                         ▲
-                                             CRITICAL BLIND SPOT:
-                                        Vector RAG has zero awareness
-                                        of call-chains, hop distance,
-                                        or caller contracts!
-```
-
-### The Fundamental Flaws of Flat Text Chunking
-
-1. **Chunk Boundary Truncation**: Codebases are sliced into arbitrary 500-token chunks with 50-token overlaps. A function signature lives in Chunk $A$, its implementation in Chunk $B$, and its downstream caller in Chunk $C$.
-2. **Multi-Hop Blindness**: Vector search relies on approximate nearest-neighbor (ANN) cosine similarity. If `finance.ts:auditAccount` calls `billing.ts:processInvoice`, which in turn calls `auth.ts:validateToken`, `finance.ts` contains zero semantic similarity to the term "clock skew". An embedding model will **never** retrieve it.
-3. **Amnesia Across Sessions**: When a developer rejects a buggy hallucination or fixes an edge-case, vector databases have no structured mechanism to record an episodic rule linked directly to that AST node.
-4. **Zero Human Provenance**: Vector slices strip out git blame, PR discussions, and architectural intent. The agent has no idea that `@alex.chen` authored PR #104 specifically to address RFC 7519 replay attacks.
-
-> **The Fundamental Axiom**: Natural language is loose and forgiving; **code is a deterministic, typed, multi-layer directed knowledge graph.** Slicing code into vector chunks is an architectural impedance mismatch.
+Slicing code into flat vector chunks is like shredding a city roadmap into confetti, picking up three pieces that look pretty, and expecting to navigate rush-hour traffic.
 
 ---
 
-## 2. The Solution: NexusIDE Inner-Loop Graph-RAG
+## Enter NexusIDE: The Graph-Native Coding Experience
 
-Instead of treating code as unstructured prose, **NexusIDE** embeds **FalkorDB** directly into the inner loop of the agentic execution engine.
+To solve this, we built **NexusIDE** for the **FalkorDB Graph Hacks Hackathon 2026**.
 
-```
-                      ┌─────────────────────────────────────────┐
-                      │            Developer Prompt             │
-                      │  "Refactor validateToken in src/auth.ts"│
-                      └────────────────────┬────────────────────┘
-                                           │
-                                           ▼
-                      ┌─────────────────────────────────────────┐
-                      │       NexusIDE Agent Orchestrator       │
-                      │    (NO NATIVE FILE-READ / GREP TOOLS)   │
-                      └───────┬─────────────────────────▲───────┘
-                              │                         │
-            falkor_blast_radius(validateToken)          │ Verified Topological
-            falkor_episodic_memory(validateToken)       │ Context & Guardrails
-            falkor_provenance(validateToken)            │
-                              │                         │
-                              ▼                         │
-                      ┌─────────────────────────────────┴───────┐
-                      │          FalkorDB Graph Engine          │
-                      │     (GraphBLAS Matrix Multiplication)   │
-                      │                                         │
-                      │  (:File)-[:DEFINES]->(:Function)        │
-                      │  (:Function)-[:CALLS*1..4]->(:Function) │
-                      │  (:Function)-[:HAS_RULE]->(:Memory)     │
-                      │  (:Function)-[:AUTHORED_IN]->(:PR)      │
-                      └───────┬─────────────────────────────────┘
-                              │
-               SSE Stream (/api/agent/stream)
-               ├─► event: graph_traversal (visitedBlockIds, activeConnections)
-               ├─► event: context_resolved (memory rules & callers)
-               ├─► event: reasoning_chunk (streaming architectural tokens)
-               └─► event: code_patch (multi-file coordinated diff)
-                              │
-                              ▼
-                      ┌─────────────────────────────────────────┐
-                      │        @gravity-ui/graph Canvas         │
-                      │  4 Vertical Swimlanes (x=50,350,680,1000│
-                      │  Real-Time Traversal Path Highlighting  │
-                      └─────────────────────────────────────────┘
-```
+Instead of treating code as unstructured prose, NexusIDE builds a **live, multi-layer knowledge graph** of your entire project directly in **FalkorDB**, the ultra-fast in-memory graph database.
 
-The agent is intentionally stripped of raw filesystem tools (`no open()`, `no grep`, `no cat`). It navigates code strictly by traversing the FalkorDB graph over standardized Cypher queries and **FastMCP** tools.
+Here is a 3-minute live walkthrough showing the system in action:
+
+[![Watch NexusIDE 3-Minute Demo](https://raw.githubusercontent.com/prathamxeth/nexus-ide/main/frontend/public/nexus-bg.jpg)](https://www.loom.com/share/7de75784a52d4da8a8e4f0beb4fe868c)
+
+> 🎬 **Watch the Full Interactive Demo**:  
+> 👉 [**Loom Video: NexusIDE Graph-Native Refactoring Walkthrough**](https://www.loom.com/share/7de75784a52d4da8a8e4f0beb4fe868c)
 
 ---
 
-## 3. The Unified 3-Layer Knowledge Graph Schema
+## The Three Pillars of a Graph-Native IDE
 
-NexusIDE solves all three hackathon tracks inside a single unified FalkorDB property graph:
+NexusIDE combines three interconnected layers into a single property graph:
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                      NEXUSIDE UNIFIED GRAPH SCHEMA                     │
-└────────────────────────────────────────────────────────────────────────┘
+### 1. Zero Blast-Radius AST Code Topology
+When you open a project, Tree-sitter parses your code into functions, files, classes, and call hierarchies. 
 
- [LAYER 3: COMPANY BRAIN]
-       (:Engineer {name, role}) ──[:AUTHORED]──► (:PR {id, title, merged_at})
-                                                      │
-                                                 [:RESOLVES]
-                                                      │
-                                                      ▼
-                                            (:Ticket {key, summary})
-                                                      ▲
-                                                      │ [:TOUCHES]
- ─────────────────────────────────────────────────────┼───────────────────
- [LAYER 1: AST CODE TOPOLOGY]                         │
-       (:File {path}) ──[:DEFINES]──► (:Function {name, pagerank, file})
-                                                      ▲   │
-                                         [:CALLS*1..4]│   │
-                                                      └───┘
- ─────────────────────────────────────────────────────────────────────────
- [LAYER 2: AGENT MEMORY]                              │
-                                                 [:HAS_RULE]
-                                                      │
-                                                      ▼
-                                       (:Memory {rule, session_id, created_at})
-```
+Before the AI writes a single line of code, it queries FalkorDB to calculate the **exact blast radius** of the change. It traverses 1, 2, 3, or 4 hops upstream and downstream in **less than 2 milliseconds** thanks to FalkorDB’s GraphBLAS linear algebra engine.
 
-### Layer 1: Code Syntax & AST Topology (Track 1)
-Using Tree-sitter, we parse TypeScript and Python files into AST entities during codebase ingestion:
-- **Nodes**: `:File`, `:Function`, `:Class`, `:Method`
-- **Edges**: `(:File)-[:DEFINES]->(:Function)`, `(:Function)-[:CALLS]->(:Function)`, `(:File)-[:IMPORTS]->(:File)`
+The agent doesn't guess who calls `validateToken`—it *knows*.
 
-### Layer 2: Cross-Session Episodic & Procedural Memory (Track 2)
-Whenever an agent hallucinates or violates an architectural pattern, the developer rejects the diff (`⌘N` or clicking **Reject & Learn**). NexusIDE writes directly to FalkorDB:
-```cypher
-MATCH (fn:Function {name: $function_name})
-CREATE (m:Memory {
-    id: $memory_id,
-    rule: $rule_text,
-    rejected_patch_summary: $patch_summary,
-    timestamp: datetime()
-})
-CREATE (fn)-[:HAS_RULE]->(m)
-```
-On subsequent queries, the agent queries `[:HAS_RULE]` before proposing edits, permanently preventing regression loops!
+### 2. Episodic Memory that Actually Learns
+In standard AI IDEs, if you reject a suggested patch, that feedback is lost the moment you close the tab. The very next day, another engineer (or you) will ask a similar question, and the AI will hallucinate the exact same bad pattern.
 
-### Layer 3: Company Brain & Provenance (Track 3)
-Enterprise context (Git blame, PR reviews, Linear/Jira tickets) is mapped as graph nodes:
-```cypher
-MATCH (fn:Function {name: $name})
-OPTIONAL MATCH (fn)-[:AUTHORED_IN|MODIFIED|TOUCHES]-(pr:PR)
-OPTIONAL MATCH (eng:Engineer)-[:AUTHORED]->(pr)
-OPTIONAL MATCH (pr)-[:RESOLVES]->(t:Ticket)
-RETURN pr.id AS pr_number, pr.title AS pr_title, eng.handle AS author, t.key AS ticket;
-```
-When refactoring sensitive authorization or payment modules, the agent greets the engineer with full organizational awareness: *"Warning: This function was modified in PR #104 by @alex.chen to resolve SEC-892."*
+In NexusIDE, human feedback is a first-class citizen:
+- Press **`⌘N`** or click **Reject & Learn**.
+- NexusIDE immediately writes an episodic rule node directly into FalkorDB attached to that specific function:
+  > *"When refactoring validateToken, always preserve legacy epoch timestamps for billing.ts."*
+- From that second onward, across every future session and every connected developer, the agent retrieves this rule and honors it.
+
+### 3. The "Company Brain" Layer
+Code doesn't exist in a vacuum. It was written by people with specific reasons. 
+
+NexusIDE maps pull requests, issues, and engineers into the graph. When refactoring critical modules, the agent alerts you:
+> *"Heads up: This function was modified by @alex.chen in PR #104 to resolve SEC-892 (Replay Attack Vulnerability). Preserving replay cache checks."*
 
 ---
 
-## 4. FalkorDB’s Engine: Sub-Millisecond Cypher & Native PageRank
+## A Studio Built for Developer Joy
 
-### GraphBLAS Matrix Multiplication Under the Hood
-FalkorDB doesn't do pointer chasing like legacy graph engines. Built on **GraphBLAS**, it represents graph adjacency as sparse linear algebra matrices. 
+We designed NexusIDE from the ground up to feel fast, responsive, and visually stunning:
 
-Finding callers 4 hops away is computed via matrix-vector multiplication:
-$$\mathbf{y} = \mathbf{A}^k \cdot \mathbf{x}$$
-
-Where $\mathbf{A}$ is the sparse adjacency matrix of the call graph and $\mathbf{x}$ is the indicator vector for `validateToken`. The entire operation evaluates in CPU cache in **0.9ms**!
-
-### Identifying Architectural Bottlenecks via Native PageRank
-Not all functions carry equal weight. Slicing through helper utilities is low risk; modifying a central dispatcher can crash an entire platform.
-
-NexusIDE executes native FalkorDB algorithms directly in Cypher:
-```cypher
-CALL algo.pageRank('Function', 'CALLS') 
-YIELD node, score 
-SET node.pagerank = score
-RETURN node.name, node.pagerank 
-ORDER BY score DESC 
-LIMIT 10;
-```
-
-Functions with high PageRank centrality are automatically assigned top architectural gravity in the frontend canvas and trigger heightened risk warnings in the agent prompt.
-
-### Latency Benchmarks: FalkorDB vs. Vector RAG
-
-| Metric | Traditional Vector RAG (OpenAI / Pinecone) | NexusIDE (FalkorDB GraphBLAS) | Improvement |
-| :--- | :--- | :--- | :--- |
-| **P50 Query Latency** | 380 ms | **0.9 ms** | **422x faster** |
-| **P99 Query Latency** | 720 ms | **1.7 ms** | **423x faster** |
-| **Multi-Hop Traversal (Hop 1-4)** | Fails completely | **100% Deterministic** | **Zero hallucinations** |
-| **Memory Footprint** | External Cloud Service ($$$) | **~45 MB Docker container** | **Zero-cloud, local** |
-| **Cost per 10k Lookups** | ~$4.00 (Token embeddings) | **$0.00 (Local GraphBLAS)** | **Free & infinite** |
+- **Cupertino Dark Studio**: Modern typography, silky micro-animations, and a distraction-free split-editor.
+- **Interactive Knowledge Canvas**: Powered by `@gravity-ui/graph`, you can zoom, pan, and inspect your codebase's architectural gravity.
+- **Live Thought Pulses**: As the agent reasons, the nodes it traverses light up in vivid cyan in real time via Server-Sent Events. You actually *see* the AI exploring your architecture.
+- **Monaco Split-Diff**: Clean side-by-side reviews with synchronized scrolling and keyboard shortcuts.
+- **The Hard Kill-Switch**: The agent has zero raw file-reading tools. If the graph database goes down, the agent strictly refuses to hallucinate code. No graph, no patch.
 
 ---
 
-## 5. Standardized Agent Tooling with FastMCP
+## Open Protocols: Built on FastMCP
 
-To ensure NexusIDE isn't locked into a siloed interface, we built a standalone **FastMCP (Model Context Protocol)** server in `backend/mcp_server.py`. 
+We didn't want NexusIDE to be a closed garden. We packaged the entire FalkorDB code intelligence layer into a standalone **FastMCP (Model Context Protocol)** server.
 
-Any MCP-compliant client (Claude Desktop, Cursor, Antigravity, custom agents) can connect via:
-```json
-{
-  "mcpServers": {
-    "nexus-code-graph": {
-      "command": "python",
-      "args": ["-m", "backend.mcp_server"],
-      "env": {
-        "FALKORDB_HOST": "localhost",
-        "FALKORDB_PORT": "6379"
-      }
-    }
-  }
-}
-```
-
-The FastMCP server exposes three core primitives:
-
-```python
-@mcp.tool()
-def get_code_blast_radius(function_name: str, max_depth: int = 4) -> dict:
-    """Traverses downstream and upstream call-chains in FalkorDB to calculate exact impact."""
-    query = """
-    MATCH path = (caller:Function)-[:CALLS*1..$max_depth]->(target:Function {name: $name})
-    RETURN caller.name AS name, caller.file AS file, min(length(path)) AS depth
-    ORDER BY depth ASC;
-    """
-    return falkor_client.query(query, {"name": function_name, "max_depth": max_depth})
-
-@mcp.tool()
-def get_episodic_memory(function_name: str) -> dict:
-    """Retrieves human rejection rules and past architectural guardrails."""
-    query = """
-    MATCH (fn:Function {name: $name})-[:HAS_RULE]->(m:Memory)
-    RETURN collect(m.rule) AS rules;
-    """
-    return falkor_client.query(query, {"name": function_name})
-
-@mcp.tool()
-def get_company_context(function_name: str) -> dict:
-    """Fetches author PRs and ticket intent from the company brain layer."""
-    query = """
-    MATCH (fn:Function {name: $name})-[:TOUCHES|AUTHORED_IN]-(pr:PR)<-[:AUTHORED]-(eng:Engineer)
-    RETURN pr.id, pr.title, eng.handle;
-    """
-    return falkor_client.query(query, {"name": function_name})
-```
+Whether you're using NexusIDE, Claude Desktop, Cursor, or custom autonomous agents, any client can connect to your project’s FalkorDB instance and immediately gain graph-native superpowers:
+- `get_code_blast_radius(function_name)`
+- `get_episodic_memory(function_name)`
+- `get_company_context(function_name)`
 
 ---
 
-## 6. The Hard Kill-Switch: Proving Graph Dependency
+## Try It in Under 60 Seconds
 
-A common criticism of AI demo apps is that they use fancy databases for show, while the LLM quietly does ungrounded text generation in the background.
-
-To prove that NexusIDE is **strictly graph-native**, we implemented a hard architectural kill-switch:
-
-```python
-# backend/services/agent_tools.py
-def check_falkor_health(falkor_service: Optional[FalkorService] = None) -> FalkorService:
-    client = falkor_service or get_falkor_service()
-    if not client.is_healthy():
-        raise ConnectionError(
-            "FalkorDB connection failed or port 6379 is unreachable. "
-            "Kill-switch activated: 0 context returned."
-        )
-    return client
-```
-
-When FalkorDB is shut down, running `python backend/test_agent_killswitch.py` proves:
-1. `check_falkor_health` triggers `ConnectionError`.
-2. The agent prompt strictly refuses code generation.
-3. An `abort` SSE event is emitted.
-4. **Exactly ZERO lines of code or patches are produced.**
-
-```text
-🧪 Test: FalkorDB Disconnected — Strict Kill-Switch Verification
-✔ check_falkor_health properly raised ConnectionError
-✔ falkor_blast_radius properly triggered kill-switch ConnectionError
-✔ Disconnected agent emitted events: ['reasoning_chunk', 'abort', 'done']
-✔ Confirmed: ZERO code patches emitted when graph engine is offline!
-```
-
----
-
-## 7. The Frontend Experience: Monaco Split-Diff & @gravity-ui/graph
-
-![NexusIDE Architecture and Studio](https://raw.githubusercontent.com/prathamxeth/nexus-ide/main/frontend/public/nexus-bg.jpg)
-
-The NexusIDE UI is crafted with a high-performance Cupertino-dark aesthetic:
-- **Interactive Knowledge Canvas**: Powered by `@gravity-ui/graph`, arranging nodes into 4 structured vertical swimlanes (Files, Core Functions, Blast Radius Callers, and Memory/PR Context).
-- **Live SSE Traversal Pulses**: As the agent queries Cypher paths, nodes in the canvas illuminate in neon cyan via real-time SSE stream events (`graph_traversal`).
-- **Monaco Split Diff**: Side-by-side patch review with synchronized line scrolling and syntax highlighting.
-- **Dynamic Rejection Feedback**: Pressing `⌘N` rejects the patch, triggers a sound effect, and immediately persists an episodic memory node in FalkorDB without restarting the session.
-
----
-
-## 8. Run It Yourself (1-Command Bootstrap)
-
-You can clone and spin up the complete NexusIDE environment in under 60 seconds:
+You can spin up the complete NexusIDE environment locally with Docker:
 
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/prathamxeth/nexus-ide.git
 cd nexus-ide
 
-# 2. Start FalkorDB and microservices via Docker Compose
-docker compose up -d
-
-# 3. Seed demo AST knowledge graph
-cd backend && python seed_demo_data.py
-
-# 4. Run automated test suites (AST, PageRank, Kill-Switch)
-python test_agent_killswitch.py
-python test_graph_layout.py
-python test_api_endpoints.py
-
-# 5. Launch the IDE studio
-cd .. && ./run.sh
+# Launch all services
+./run.sh
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and watch graph-native refactoring in action.
+Navigate to `http://localhost:3000`, click **Start Refactor**, and experience what coding with a graph-native assistant feels like.
 
 ---
 
-## 9. Conclusion
+## What’s Next for Code Intelligence?
 
-Vector embeddings were a groundbreaking milestone for fuzzy semantic text search. But software engineering is not fuzzy—it is exact, hierarchical, and deeply interconnected.
+The past two years proved that Large Language Models are brilliant code generators. But the next leap in AI developer tooling won't come from larger parameter counts—it will come from **structured context**.
 
-By embedding **FalkorDB's sub-millisecond GraphBLAS engine** and **FastMCP** directly into the inner loop of the coding agent, NexusIDE transforms AI from an unpredictable syntax guesser into a deterministic, context-aware software architect.
+By replacing flat vector chunking with the speed and precision of **FalkorDB**, we turn AI from an unpredictable syntax guesser into a dependable software architect that truly understands the systems we build.
 
-- ⭐️ **Star the Repo**: [https://github.com/prathamxeth/nexus-ide](https://github.com/prathamxeth/nexus-ide)
-- 🎬 **Watch the Demo**: [3-Minute Hackathon Screencast](https://github.com/prathamxeth/nexus-ide#demo-video)
-- 💬 **Thoughts?** Let’s discuss in the comments below!
+***
+
+### Links & Resources
+- 🚀 **GitHub Repository**: [https://github.com/prathamxeth/nexus-ide](https://github.com/prathamxeth/nexus-ide) *(100% Open Source)*
+- 🎬 **Watch the 3-Minute Demo**: [Loom Screencast Walkthrough](https://www.loom.com/share/7de75784a52d4da8a8e4f0beb4fe868c)
+- 💬 **Join the Discussion**: Drop your thoughts, questions, and feedback in the comments below!

@@ -15,7 +15,7 @@
 ---
 
 ## 📌 Quick Links for Judges
-- 🎬 **Demo Video Script**: [`demo_video_script.md`](./demo_video_script.md) *(3-minute high-impact walkthrough)*
+- 🎬 **Live Demo Video (Loom)**: [https://www.loom.com/share/7de75784a52d4da8a8e4f0beb4fe868c](https://www.loom.com/share/7de75784a52d4da8a8e4f0beb4fe868c) *(3-minute high-impact walkthrough)*
 - 📝 **Technical Blog Post**: [`blog_post.md`](./blog_post.md) *(In-depth architectural breakdown)*
 - 🔌 **FastMCP Server**: [`backend/mcp_server.py`](./backend/mcp_server.py) *(Open agent protocol tool server)*
 - 🚀 **1-Command Bootstrap**: [`run.sh`](./run.sh) / [`docker-compose.yml`](./docker-compose.yml)
