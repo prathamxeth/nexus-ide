@@ -43,6 +43,14 @@ async def lifespan(app: FastAPI):
             # Enforce required graph indices on startup
             schema_results = falkor.init_schema()
             logger.info("FalkorDB schema initialized successfully: %s", schema_results)
+            if falkor.get_node_count() == 0:
+                logger.info("Graph is empty. Auto-seeding initial demo data...")
+                try:
+                    from seed_demo_data import seed_data
+                    seed_data()
+                    logger.info("Auto-seeded demo data successfully.")
+                except Exception as seed_err:
+                    logger.warning("Auto-seeding demo data failed: %s", seed_err)
         except Exception as exc:
             logger.warning(
                 "FalkorDB not immediately reachable at startup (%s). Will connect and initialize lazily.",
@@ -259,6 +267,33 @@ def health_check() -> HealthResponse:
         falkordb_connected=is_connected,
         details=metrics,
     )
+
+
+@app.api_route("/api/seed", methods=["GET", "POST"], tags=["Diagnostics"])
+def trigger_seed() -> Dict[str, Any]:
+    """Trigger seeding of initial enterprise context, AST topology & procedural memory into FalkorDB."""
+    falkor = get_falkor_service()
+    if not falkor.is_healthy():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="FalkorDB is currently offline or unreachable.",
+        )
+    try:
+        from seed_demo_data import seed_data
+        seed_data()
+        metrics = falkor.get_health_metrics()
+        return {
+            "success": True,
+            "message": "Demo data successfully seeded into FalkorDB.",
+            "active_nodes_count": metrics.get("active_nodes_count", 0),
+            "latency_ms": metrics.get("latency_ms"),
+        }
+    except Exception as exc:
+        logger.error("Failed to seed demo data: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Seeding error: {exc}",
+        )
 
 
 @app.post("/api/ast/parse", tags=["AST Engine"])
