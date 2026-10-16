@@ -67,6 +67,8 @@ const DiffEditor = dynamic(
   }
 );
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 interface WorkspaceFile {
   name: string;
   path: string;
@@ -313,7 +315,7 @@ export default function NexusIDE() {
 
     // Fetch Network Topology Data from /api/graph/inspect
     try {
-      const res = await fetch("http://localhost:8000/api/graph/inspect");
+      const res = await fetch(`${API_BASE_URL}/api/graph/inspect`);
       if (res.ok) {
         const data = await res.json();
         if (data.nodes && data.nodes.length > 0) {
@@ -565,7 +567,7 @@ export default function NexusIDE() {
 
     // Optional fire-and-forget sync to FalkorDB knowledge graph
     try {
-      fetch("http://localhost:8000/api/graph/index-code", {
+      fetch(`${API_BASE_URL}/api/graph/index-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -623,7 +625,7 @@ export default function NexusIDE() {
       },
     }));
     try {
-      fetch("http://localhost:8000/api/graph/index-code", {
+      fetch(`${API_BASE_URL}/api/graph/index-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -644,7 +646,7 @@ export default function NexusIDE() {
     setIsDiffMode(false);
 
     try {
-      fetch("http://localhost:8000/api/memory/record-rejection", {
+      fetch(`${API_BASE_URL}/api/memory/record-rejection`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -818,13 +820,13 @@ export default function NexusIDE() {
   const handlePingHealth = async () => {
     setBackendStatus("connecting");
     try {
-      const res = await fetch("http://localhost:8000/health");
+      const res = await fetch(`${API_BASE_URL}/health`);
       if (res.ok) {
         setBackendStatus("connected");
         setToastMessage("✓ FalkorDB Engine Live: 0.8ms latency (connected)");
       } else {
         setBackendStatus("offline");
-        setToastMessage("⚠ FalkorDB unreachable at localhost:8000");
+        setToastMessage("⚠ FalkorDB unreachable at backend");
       }
     } catch {
       setBackendStatus("offline");
@@ -873,7 +875,7 @@ export default function NexusIDE() {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/api/agent/stream", {
+      const response = await fetch(`${API_BASE_URL}/api/agent/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

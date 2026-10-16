@@ -34,9 +34,16 @@ class FalkorService:
         host: Optional[str] = None,
         port: Optional[int] = None,
         graph_name: Optional[str] = None,
+        password: Optional[str] = None,
+        username: Optional[str] = None,
+        ssl: Optional[bool] = None,
     ) -> None:
         self.host = host or os.getenv("FALKORDB_HOST", "localhost")
         self.port = port or int(os.getenv("FALKORDB_PORT", "6379"))
+        self.password = password or os.getenv("FALKORDB_PASSWORD") or None
+        self.username = username or os.getenv("FALKORDB_USERNAME") or None
+        ssl_env = os.getenv("FALKORDB_SSL", "false").lower() in ("true", "1", "yes")
+        self.ssl = ssl if ssl is not None else ssl_env
         self.graph_name = graph_name or os.getenv("FALKORDB_GRAPH", "nexus_code_graph")
         self._db: Optional[FalkorDB] = None
         self._graph = None
@@ -44,12 +51,24 @@ class FalkorService:
     def connect(self) -> None:
         """Establish connection to FalkorDB and select primary graph."""
         try:
-            self._db = FalkorDB(host=self.host, port=self.port)
+            connect_kwargs: Dict[str, Any] = {
+                "host": self.host,
+                "port": self.port,
+            }
+            if self.password:
+                connect_kwargs["password"] = self.password
+            if self.username:
+                connect_kwargs["username"] = self.username
+            if self.ssl:
+                connect_kwargs["ssl"] = True
+
+            self._db = FalkorDB(**connect_kwargs)
             self._graph = self._db.select_graph(self.graph_name)
             logger.info(
-                "Connected to FalkorDB at %s:%s [Graph: %s]",
+                "Connected to FalkorDB at %s:%s (ssl=%s) [Graph: %s]",
                 self.host,
                 self.port,
+                self.ssl,
                 self.graph_name,
             )
         except Exception as exc:

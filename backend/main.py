@@ -58,14 +58,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Enable CORS for frontend development (Next.js typically on port 3000)
+# Enable CORS for local dev and cloud deployments (Vercel, Render, Railway, Fly.io)
+import os
+cors_origins_env = os.getenv("CORS_ORIGINS", "")
+if cors_origins_env:
+    allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+else:
+    allowed_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+allow_all_origins = "*" in allowed_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all_origins else allowed_origins,
+    allow_origin_regex=None if allow_all_origins else r"https://.*\.vercel\.app|https://.*\.render\.com|https://.*\.railway\.app|http://localhost:\d+",
+    allow_credentials=not allow_all_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 # ---------------- Request & Response Models ---------------- #

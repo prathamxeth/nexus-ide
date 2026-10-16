@@ -214,11 +214,41 @@ Any MCP client (Claude Desktop, Cursor, or autonomous agents) can connect direct
 - `get_episodic_memory(function_name)`: Returns human rejection rules and past incident reports.
 - `get_company_context(function_name)`: Returns author PRs, Git blame, and ticket intent.
 
+## 🚀 Deployment & Quick Start
+
+### 🌐 Option 1: Live Cloud Deployment (If Deploying Online)
+
+If you want to provide a live URL, you can host the stack using free/starter cloud tiers:
+
+#### 1. FalkorDB Cloud / Docker on a Cloud VM
+- **FalkorDB Cloud**: Deploy FalkorDB via [FalkorDB Cloud](https://app.falkordb.cloud/) (or on a single cloud VPS like Render / Railway / DigitalOcean / Fly.io running `falkordb/falkordb:latest`).
+- Copy your connection host, port, password, and SSL settings from the cluster dashboard.
+
+#### 2. Backend (FastAPI on Render, Railway, or Fly.io)
+- Deploy the FastAPI backend from `/backend` (or using `backend/Dockerfile`):
+- Configure environment variables:
+  ```env
+  FALKORDB_HOST=<your-falkordb-host>
+  FALKORDB_PORT=<your-falkordb-port>
+  FALKORDB_PASSWORD=<your-falkordb-password>
+  FALKORDB_SSL=true
+  CORS_ORIGINS=https://nexus-ide.vercel.app
+  ```
+- Backend start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+
+#### 3. Frontend (Next.js Studio on Vercel)
+- Deploy the Next.js frontend to [Vercel](https://vercel.com), setting the **Root Directory** to `frontend`.
+- Add environment variable pointing to your live backend:
+  ```env
+  NEXT_PUBLIC_API_URL=https://<your-backend-service>.onrender.com
+  ```
+- **Submission URL**: Enter your public Vercel URL (e.g., [`https://nexus-ide.vercel.app`](https://nexus-ide.vercel.app)).
+
 ---
 
-## 🚀 Quick Start (Up in 60 Seconds)
+### 💻 Option 2: Local 1-Command Launch (Up in 60 Seconds)
 
-### 1-Command Launch
+#### Bootstrap All Containers and Services
 ```bash
 # Clone the repository
 git clone https://github.com/prathamxeth/nexus-ide.git
@@ -230,7 +260,7 @@ cd nexus-ide
 
 *(On Apple Silicon Macs, you can also run `./launch-mac.sh` for native Metal/ARM64 optimization).*
 
-### Services & Endpoints
+#### Services & Endpoints
 | Component | Address | Purpose |
 | :--- | :--- | :--- |
 | **NexusIDE Studio** | [`http://localhost:3000`](http://localhost:3000) | Monaco Split-Diff & Interactive Graph UI |
