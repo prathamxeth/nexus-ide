@@ -128,6 +128,9 @@ class DatabaseHealth(BaseModel):
     host: str = Field(..., description="Database host")
     port: int = Field(..., description="Database port")
     graph: str = Field(..., description="Selected graph name")
+    ssl: Optional[bool] = Field(None, description="Whether SSL/TLS is enabled")
+    has_password: Optional[bool] = Field(None, description="Whether authentication password is provided")
+    error: Optional[str] = Field(None, description="Connection error details if degraded")
 
 
 class HealthResponse(BaseModel):
@@ -245,6 +248,9 @@ def health_check() -> HealthResponse:
         host=metrics["host"],
         port=metrics["port"],
         graph=metrics["graph"],
+        ssl=metrics.get("ssl"),
+        has_password=metrics.get("has_password"),
+        error=metrics.get("error"),
     )
 
     return HealthResponse(

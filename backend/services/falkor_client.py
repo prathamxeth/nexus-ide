@@ -55,11 +55,17 @@ class FalkorService:
         self.port = port or (int(env_port) if env_port else (parsed_port or 6379))
         self.password = (password or os.getenv("FALKORDB_PASSWORD") or "").strip() or None
         self.username = (username or os.getenv("FALKORDB_USERNAME") or "").strip() or None
-        ssl_env = os.getenv("FALKORDB_SSL", "false").lower().strip() in ("true", "1", "yes")
-        self.ssl = ssl if ssl is not None else ssl_env
+        raw_ssl = os.getenv("FALKORDB_SSL")
+        if raw_ssl is not None:
+            self.ssl = raw_ssl.lower().strip() in ("true", "1", "yes")
+        elif ssl is not None:
+            self.ssl = ssl
+        else:
+            self.ssl = ".cloud" in self.host
         self.graph_name = graph_name or os.getenv("FALKORDB_GRAPH", "nexus_code_graph")
         self._db: Optional[FalkorDB] = None
         self._graph = None
+        self.last_error: Optional[str] = None
 
     def connect(self) -> None:
         """Establish connection to FalkorDB and select primary graph."""
@@ -76,6 +82,7 @@ class FalkorService:
                 connect_kwargs["username"] = self.username
             if self.ssl:
                 connect_kwargs["ssl"] = True
+                connect_kwargs["ssl_cert_reqs"] = "none"
 
             self._db = FalkorDB(**connect_kwargs)
             self._graph = self._db.select_graph(self.graph_name)
@@ -87,6 +94,7 @@ class FalkorService:
                 self.graph_name,
             )
         except Exception as exc:
+            self.last_error = str(exc)
             logger.error("Failed to connect to FalkorDB: %s", exc)
             self._db = None
             self._graph = None
@@ -157,10 +165,29 @@ class FalkorService:
         try:
             result = self.query("RETURN 1 AS ping")
             if result and len(result) > 0 and result[0][0] == 1:
+                self.last_error = None
                 return True
             return False
         except Exception as exc:
+            self.last_error = str(exc)
             logger.warning("FalkorDB ping failed: %s", exc)
+            self._db = None
+            self._graph = None
+
+            # If connecting to cloud and FALKORDB_SSL wasn't explicitly pinned, try opposite SSL mode
+            if os.getenv("FALKORDB_SSL") is None and (".cloud" in self.host or self.port != 6379):
+                try:
+                    self.ssl = not self.ssl
+                    logger.info("Retrying FalkorDB ping with SSL=%s", self.ssl)
+                    result = self.query("RETURN 1 AS ping")
+                    if result and len(result) > 0 and result[0][0] == 1:
+                        self.last_error = None
+                        return True
+                except Exception as retry_exc:
+                    self.last_error = str(retry_exc)
+                    self._db = None
+                    self._graph = None
+
             return False
 
     def is_healthy(self) -> bool:
@@ -193,6 +220,9 @@ class FalkorService:
             "host": self.host,
             "port": self.port,
             "graph": self.graph_name,
+            "ssl": self.ssl,
+            "has_password": bool(self.password),
+            "error": self.last_error if not is_live else None,
         }
 
     def query(self, cypher: str, params: Optional[Dict[str, Any]] = None) -> List[Any]:
