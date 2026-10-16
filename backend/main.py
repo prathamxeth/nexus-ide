@@ -35,17 +35,22 @@ async def lifespan(app: FastAPI):
     """Application lifespan context for resource initialization and teardown."""
     logger.info("Initializing Nexus IDE backend resources...")
     falkor = get_falkor_service()
-    try:
-        falkor.connect()
-        logger.info("FalkorDB connection established successfully.")
-        # Enforce required graph indices on startup
-        schema_results = falkor.init_schema()
-        logger.info("FalkorDB schema initialized successfully: %s", schema_results)
-    except Exception as exc:
-        logger.warning(
-            "FalkorDB not immediately reachable at startup (%s). Will connect and initialize lazily.",
-            exc,
-        )
+
+    def _init_falkor_background():
+        try:
+            falkor.connect()
+            logger.info("FalkorDB connection established successfully.")
+            # Enforce required graph indices on startup
+            schema_results = falkor.init_schema()
+            logger.info("FalkorDB schema initialized successfully: %s", schema_results)
+        except Exception as exc:
+            logger.warning(
+                "FalkorDB not immediately reachable at startup (%s). Will connect and initialize lazily.",
+                exc,
+            )
+
+    import asyncio
+    asyncio.create_task(asyncio.to_thread(_init_falkor_background))
     yield
     logger.info("Shutting down Nexus IDE backend resources...")
     falkor.close()
