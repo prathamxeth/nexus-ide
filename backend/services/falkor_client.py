@@ -38,30 +38,51 @@ class FalkorService:
         username: Optional[str] = None,
         ssl: Optional[bool] = None,
     ) -> None:
-        raw_host = (host or os.getenv("FALKORDB_HOST", "localhost")).strip().replace("\r", "").replace("\n", "")
-        if "://" in raw_host:
-            raw_host = raw_host.split("://", 1)[1]
-        raw_host = raw_host.rstrip("/").split("/", 1)[0].strip()
+        from urllib.parse import urlparse
+
+        url_env = (os.getenv("FALKORDB_URL") or "").strip()
+        raw_input = url_env or host or os.getenv("FALKORDB_HOST", "localhost")
+        raw_input = raw_input.strip().replace("\r", "").replace("\n", "")
+
+        is_tls = False
+        parsed_user = None
+        parsed_password = None
+        parsed_host = raw_input
         parsed_port = None
-        if ":" in raw_host:
-            host_part, port_str = raw_host.split(":", 1)
-            raw_host = host_part.strip()
+
+        if "://" in raw_input:
+            parsed = urlparse(raw_input)
+            is_tls = parsed.scheme.lower() in ("falkors", "rediss")
+            parsed_host = parsed.hostname or raw_input
+            parsed_port = parsed.port
+            parsed_user = parsed.username
+            parsed_password = parsed.password
+        elif ":" in parsed_host:
+            host_part, port_str = parsed_host.split(":", 1)
+            parsed_host = host_part.strip()
             try:
                 parsed_port = int(port_str.strip())
             except ValueError:
                 pass
-        self.host = raw_host.strip()
+
+        self.host = (parsed_host or "localhost").strip()
         env_port = (os.getenv("FALKORDB_PORT") or "").strip()
         self.port = port or (int(env_port) if env_port else (parsed_port or 6379))
-        self.password = (password or os.getenv("FALKORDB_PASSWORD") or "").strip() or None
-        self.username = (username or os.getenv("FALKORDB_USERNAME") or "").strip() or None
+        self.password = (password or parsed_password or os.getenv("FALKORDB_PASSWORD") or "").strip() or None
+        self.username = (username or parsed_user or os.getenv("FALKORDB_USERNAME") or "").strip() or None
+
+        # FalkorDB Cloud uses 'admin' as default username for ACL
+        if not self.username and self.password and ".cloud" in self.host:
+            self.username = "admin"
+
         raw_ssl = os.getenv("FALKORDB_SSL")
         if raw_ssl is not None:
             self.ssl = raw_ssl.lower().strip() in ("true", "1", "yes")
         elif ssl is not None:
             self.ssl = ssl
         else:
-            self.ssl = ".cloud" in self.host
+            self.ssl = is_tls
+
         self.graph_name = graph_name or os.getenv("FALKORDB_GRAPH", "nexus_code_graph")
         self._db: Optional[FalkorDB] = None
         self._graph = None
@@ -174,10 +195,15 @@ class FalkorService:
             self._db = None
             self._graph = None
 
-            # If connecting to cloud and FALKORDB_SSL wasn't explicitly pinned, try opposite SSL mode
-            if os.getenv("FALKORDB_SSL") is None and (".cloud" in self.host or self.port != 6379):
+            original_ssl = self.ssl
+            original_user = self.username
+
+            # 1. If connection timed out or failed, try opposite SSL mode
+            for test_ssl in (False, True):
+                if test_ssl == original_ssl:
+                    continue
                 try:
-                    self.ssl = not self.ssl
+                    self.ssl = test_ssl
                     logger.info("Retrying FalkorDB ping with SSL=%s", self.ssl)
                     result = self.query("RETURN 1 AS ping")
                     if result and len(result) > 0 and result[0][0] == 1:
@@ -188,6 +214,22 @@ class FalkorService:
                     self._db = None
                     self._graph = None
 
+            # 2. Try toggling username between 'admin' and None
+            alt_user = None if original_user else "admin"
+            try:
+                self.username = alt_user
+                logger.info("Retrying FalkorDB ping with username=%s", self.username)
+                result = self.query("RETURN 1 AS ping")
+                if result and len(result) > 0 and result[0][0] == 1:
+                    self.last_error = None
+                    return True
+            except Exception as retry_exc:
+                self.last_error = str(retry_exc)
+                self._db = None
+                self._graph = None
+
+            self.ssl = original_ssl
+            self.username = original_user
             return False
 
     def is_healthy(self) -> bool:
