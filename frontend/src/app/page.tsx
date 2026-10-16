@@ -36,10 +36,14 @@ import {
   Database,
   Sliders,
   FileText,
-  Plus
+  Plus,
+  Info
 } from "lucide-react";
 import NetworkGraphCanvas, { NodeItem, EdgeItem } from "@/components/NetworkGraphCanvas";
 import { MCP_CODEBASE_REGISTRY } from "@/lib/mcp-codebase";
+import { CommandPalette } from "@/components/CommandPalette";
+import { SettingsModal } from "@/components/SettingsModal";
+import { AboutModal } from "@/components/AboutModal";
 
 // Dynamically import Monaco Editor and DiffEditor
 const Editor = dynamic(() => import("@monaco-editor/react"), {
@@ -275,6 +279,8 @@ export default function NexusIDE() {
   const [selectedModel, setSelectedModel] = useState<string>("claude-3-5-sonnet");
   const [isModelPickerOpen, setIsModelPickerOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState<string>("");
   const [gitCommitMessage, setGitCommitMessage] = useState<string>("");
   const [committedCount, setCommittedCount] = useState<number>(0);
@@ -665,6 +671,12 @@ export default function NexusIDE() {
       } else if (isDiffMode && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
         e.preventDefault();
         handleRejectDiffChanges();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        setIsSettingsOpen(true);
       } else if (isDiffMode && e.key === "Escape") {
         e.preventDefault();
         setIsDiffMode(false);
@@ -1059,12 +1071,20 @@ export default function NexusIDE() {
         {/* TOP IDE APP BAR */}
         <div className="h-11 px-3 border-b border-[#1e1e1e] flex items-center justify-between shrink-0 bg-[#080808]">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#f54e00] shadow-[0_0_8px_#f54e00]" />
-              <span className="text-xs font-semibold tracking-tight text-white font-mono">
-                fastapi-worker-dani-mcp-server
+            <button
+              onClick={() => setIsAboutOpen(true)}
+              title="About NexusIDE (FalkorDB Hackathon 2026)"
+              className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#1a1a1a] transition-colors cursor-pointer group"
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-[#f54e00] shadow-[0_0_8px_#f54e00] group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-bold tracking-tight text-white font-mono flex items-center gap-1.5">
+                NexusIDE
               </span>
-            </div>
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#1c1c1c] text-[#f54e00] border border-[#f54e00]/30 hidden sm:inline">
+                FalkorDB
+              </span>
+            </button>
+
             <button
               onClick={() => {
                 setActiveActivityTab("git");
@@ -1077,6 +1097,17 @@ export default function NexusIDE() {
               <span>main</span>
             </button>
           </div>
+
+          {/* Quick Actions Search Bar (⌘K) */}
+          <button
+            onClick={() => setIsCommandPaletteOpen(true)}
+            className="hidden md:flex items-center gap-2 px-3 py-1 rounded-[6px] bg-[#121212] hover:bg-[#181818] border border-[#222222] hover:border-[#333333] text-[11px] font-mono text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer shadow-inner"
+            title="Open Command Palette (⌘K)"
+          >
+            <Search size={12} className="text-[#f54e00]" />
+            <span>Search actions & files...</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#1c1c1c] border border-[#2e2e2e] text-[10px] text-neutral-400">⌘K</kbd>
+          </button>
 
           <div className="flex items-center gap-2">
             {/* FalkorDB Telemetry Status */}
@@ -1091,6 +1122,13 @@ export default function NexusIDE() {
                 {backendStatus === "connected" ? "0.8ms (Live)" : "Connecting..."}
               </span>
             </button>
+
+            {/* FastMCP Protocol Pill */}
+            <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-[6px] bg-transparent border border-[#262626] text-[11px] font-mono text-neutral-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc]" />
+              <span className="text-neutral-400">FastMCP:</span>
+              <span className="text-purple-300 font-semibold">:8000</span>
+            </div>
 
             {/* Split Diff Toggle */}
             <button
@@ -1109,6 +1147,16 @@ export default function NexusIDE() {
             >
               <SplitSquareVertical size={11} />
               <span>{isDiffMode ? "Exit Diff" : "Diff View"}</span>
+            </button>
+
+            {/* About Modal Button */}
+            <button
+              onClick={() => setIsAboutOpen(true)}
+              title="About NexusIDE"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] text-[11px] font-mono border border-[#262626] hover:border-[#383838] text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            >
+              <Info size={11} className="text-[#f54e00]" />
+              <span>About</span>
             </button>
 
             <button
@@ -1174,10 +1222,17 @@ export default function NexusIDE() {
               <GitBranch size={16} />
             </button>
 
-            <div className="mt-auto">
+            <div className="mt-auto flex flex-col items-center gap-1.5">
+              <button
+                onClick={() => setIsAboutOpen(true)}
+                title="About NexusIDE"
+                className="p-2 text-neutral-500 hover:text-[#f54e00] hover:bg-[#1a1a1a] rounded-lg transition-colors cursor-pointer"
+              >
+                <Info size={16} />
+              </button>
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                title="Cursor IDE Settings"
+                title="NexusIDE Settings (⌘,)"
                 className="p-2 text-neutral-500 hover:text-[#f54e00] hover:bg-[#1a1a1a] rounded-lg transition-colors cursor-pointer"
               >
                 <Settings size={16} />
@@ -1863,97 +1918,53 @@ export default function NexusIDE() {
     </div>
 
     {/* ========================================================================= */}
-    {/* 5. CURSOR IDE SETTINGS MODAL */}
+    {/* 5. MODAL DIALOGS: SETTINGS, ABOUT, COMMAND PALETTE */}
     {/* ========================================================================= */}
-    {isSettingsOpen && (
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-[#0c0c0c] border border-[#242424] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
-          <div className="h-12 px-4 border-b border-[#202020] flex items-center justify-between bg-[#080808]">
-            <div className="flex items-center gap-2">
-              <Settings size={15} className="text-[#f54e00]" />
-              <span className="text-sm font-semibold text-white font-mono">Cursor IDE Settings</span>
-            </div>
-            <button
-              onClick={() => setIsSettingsOpen(false)}
-              className="p-1 rounded hover:bg-[#1c1c1c] text-neutral-400 hover:text-white cursor-pointer"
-            >
-              <X size={15} />
-            </button>
-          </div>
+    <SettingsModal
+      isOpen={isSettingsOpen}
+      onClose={() => setIsSettingsOpen(false)}
+      onSettingsSaved={() => {
+        setToastMessage("Settings updated successfully");
+        setTimeout(() => setToastMessage(null), 2500);
+      }}
+    />
 
-          <div className="p-5 space-y-4 text-xs font-mono">
-            <div>
-              <label className="text-neutral-400 uppercase text-[11px] tracking-wider block mb-1.5 font-semibold">
-                Default AI Model
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {["claude-3-5-sonnet", "claude-3-7-sonnet", "gpt-4o", "deepseek-r1"].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setSelectedModel(m)}
-                    className={`p-2 rounded-[8px] border text-left cursor-pointer transition-colors ${
-                      selectedModel === m
-                        ? "bg-[#f54e00]/15 border-[#f54e00] text-white"
-                        : "bg-[#141414] border-[#242424] text-neutral-400 hover:text-white"
-                    }`}
-                  >
-                    <div className="font-semibold">{m}</div>
-                    <div className="text-[11px] text-neutral-500">
-                      {m.includes("claude") ? "Anthropic" : m.includes("gpt") ? "OpenAI" : "DeepSeek"}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+    <AboutModal
+      isOpen={isAboutOpen}
+      onClose={() => setIsAboutOpen(false)}
+      falkorLatency="0.8ms"
+      falkorConnected={backendStatus === "connected"}
+    />
 
-            <div className="border-t border-[#202020] pt-3">
-              <label className="text-neutral-400 uppercase text-[11px] tracking-wider block mb-1.5 font-semibold">
-                FalkorDB Code Engine
-              </label>
-              <div className="bg-[#121212] border border-[#222222] rounded-xl p-3 space-y-1.5 text-neutral-300">
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Host / Port:</span>
-                  <span>localhost:6379</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Graph Key:</span>
-                  <span className="text-neutral-100 font-semibold">code_graph</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Live Status:</span>
-                  <span className={backendStatus === "connected" ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
-                    {backendStatus === "connected" ? "0.8ms (Connected)" : "Connecting..."}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-[#202020] pt-3">
-              <label className="text-neutral-400 uppercase text-[11px] tracking-wider block mb-1.5 font-semibold">
-                Design Tokens (DESIGN.md)
-              </label>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded bg-[#f54e00] text-white text-[11px]">#f54e00 CTA</span>
-                <span className="px-2 py-0.5 rounded bg-[#dfa88f] text-neutral-900 text-[11px]">Thinking</span>
-                <span className="px-2 py-0.5 rounded bg-[#9fc9a2] text-neutral-900 text-[11px]">Grep</span>
-                <span className="px-2 py-0.5 rounded bg-[#9fbbe0] text-neutral-900 text-[11px]">Read</span>
-                <span className="px-2 py-0.5 rounded bg-[#c0a8dd] text-neutral-900 text-[11px]">Edit</span>
-                <span className="px-2 py-0.5 rounded bg-[#c08532] text-white text-[11px]">Done</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-11 px-4 border-t border-[#202020] bg-[#080808] flex items-center justify-end">
-            <button
-              onClick={() => setIsSettingsOpen(false)}
-              className="px-4 py-1.5 rounded-[8px] bg-[#f54e00] hover:bg-[#d04200] text-white font-mono text-xs font-medium cursor-pointer transition-colors"
-            >
-              Save & Close
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    <CommandPalette
+      isOpen={isCommandPaletteOpen}
+      onClose={() => setIsCommandPaletteOpen(false)}
+      onSelectFile={(f) => {
+        setActiveFileName(f);
+        if (!openTabs.includes(f)) setOpenTabs((prev) => [...prev, f]);
+      }}
+      onSelectView={(v) => {
+        if (v === "diff") {
+          openDiffComparison();
+        } else {
+          setIsDiffMode(false);
+        }
+      }}
+      onSelectModel={(m) => setSelectedModel(m)}
+      onRunPrompt={(p) => {
+        setInputQuery(p);
+        handleSendQuery(p);
+      }}
+      onOpenSettings={() => {
+        setIsCommandPaletteOpen(false);
+        setIsSettingsOpen(true);
+      }}
+      onOpenAbout={() => {
+        setIsCommandPaletteOpen(false);
+        setIsAboutOpen(true);
+      }}
+      currentModel={selectedModel}
+    />
 
     {/* ========================================================================= */}
     {/* 6. TOAST NOTIFICATION */}

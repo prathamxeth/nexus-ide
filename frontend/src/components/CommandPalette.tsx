@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Search, FileCode, Network, Sparkles, Cpu, Cloud, 
   Settings, ArrowRight, ShieldAlert, BookOpen, GitPullRequest,
-  Check, X
+  Check, X, Info
 } from "lucide-react";
 import { playUiSound } from "@/lib/sound";
 
@@ -28,6 +28,7 @@ interface CommandPaletteProps {
   onSelectModel: (model: string) => void;
   onRunPrompt: (prompt: string) => void;
   onOpenSettings: () => void;
+  onOpenAbout?: () => void;
   currentModel: string;
 }
 
@@ -39,6 +40,7 @@ export function CommandPalette({
   onSelectModel,
   onRunPrompt,
   onOpenSettings,
+  onOpenAbout,
   currentModel,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
@@ -213,6 +215,18 @@ export function CommandPalette({
 
     // 5. Preferences
     {
+      id: "pref-about",
+      category: "Preferences",
+      title: "About NexusIDE",
+      subtitle: "Graph-Native IDE Architecture, FalkorDB Engine & Hackathon Info",
+      icon: <Info className="w-4 h-4 text-[#f54e00]" />,
+      badge: "FalkorDB 2026",
+      badgeColor: "bg-[#f54e00]/20 text-[#f54e00] border-[#f54e00]/40",
+      onSelect: () => {
+        if (onOpenAbout) onOpenAbout();
+      },
+    },
+    {
       id: "pref-settings",
       category: "Preferences",
       title: "Open Preferences & BYOK Config",
@@ -223,7 +237,7 @@ export function CommandPalette({
       shortcut: "⌘,",
       onSelect: onOpenSettings,
     },
-  ], [currentModel, onSelectFile, onSelectView, onSelectModel, onRunPrompt, onOpenSettings]);
+  ], [currentModel, onSelectFile, onSelectView, onSelectModel, onRunPrompt, onOpenSettings, onOpenAbout]);
 
   // Filter commands by search query
   const filteredCommands = useMemo(() => {
