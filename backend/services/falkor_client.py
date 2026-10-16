@@ -38,8 +38,21 @@ class FalkorService:
         username: Optional[str] = None,
         ssl: Optional[bool] = None,
     ) -> None:
-        self.host = host or os.getenv("FALKORDB_HOST", "localhost")
-        self.port = port or int(os.getenv("FALKORDB_PORT", "6379"))
+        raw_host = host or os.getenv("FALKORDB_HOST", "localhost")
+        if "://" in raw_host:
+            raw_host = raw_host.split("://", 1)[1]
+        raw_host = raw_host.rstrip("/").split("/", 1)[0]
+        parsed_port = None
+        if ":" in raw_host:
+            host_part, port_str = raw_host.split(":", 1)
+            raw_host = host_part
+            try:
+                parsed_port = int(port_str)
+            except ValueError:
+                pass
+        self.host = raw_host
+        env_port = os.getenv("FALKORDB_PORT")
+        self.port = port or (int(env_port) if env_port else (parsed_port or 6379))
         self.password = password or os.getenv("FALKORDB_PASSWORD") or None
         self.username = username or os.getenv("FALKORDB_USERNAME") or None
         ssl_env = os.getenv("FALKORDB_SSL", "false").lower() in ("true", "1", "yes")
