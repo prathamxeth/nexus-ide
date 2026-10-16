@@ -2,20 +2,14 @@
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { GraphData, GraphNode, GraphEdge } from "@/lib/agent-client";
+import type { ForceGraphMethods } from "react-force-graph-2d";
+import { GraphData, GraphNode } from "@/lib/agent-client";
 import {
   ZoomIn,
   ZoomOut,
   Maximize2,
   RefreshCw,
-  Layers,
   Cpu,
-  ShieldAlert,
-  BookOpen,
-  GitPullRequest,
-  Check,
-  X,
-  Info,
 } from "lucide-react";
 
 // Dynamically load ForceGraph2D client-side only
@@ -95,12 +89,12 @@ export function GraphViewer({
   isLoading = false,
 }: GraphViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const fgRef = useRef<any>(null);
+  const fgRef = useRef<ForceGraphMethods | undefined>(undefined);
   const [dimensions, setDimensions] = useState({ width: 800, height: 350 });
 
   // Interactive states: Inspect, Hover, and Filters
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [hoverNode, setHoverNode] = useState<any | null>(null);
+  const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   // Layer Filter Toggles
@@ -149,7 +143,7 @@ export function GraphViewer({
   // Hierarchically position and stratify nodes
   const processedData = useMemo(() => {
     const rawNodes = graphData.nodes || [];
-    const rawEdges = graphData.edges || (graphData as any).links || [];
+    const rawEdges = graphData.edges || (graphData as { links?: GraphData["edges"] }).links || [];
 
     // Group nodes by layer for structured layout offsets
     const layerCounters: Record<LayerKey, number> = { ast: 0, blast: 0, memory: 0, company: 0 };
@@ -194,7 +188,7 @@ export function GraphViewer({
 
     // Filter edges accordingly
     const filteredLinks = rawEdges
-      .map((e: any) => {
+      .map((e: { source: string | { id: string }; target: string | { id: string }; type?: string; relationship?: string }) => {
         const srcId = typeof e.source === "object" ? String(e.source.id) : String(e.source);
         const tgtId = typeof e.target === "object" ? String(e.target.id) : String(e.target);
         return {
@@ -203,7 +197,7 @@ export function GraphViewer({
           type: e.type || e.relationship || "CALLS",
         };
       })
-      .filter((e: any) => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target));
+      .filter((e: { source: string; target: string }) => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target));
 
     return {
       nodes: filteredNodes,
@@ -216,8 +210,10 @@ export function GraphViewer({
     if (!selectedNodeId) return null;
     const connected = new Set<string>([selectedNodeId]);
     for (const link of processedData.links) {
-      const s = typeof link.source === "object" ? String((link.source as any).id) : String(link.source);
-      const t = typeof link.target === "object" ? String((link.target as any).id) : String(link.target);
+      const srcObj = link.source as unknown;
+      const tgtObj = link.target as unknown;
+      const s = typeof srcObj === "object" && srcObj !== null && "id" in srcObj ? String((srcObj as { id: string }).id) : String(link.source);
+      const t = typeof tgtObj === "object" && tgtObj !== null && "id" in tgtObj ? String((tgtObj as { id: string }).id) : String(link.target);
       if (s === selectedNodeId) connected.add(t);
       if (t === selectedNodeId) connected.add(s);
     }
@@ -249,7 +245,7 @@ export function GraphViewer({
   }, [processedData.nodes.length]);
 
   // Node Click: Inspect / Highlight Subgraph
-  const handleNodeClick = (node: any) => {
+  const handleNodeClick = (node: GraphNode) => {
     const nid = String(node.id);
     if (selectedNodeId === nid) {
       setSelectedNodeId(null);
@@ -398,25 +394,25 @@ export function GraphViewer({
                 File: <span className="text-neutral-200">{hoverNode.file}</span>
               </div>
             )}
-            {hoverNode.metadata?.rule && (
+            {Boolean(hoverNode.metadata?.rule) && (
               <div className="text-amber-400">
-                Rule: <span className="text-neutral-300 font-sans">{hoverNode.metadata.rule}</span>
+                Rule: <span className="text-neutral-300 font-sans">{String(hoverNode.metadata?.rule)}</span>
               </div>
             )}
-            {hoverNode.metadata?.author && (
+            {Boolean(hoverNode.metadata?.author) && (
               <div className="text-emerald-400">
-                Author: <span className="text-neutral-300">{hoverNode.metadata.author}</span>
-                {hoverNode.metadata.pr_number && ` (PR #${hoverNode.metadata.pr_number})`}
+                Author: <span className="text-neutral-300">{String(hoverNode.metadata?.author)}</span>
+                {Boolean(hoverNode.metadata?.pr_number) && ` (PR #${String(hoverNode.metadata?.pr_number)})`}
               </div>
             )}
-            {hoverNode.metadata?.ticket && (
+            {Boolean(hoverNode.metadata?.ticket) && (
               <div className="text-neutral-400">
-                Ticket: <span className="text-neutral-300">{hoverNode.metadata.ticket}</span>
+                Ticket: <span className="text-neutral-300">{String(hoverNode.metadata?.ticket)}</span>
               </div>
             )}
             {hoverNode.metadata?.hop !== undefined && (
               <div className="text-red-400">
-                Blast Depth: <span className="text-neutral-300">{hoverNode.metadata.hop} hop(s)</span>
+                Blast Depth: <span className="text-neutral-300">{String(hoverNode.metadata?.hop)} hop(s)</span>
               </div>
             )}
           </div>
@@ -451,30 +447,35 @@ export function GraphViewer({
         graphData={processedData}
         backgroundColor="#0e0e0e"
         nodeRelSize={5}
-        onNodeClick={handleNodeClick}
-        onNodeHover={(node: any) => setHoverNode(node || null)}
+        onNodeClick={(node) => handleNodeClick(node as GraphNode)}
+        onNodeHover={(node) => setHoverNode((node as GraphNode) || null)}
         onBackgroundClick={() => setSelectedNodeId(null)}
-        linkColor={(link: any) => {
+        linkColor={(link) => {
           if (!connectedIds) return "#222a35";
-          const s = typeof link.source === "object" ? String(link.source.id) : String(link.source);
-          const t = typeof link.target === "object" ? String(link.target.id) : String(link.target);
+          const l = link as { source?: unknown; target?: unknown };
+          const s = typeof l.source === "object" && l.source !== null && "id" in l.source ? String((l.source as { id: unknown }).id) : String(l.source);
+          const t = typeof l.target === "object" && l.target !== null && "id" in l.target ? String((l.target as { id: unknown }).id) : String(l.target);
           if (connectedIds.has(s) && connectedIds.has(t)) {
             return "#38bdf8"; // Neon highlighted edge
           }
           return "#14171d"; // Dimmed edge
         }}
-        linkWidth={(link: any) => {
+        linkWidth={(link) => {
           if (!connectedIds) return 1.2;
-          const s = typeof link.source === "object" ? String(link.source.id) : String(link.source);
-          const t = typeof link.target === "object" ? String(link.target.id) : String(link.target);
+          const l = link as { source?: unknown; target?: unknown };
+          const s = typeof l.source === "object" && l.source !== null && "id" in l.source ? String((l.source as { id: unknown }).id) : String(l.source);
+          const t = typeof l.target === "object" && l.target !== null && "id" in l.target ? String((l.target as { id: unknown }).id) : String(l.target);
           return connectedIds.has(s) && connectedIds.has(t) ? 2.4 : 0.6;
         }}
         linkDirectionalArrowLength={3.5}
         linkDirectionalArrowRelPos={0.96}
-        nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-          const nid = String(node.id);
-          const layer = (node.layer as LayerKey) || "ast";
+        nodeCanvasObject={(node, ctx: CanvasRenderingContext2D, globalScale: number) => {
+          const n = node as unknown as GraphNode;
+          const nid = String(n.id);
+          const layer = (n.layer as LayerKey) || "ast";
           const cfg = LAYER_CONFIG[layer] || LAYER_CONFIG.ast;
+          const nx = n.x ?? 0;
+          const ny = n.y ?? 0;
 
           // Inspection highlight state
           const isSelected = selectedNodeId === nid;
@@ -483,7 +484,7 @@ export function GraphViewer({
 
           const baseRadius = layer === "ast" ? 8 : layer === "blast" ? 7 : 6;
           const radius = isSelected ? baseRadius + 2 : baseRadius;
-          const label = String(node.label || node.id);
+          const label = String(n.label || n.id);
 
           ctx.save();
           if (isDimmed) {
@@ -493,13 +494,13 @@ export function GraphViewer({
           // 1. Neon ring on inspect or blast pulse
           if (isSelected) {
             ctx.beginPath();
-            ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI, false);
+            ctx.arc(nx, ny, radius + 5, 0, 2 * Math.PI, false);
             ctx.strokeStyle = "#38bdf8";
             ctx.lineWidth = 2.5 / globalScale;
             ctx.stroke();
           } else if (connectedIds && isConnected) {
             ctx.beginPath();
-            ctx.arc(node.x, node.y, radius + 3, 0, 2 * Math.PI, false);
+            ctx.arc(nx, ny, radius + 3, 0, 2 * Math.PI, false);
             ctx.strokeStyle = cfg.haloColor;
             ctx.lineWidth = 1.8 / globalScale;
             ctx.stroke();
@@ -509,7 +510,7 @@ export function GraphViewer({
             const now = Date.now();
             const pulse = (Math.sin(now / 220) + 1) / 2;
             ctx.beginPath();
-            ctx.arc(node.x, node.y, radius + 3 + pulse * 4, 0, 2 * Math.PI, false);
+            ctx.arc(nx, ny, radius + 3 + pulse * 4, 0, 2 * Math.PI, false);
             ctx.strokeStyle = `rgba(239, 68, 68, ${0.7 - pulse * 0.5})`;
             ctx.lineWidth = 1.5 / globalScale;
             ctx.stroke();
@@ -517,7 +518,7 @@ export function GraphViewer({
 
           // 2. Main Node Circle
           ctx.beginPath();
-          ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
+          ctx.arc(nx, ny, radius, 0, 2 * Math.PI, false);
           ctx.fillStyle = cfg.color;
           ctx.fill();
           ctx.strokeStyle = "#141414";
@@ -532,10 +533,10 @@ export function GraphViewer({
 
           // Shadow for readability
           ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
-          ctx.fillText(label, node.x, node.y + radius + 3 / globalScale);
+          ctx.fillText(label, nx, ny + radius + 3 / globalScale);
 
           ctx.fillStyle = isSelected ? "#38bdf8" : cfg.textColor;
-          ctx.fillText(label, node.x, node.y + radius + 2.5 / globalScale);
+          ctx.fillText(label, nx, ny + radius + 2.5 / globalScale);
 
           ctx.restore();
         }}
