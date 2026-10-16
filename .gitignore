@@ -37,3 +37,15 @@ falkor-data/
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# IDE skills & local agents
+.agents/
+.cursor/
+.impeccable/
+skills-lock.json
+design-system/
+blog_post.md
+demo_video_script.md
+PRODUCT.md
+DESIGN.md
+
