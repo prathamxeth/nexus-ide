@@ -6,11 +6,9 @@ import {
   ShieldAlert,
   Send,
   Loader2,
-  CheckCircle2,
   GitPullRequest,
   BookOpen,
   ArrowRight,
-  Code,
   Check,
   Bot,
   X,
@@ -42,10 +40,7 @@ interface AgentPanelProps {
 }
 
 export function AgentPanel({
-  activeFile,
-  code,
   targetFunction,
-  onApplyPatch,
   prompt: propPrompt,
   onPromptChange: propOnPromptChange,
   isStreaming: propIsStreaming,

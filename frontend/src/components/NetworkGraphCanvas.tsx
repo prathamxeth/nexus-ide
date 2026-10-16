@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
+import type { ForceGraphMethods } from "react-force-graph-2d";
 import {
   Filter,
   Play,
@@ -18,7 +19,6 @@ import {
   ChevronRight,
   FileCode,
   X,
-  Sparkles,
 } from "lucide-react";
 
 // Dynamically import react-force-graph-2d client-side only
@@ -40,17 +40,43 @@ export interface NodeItem {
   layer?: string;
   color?: string;
   val?: number;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   x?: number;
   y?: number;
   collapsed?: boolean;
 }
 
+export interface SimulationNode extends NodeItem {
+  targetX?: number;
+  targetY?: number;
+  vx?: number;
+  vy?: number;
+  level?: number;
+  tier?: number;
+  order?: number;
+  isEdited?: boolean;
+  isHighlighted?: boolean;
+  isSPI?: boolean;
+  accentColor?: string;
+  changeSnippet?: string;
+  desc?: string;
+  category?: string;
+}
+
 export interface EdgeItem {
-  source: string | any;
-  target: string | any;
+  source: string | NodeItem | { id: string; [key: string]: unknown };
+  target: string | NodeItem | { id: string; [key: string]: unknown };
   relationship?: string;
   type?: string;
+}
+
+export interface LinkData {
+  source: string | SimulationNode | { id: string; [key: string]: unknown };
+  target: string | SimulationNode | { id: string; [key: string]: unknown };
+  relationship?: string;
+  type?: string;
+  color?: string;
+  animated?: boolean;
 }
 
 interface NetworkGraphCanvasProps {
@@ -119,20 +145,6 @@ function getNodeVerticalTier(node: NodeItem): { tier: number; order: number } {
 
 function getNodeLevel(node: NodeItem): number {
   return getNodeVerticalTier(node).tier;
-}
-
-function getTreeDepth(id: string): number {
-  if (id === "root") return 0;
-  if (id === "src" || id === "tests" || id.endsWith(".json") || id.endsWith(".toml") || id.endsWith(".md") || id.endsWith(".txt") || id.endsWith(".sh")) {
-    return 1;
-  }
-  if (id.endsWith(".ts") || id.endsWith(".py")) {
-    return 2;
-  }
-  if (id === "ASGI" || id === "FastMCPServer" || id === "background_task" || id === "validateToken" || id === "processInvoice" || id === "auditAccount" || id === "start_application" || id === "setup_server" || id === "process_websocket" || id === "fetch" || id === "websocket") {
-    return 3;
-  }
-  return 4;
 }
 
 // Computes strictly sequential vertical levels for Tree mode (strictly one above another)
@@ -387,7 +399,7 @@ export default function NetworkGraphCanvas({
   isModified,
 }: NetworkGraphCanvasProps) {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const fgRef = useRef<any>(null);
+  const fgRef = useRef<ForceGraphMethods | undefined>(undefined);
   const [dimensions, setDimensions] = useState({ width: 400, height: 600 });
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -403,25 +415,31 @@ export default function NetworkGraphCanvas({
 
   // Auto-switch to flowchart when a file is opened, clicked, or closed
   useEffect(() => {
-    if (activeFileName && activeFileName !== prevActiveFileRef.current) {
-      prevActiveFileRef.current = activeFileName;
-      userPrefersGraphRef.current = false;
-      setViewMode("flowchart");
-    } else if (!activeFileName) {
-      prevActiveFileRef.current = undefined;
-      setViewMode("graph");
-    }
+    const timer = setTimeout(() => {
+      if (activeFileName && activeFileName !== prevActiveFileRef.current) {
+        prevActiveFileRef.current = activeFileName;
+        userPrefersGraphRef.current = false;
+        setViewMode("flowchart");
+      } else if (!activeFileName) {
+        prevActiveFileRef.current = undefined;
+        setViewMode("graph");
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [activeFileName]);
 
   // Auto-switch to flowchart when code is modified or highlighted, unless user explicitly clicked Graph
   useEffect(() => {
-    const hasChanges = (realtimeChangedNodeIds && (Array.isArray(realtimeChangedNodeIds) ? realtimeChangedNodeIds.length > 0 : realtimeChangedNodeIds.size > 0)) || Boolean(isModified);
-    const hasHighlights = highlightedNodeIds && (highlightedNodeIds instanceof Set ? highlightedNodeIds.size > 0 : highlightedNodeIds.length > 0);
-    if (hasChanges || hasHighlights) {
-      if (!userPrefersGraphRef.current) {
-        setViewMode("flowchart");
+    const timer = setTimeout(() => {
+      const hasChanges = (realtimeChangedNodeIds && (Array.isArray(realtimeChangedNodeIds) ? realtimeChangedNodeIds.length > 0 : realtimeChangedNodeIds.size > 0)) || Boolean(isModified);
+      const hasHighlights = highlightedNodeIds && (highlightedNodeIds instanceof Set ? highlightedNodeIds.size > 0 : highlightedNodeIds.length > 0);
+      if (hasChanges || hasHighlights) {
+        if (!userPrefersGraphRef.current) {
+          setViewMode("flowchart");
+        }
       }
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [realtimeChangedNodeIds, isModified, highlightedNodeIds]);
 
   // Node type filters
@@ -489,26 +507,24 @@ export default function NetworkGraphCanvas({
 
     const nodeTierMap = new Map<string, number>();
     const treeLevelMap = computeSequentialTreeLevels(validNodes);
-    const tierGroups: Record<number, any[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] };
+    const tierGroups: Record<number, SimulationNode[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] };
 
-    const enrichedNodes = validNodes.map((n) => {
+    const enrichedNodes: SimulationNode[] = validNodes.map((n) => {
       const { tier, order } = getNodeVerticalTier(n);
       nodeTierMap.set(n.id, tier);
       return { ...n, tier, order };
     });
 
     for (const n of enrichedNodes) {
-      if (!tierGroups[n.tier]) tierGroups[n.tier] = [];
-      tierGroups[n.tier].push(n);
+      if (!tierGroups[n.tier ?? 2]) tierGroups[n.tier ?? 2] = [];
+      tierGroups[n.tier ?? 2].push(n);
     }
 
     // Sort nodes within each tier for consistent positioning in cluster mode
     Object.keys(tierGroups).forEach((tierStr) => {
       const tier = Number(tierStr);
-      tierGroups[tier].sort((a, b) => (a.order - b.order) || a.id.localeCompare(b.id));
+      tierGroups[tier].sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || a.id.localeCompare(b.id));
     });
-
-    const totalTreeNodes = validNodes.length;
 
     const finalNodes = enrichedNodes.map((n) => {
       const treeLvl = treeLevelMap.get(n.id) ?? 0;
@@ -561,7 +577,7 @@ export default function NetworkGraphCanvas({
       });
 
     return { nodes: finalNodes, links };
-  }, [nodes, edges, activeTypes, collapsedNodes, layoutMode, dimensions.width, dimensions.height]);
+  }, [nodes, edges, activeTypes, collapsedNodes, layoutMode, dimensions]);
 
   // Dedicated File Flowchart Data: Vertical Linked Concise & Precise Pipeline (matching system flowchart)
   const flowchartData = useMemo(() => {
@@ -643,15 +659,15 @@ export default function NetworkGraphCanvas({
           id: fn,
           label: `${fn}()`,
           desc: i === 0 ? "Entry Handler" : i === rawFns.length - 1 ? "Output Return" : "Logic Step",
-          category: (i === 0 ? "core" : i === rawFns.length - 1 ? "output" : "logic") as any,
+          category: (i === 0 ? "core" : i === rawFns.length - 1 ? "output" : "logic") as FlowStep["category"],
           accentColor: i % 2 === 0 ? "#38bdf8" : "#10b981"
         }))
       ];
     }
 
     // Build Nodes with sequential vertical levels (Level 0, 1, 2, 3...)
-    const fNodes: any[] = [];
-    const fLinks: any[] = [];
+    const fNodes: SimulationNode[] = [];
+    const fLinks: LinkData[] = [];
 
     pipelineSteps.forEach((step, idx) => {
       const isEdited = realtimeChangedSet.has(step.id) || realtimeChangedSet.has(activeFileName) || (idx === 1 && Boolean(isModified));
@@ -681,7 +697,6 @@ export default function NetworkGraphCanvas({
         level: idx, // Strictly sequential vertical level!
         type: step.category === "entry" ? "EntrySPI" : step.category === "output" ? "Result" : "Function",
         isSPI: step.isSPI,
-        isResult: step.category === "output",
         accentColor: step.accentColor,
         isEdited,
         isHighlighted,
@@ -702,14 +717,13 @@ export default function NetworkGraphCanvas({
     // Add any side branch nodes (e.g. notifications / schema on the side)
     sideSteps.forEach(({ step, connectedTo }) => {
       const parentNode = fNodes.find(n => n.id === connectedTo);
-      const parentLevel = parentNode ? parentNode.level : 2;
+      const parentLevel = parentNode ? (parentNode.level ?? 2) : 2;
       fNodes.push({
         id: step.id,
         label: step.label,
         desc: step.desc,
         level: parentLevel, // Sits on same level as connected parent
         type: "SideBranch",
-        isSideBranch: true,
         accentColor: step.accentColor,
         isEdited: realtimeChangedSet.has(step.id),
       });
@@ -722,7 +736,7 @@ export default function NetworkGraphCanvas({
     });
 
     return { nodes: fNodes, links: fLinks };
-  }, [activeFileName, activeFileCode, nodes, edges, realtimeChangedSet, highlightedNodeIds, isModified]);
+  }, [activeFileName, activeFileCode, realtimeChangedSet, highlightedNodeIds, isModified]);
 
   // Current active data: Flowchart when in flowchart mode, else Full Graph
   const currentGraphData = useMemo(() => {
@@ -749,15 +763,17 @@ export default function NetworkGraphCanvas({
   const handleFit = useCallback(() => {
     if (!fgRef.current || currentGraphData.nodes.length === 0) return;
     const validNodes = currentGraphData.nodes.filter(
-      (n: any) => typeof n.x === "number" && typeof n.y === "number" && !isNaN(n.x) && !isNaN(n.y)
+      (n: SimulationNode) => typeof n.x === "number" && typeof n.y === "number" && !isNaN(n.x) && !isNaN(n.y)
     );
     if (validNodes.length > 0) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       for (const n of validNodes) {
-        if (n.x < minX) minX = n.x;
-        if (n.x > maxX) maxX = n.x;
-        if (n.y < minY) minY = n.y;
-        if (n.y > maxY) maxY = n.y;
+        const nx = n.x ?? 0;
+        const ny = n.y ?? 0;
+        if (nx < minX) minX = nx;
+        if (nx > maxX) maxX = nx;
+        if (ny < minY) minY = ny;
+        if (ny > maxY) maxY = ny;
       }
       const midX = (minX + maxX) / 2;
       const midY = (minY + maxY) / 2;
@@ -812,7 +828,7 @@ export default function NetworkGraphCanvas({
       if (viewMode === "graph") {
         // Vertical layout & boundary containment force (smooth stable layout, zero oscillation, strictly bounded)
         const stablePhysicsForce = () => {
-          let fNodes: any[] = [];
+          let fNodes: Array<{ x?: number; y?: number; vx?: number; vy?: number; targetX?: number; targetY?: number }> = [];
           const force = (alpha: number) => {
             const boundX = Math.max(dimensions.width / 2 - 20, 200);
             const boundY = Math.max(dimensions.height / 2 - 20, 300);
@@ -821,30 +837,30 @@ export default function NetworkGraphCanvas({
               const node = fNodes[i];
               // Target coordinate attraction (smoothly guides nodes to structured positions)
               if (node.targetY !== undefined) {
-                node.vy += (node.targetY - node.y) * 0.24 * alpha;
+                node.vy = (node.vy ?? 0) + (node.targetY - (node.y ?? 0)) * 0.24 * alpha;
               }
               if (node.targetX !== undefined) {
-                node.vx += (node.targetX - node.x) * 0.28 * alpha;
+                node.vx = (node.vx ?? 0) + (node.targetX - (node.x ?? 0)) * 0.28 * alpha;
               }
 
               // Absolute boundary containment: nothing out of canvas
-              if (node.x > boundX) {
+              if (node.x !== undefined && node.x > boundX) {
                 node.x = boundX;
-                node.vx = -Math.abs(node.vx) * 0.4;
-              } else if (node.x < -boundX) {
+                node.vx = -Math.abs(node.vx ?? 0) * 0.4;
+              } else if (node.x !== undefined && node.x < -boundX) {
                 node.x = -boundX;
-                node.vx = Math.abs(node.vx) * 0.4;
+                node.vx = Math.abs(node.vx ?? 0) * 0.4;
               }
-              if (node.y > boundY) {
+              if (node.y !== undefined && node.y > boundY) {
                 node.y = boundY;
-                node.vy = -Math.abs(node.vy) * 0.4;
-              } else if (node.y < -boundY) {
+                node.vy = -Math.abs(node.vy ?? 0) * 0.4;
+              } else if (node.y !== undefined && node.y < -boundY) {
                 node.y = -boundY;
-                node.vy = Math.abs(node.vy) * 0.4;
+                node.vy = Math.abs(node.vy ?? 0) * 0.4;
               }
             }
           };
-          force.initialize = (_nodes: any[]) => {
+          force.initialize = (_nodes: Array<{ x?: number; y?: number; vx?: number; vy?: number; targetX?: number; targetY?: number }>) => {
             fNodes = _nodes;
           };
           return force;
@@ -887,13 +903,13 @@ export default function NetworkGraphCanvas({
   // Zoom control handlers
   const handleZoomIn = () => {
     if (!fgRef.current) return;
-    const currentZoom = fgRef.current.zoom();
+    const currentZoom = fgRef.current.zoom() || 1;
     fgRef.current.zoom(Math.min(currentZoom * 1.35, 2.8), 250);
   };
 
   const handleZoomOut = () => {
     if (!fgRef.current) return;
-    const currentZoom = fgRef.current.zoom();
+    const currentZoom = fgRef.current.zoom() || 1;
     fgRef.current.zoom(Math.max(currentZoom / 1.35, 0.55), 250);
   };
 
@@ -918,7 +934,8 @@ export default function NetworkGraphCanvas({
 
   // Handle node click: zoom smoothly into specified content
   const handleNodeClick = useCallback(
-    (node: any, event: MouseEvent) => {
+    (rawNode: unknown, event: MouseEvent) => {
+      const node = rawNode as SimulationNode;
       // ⌘ + Click toggles collapse
       if (event.metaKey || event.ctrlKey) {
         setCollapsedNodes((prev) => {
@@ -1317,7 +1334,8 @@ export default function NetworkGraphCanvas({
           minZoom={0.55}
           maxZoom={2.8}
           onNodeClick={handleNodeClick}
-          onNodeHover={(node: any) => {
+          onNodeHover={(rawNode: unknown) => {
+            const node = rawNode as SimulationNode | null;
             if (canvasContainerRef.current) {
               const canvas = canvasContainerRef.current.querySelector("canvas");
               if (canvas) {
@@ -1339,14 +1357,17 @@ export default function NetworkGraphCanvas({
             }
           }}
           // Hit area detection matching world coordinates
-          nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
+          nodePointerAreaPaint={(rawNode: unknown, color: string, ctx: CanvasRenderingContext2D) => {
+            const node = rawNode as SimulationNode;
+            const nx = node.x ?? 0;
+            const ny = node.y ?? 0;
             if (viewMode === "flowchart") {
               const isEdited = Boolean(node.isEdited) || realtimeChangedSet.has(String(node.id));
               const cardWidth = isEdited && node.changeSnippet ? 124 : 106;
               const cardHeight = isEdited && node.changeSnippet ? 28 : 22;
               ctx.fillStyle = color;
               ctx.beginPath();
-              ctx.rect(node.x - cardWidth / 2, node.y - cardHeight / 2, cardWidth, cardHeight);
+              ctx.rect(nx - cardWidth / 2, ny - cardHeight / 2, cardWidth, cardHeight);
               ctx.fill();
             } else {
               const nid = String(node.id);
@@ -1354,12 +1375,13 @@ export default function NetworkGraphCanvas({
               const radius = isBig ? 8 : 5;
               ctx.fillStyle = color;
               ctx.beginPath();
-              ctx.arc(node.x, node.y, radius + 3, 0, 2 * Math.PI, false);
+              ctx.arc(nx, ny, radius + 3, 0, 2 * Math.PI, false);
               ctx.fill();
             }
           }}
           // Link styling: highlighted visible connections with prominent directional arrows
-          linkColor={(link: any) => {
+          linkColor={(rawLink: unknown) => {
+            const link = rawLink as LinkData;
             if (viewMode === "flowchart") {
               const tgt = typeof link.target === "object" ? link.target.id : link.target;
               if (realtimeChangedSet.has(tgt) || Boolean(isModified)) return "#e5c07b";
@@ -1372,7 +1394,8 @@ export default function NetworkGraphCanvas({
             }
             return "rgba(255, 255, 255, 0.45)"; // Highly visible, crisp white-slate line
           }}
-          linkWidth={(link: any) => {
+          linkWidth={(rawLink: unknown) => {
+            const link = rawLink as LinkData;
             if (viewMode === "flowchart") return 1.6;
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
@@ -1383,7 +1406,8 @@ export default function NetworkGraphCanvas({
           }}
           linkDirectionalArrowLength={viewMode === "flowchart" ? 6 : 4.5}
           linkDirectionalArrowRelPos={0.96}
-          linkDirectionalArrowColor={(link: any) => {
+          linkDirectionalArrowColor={(rawLink: unknown) => {
+            const link = rawLink as LinkData;
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
             if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
@@ -1394,7 +1418,8 @@ export default function NetworkGraphCanvas({
           linkDirectionalParticles={viewMode === "flowchart" ? 2 : 1}
           linkDirectionalParticleSpeed={0.006}
           linkDirectionalParticleWidth={1.8}
-          linkDirectionalParticleColor={(link: any) => {
+          linkDirectionalParticleColor={(rawLink: unknown) => {
+            const link = rawLink as LinkData;
             const s = typeof link.source === "object" ? link.source.id : link.source;
             const t = typeof link.target === "object" ? link.target.id : link.target;
             if (connectedNeighbors && connectedNeighbors.has(s) && connectedNeighbors.has(t)) {
@@ -1404,10 +1429,13 @@ export default function NetworkGraphCanvas({
           }}
           linkCurvature={0}
           // Custom Node Painting
-          nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+          nodeCanvasObject={(rawNode: unknown, ctx: CanvasRenderingContext2D, globalScale: number) => {
+            const node = rawNode as SimulationNode;
             const nid = String(node.id);
             const nLabel = String(node.label || "");
             const nName = String(node.name || "");
+            const nx = node.x ?? 0;
+            const ny = node.y ?? 0;
 
             // ========================================================
             // FLOWCHART MODE: RENDER VERTICAL LINKED PIPELINE CARDS
@@ -1418,7 +1446,7 @@ export default function NetworkGraphCanvas({
               const isEdited = Boolean(node.isEdited) || realtimeChangedSet.has(nid) || realtimeChangedSet.has(nLabel.replace("()", ""));
               const isHighlighted = Boolean(node.isHighlighted);
               const isSPI = Boolean(node.isSPI) || node.type === "EntrySPI";
-              const isResult = Boolean(node.isResult) || node.type === "Result";
+              const isResult = node.type === "Result";
 
               // Clean uniform card dimensions
               const cardWidth = isEdited && node.changeSnippet ? 124 : 106;
@@ -1455,9 +1483,9 @@ export default function NetworkGraphCanvas({
 
               ctx.beginPath();
               if (typeof ctx.roundRect === "function") {
-                ctx.roundRect(node.x - halfW, node.y - halfH, cardWidth, cardHeight, 4);
+                ctx.roundRect(nx - halfW, ny - halfH, cardWidth, cardHeight, 4);
               } else {
-                ctx.rect(node.x - halfW, node.y - halfH, cardWidth, cardHeight);
+                ctx.rect(nx - halfW, ny - halfH, cardWidth, cardHeight);
               }
               ctx.fill();
 
@@ -1492,7 +1520,7 @@ export default function NetworkGraphCanvas({
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
 
-              const titleY = node.desc || (isEdited && node.changeSnippet) ? node.y - 4.0 : node.y;
+              const titleY = node.desc || (isEdited && node.changeSnippet) ? ny - 4.0 : ny;
 
               ctx.fillStyle = isEdited
                 ? "#ffe2a3"
@@ -1509,7 +1537,7 @@ export default function NetworkGraphCanvas({
               const rawTitle = nLabel || nid;
               const maxTitleLen = isEdited && node.changeSnippet ? 18 : 16;
               const displayTitle = rawTitle.length > maxTitleLen ? `${rawTitle.slice(0, maxTitleLen - 1)}…` : rawTitle;
-              ctx.fillText(displayTitle, node.x, titleY);
+              ctx.fillText(displayTitle, nx, titleY);
 
               // Sub-caption / Exact Change Detail (Centered below title)
               const subFontSize = 4.3;
@@ -1521,12 +1549,12 @@ export default function NetworkGraphCanvas({
                 ctx.fillStyle = "#e5c07b";
                 const rawSnippet = String(node.changeSnippet);
                 const displaySnippet = rawSnippet.length > 25 ? `${rawSnippet.slice(0, 24)}…` : rawSnippet;
-                ctx.fillText(displaySnippet, node.x, node.y + 4.8);
+                ctx.fillText(displaySnippet, nx, ny + 4.8);
               } else if (node.desc) {
                 ctx.fillStyle = isSPI ? "#d8b4fe" : isResult ? "#6ee7b7" : "#94a3b8";
                 const rawDesc = String(node.desc);
                 const displayDesc = rawDesc.length > 22 ? `${rawDesc.slice(0, 21)}…` : rawDesc;
-                ctx.fillText(displayDesc, node.x, node.y + 4.6);
+                ctx.fillText(displayDesc, nx, ny + 4.6);
               }
 
               // Badges for Edited / Breaks
@@ -1535,13 +1563,13 @@ export default function NetworkGraphCanvas({
                 ctx.font = `700 ${badgeFont}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#e5c07b";
-                ctx.fillText("● EDITED", node.x + halfW - 4, titleY);
+                ctx.fillText("● EDITED", nx + halfW - 4, titleY);
               } else if (isHighlighted) {
                 const badgeFont = 4.0;
                 ctx.font = `700 ${badgeFont}px -apple-system, BlinkMacSystemFont, "JetBrains Mono", monospace`;
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#ef4444";
-                ctx.fillText("● BREAKS", node.x + halfW - 4, titleY);
+                ctx.fillText("● BREAKS", nx + halfW - 4, titleY);
               }
 
               ctx.restore();
@@ -1582,7 +1610,7 @@ export default function NetworkGraphCanvas({
             // 1. Subtle, refined halo pulse when selected or edited
             if (isHighlighted) {
               ctx.beginPath();
-              ctx.arc(node.x, node.y, radius + 2.5 / globalScale, 0, 2 * Math.PI, false);
+              ctx.arc(nx, ny, radius + 2.5 / globalScale, 0, 2 * Math.PI, false);
               ctx.fillStyle = "rgba(207, 45, 86, 0.25)";
               ctx.fill();
               ctx.strokeStyle = "rgba(239, 68, 68, 0.75)";
@@ -1590,7 +1618,7 @@ export default function NetworkGraphCanvas({
               ctx.stroke();
             } else if (isRealtimeChanged) {
               ctx.beginPath();
-              ctx.arc(node.x, node.y, radius + 2.0 / globalScale, 0, 2 * Math.PI, false);
+              ctx.arc(nx, ny, radius + 2.0 / globalScale, 0, 2 * Math.PI, false);
               ctx.fillStyle = "rgba(229, 192, 123, 0.2)";
               ctx.fill();
               ctx.strokeStyle = "rgba(229, 192, 123, 0.85)";
@@ -1598,7 +1626,7 @@ export default function NetworkGraphCanvas({
               ctx.stroke();
             } else if (isSelected) {
               ctx.beginPath();
-              ctx.arc(node.x, node.y, radius + 2.0 / globalScale, 0, 2 * Math.PI, false);
+              ctx.arc(nx, ny, radius + 2.0 / globalScale, 0, 2 * Math.PI, false);
               ctx.strokeStyle = "#f54e00";
               ctx.lineWidth = 1.2 / globalScale;
               ctx.stroke();
@@ -1606,7 +1634,7 @@ export default function NetworkGraphCanvas({
 
             // 2. Node Core Disc (Crisp, sleek dot)
             ctx.beginPath();
-            ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
+            ctx.arc(nx, ny, radius, 0, 2 * Math.PI, false);
             ctx.fillStyle = isHighlighted ? "#cf2d56" : isRealtimeChanged ? "#d19a66" : baseColor;
             ctx.fill();
 
@@ -1626,8 +1654,8 @@ export default function NetworkGraphCanvas({
 
             const displayLabel = (!isImportant && label.length > 17) ? `${label.slice(0, 15)}…` : label;
             const textWidth = ctx.measureText(displayLabel).width;
-            const labelX = node.x + radius + 3.0 / globalScale;
-            const labelY = node.y;
+            const labelX = nx + radius + 3.0 / globalScale;
+            const labelY = ny;
 
             const pillPadX = 2.8 / globalScale;
             const pillPadY = 1.4 / globalScale;

@@ -8,10 +8,8 @@ import {
   ChevronRight,
   Database,
   RefreshCw,
-  Server,
   Layers,
   ChevronLeft,
-  Activity,
 } from "lucide-react";
 
 interface FileTreeProps {
@@ -41,7 +39,6 @@ export function FileTree({
   isReindexing,
 }: FileTreeProps) {
   const [dbHealth, setDbHealth] = useState<DbHealth | null>(null);
-  const [isConnecting, setIsConnecting] = useState(true);
   const [folderOpen, setFolderOpen] = useState(true);
 
   // Poll FalkorDB health
@@ -59,18 +56,15 @@ export function FileTree({
               latency_ms: data.latency_ms || 1.2,
               total_nodes: data.total_nodes || 51,
             });
-            setIsConnecting(false);
           }
         } else {
           if (isMounted) {
             setDbHealth(null);
-            setIsConnecting(false);
           }
         }
-      } catch (err) {
+      } catch {
         if (isMounted) {
           setDbHealth(null);
-          setIsConnecting(false);
         }
       }
     }

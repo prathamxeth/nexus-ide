@@ -8,8 +8,6 @@ import {
   Sparkles,
   Check,
   SplitSquareVertical,
-  RotateCcw,
-  ArrowRight,
   Code,
 } from "lucide-react";
 
@@ -40,7 +38,7 @@ export function CodeEditor({
   onRejectDiff,
   onAnalyzeFunction,
 }: CodeEditorProps) {
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
   // Setup theme
   const handleEditorDidMount: OnMount = (editor, monaco) => {

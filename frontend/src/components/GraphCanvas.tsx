@@ -4,10 +4,10 @@ import React, { useEffect, useRef, useState, useMemo, useImperativeHandle, forwa
 import { GraphCanvas, useGraph } from "@gravity-ui/graph/react";
 import { GraphState, type TBlock, type TConnection } from "@gravity-ui/graph";
 import { 
-  ShieldAlert, GitPullRequest, Brain, Code2, ExternalLink, 
-  ZoomIn, ZoomOut, Maximize2, Crosshair, Sparkles, Activity, 
-  Layers, Folder, Hash, ArrowUpRight, CheckCircle2, ShieldCheck,
-  Terminal, Database, Zap
+  ShieldAlert, GitPullRequest, Brain, Code2, 
+  ZoomIn, ZoomOut, Crosshair, 
+  Layers, Folder, Hash, ArrowUpRight, 
+  Zap
 } from "lucide-react";
 import "@gravity-ui/uikit/styles/fonts.css";
 import "@gravity-ui/uikit/styles/styles.css";
@@ -31,9 +31,9 @@ export interface GraphBlock {
     ticket?: string;
     line?: number;
     status?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface GraphConnection {
@@ -45,24 +45,30 @@ export interface GraphConnection {
   label?: string;
   type?: string;
   color?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface GraphCanvasHandle {
   zoomToCenter: (padding?: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
-  graph: any;
+  graph: unknown;
 }
 
 export interface GraphCanvasProps {
   blocks: GraphBlock[];
   connections: GraphConnection[];
-  onSelectBlock: (block: any, file?: string, line?: number) => void;
+  onSelectBlock: (block: GraphBlock, file?: string, line?: number) => void;
   className?: string;
   zoomPadding?: number;
   highlightedBlockIds?: string[] | Set<string>;
 }
+
+type GraphWithCamera = {
+  zoomTo?: (target: string, opts: { padding: number }) => void;
+  zoom?: (opts: { scale: number }) => void;
+  cameraService?: { scale?: number };
+};
 
 const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvasViewer(
   {
@@ -85,7 +91,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
   useImperativeHandle(ref, () => ({
     zoomToCenter: (padding = zoomPadding) => {
       try {
-        graph?.zoomTo("center", { padding });
+        (graph as GraphWithCamera | null)?.zoomTo?.("center", { padding });
         setZoomLevel(100);
       } catch (err) {
         console.warn("zoomTo error:", err);
@@ -93,8 +99,8 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
     },
     zoomIn: () => {
       try {
-        const curScale = (graph as any)?.cameraService?.scale ?? 1;
-        (graph as any)?.zoom({ scale: Math.min(2.5, curScale * 1.25) });
+        const curScale = (graph as GraphWithCamera | null)?.cameraService?.scale ?? 1;
+        (graph as GraphWithCamera | null)?.zoom?.({ scale: Math.min(2.5, curScale * 1.25) });
         setZoomLevel((prev) => Math.min(200, Math.round(prev * 1.25)));
       } catch (err) {
         console.warn("zoomIn error:", err);
@@ -102,8 +108,8 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
     },
     zoomOut: () => {
       try {
-        const curScale = (graph as any)?.cameraService?.scale ?? 1;
-        (graph as any)?.zoom({ scale: Math.max(0.4, curScale * 0.8) });
+        const curScale = (graph as GraphWithCamera | null)?.cameraService?.scale ?? 1;
+        (graph as GraphWithCamera | null)?.zoom?.({ scale: Math.max(0.4, curScale * 0.8) });
         setZoomLevel((prev) => Math.max(40, Math.round(prev * 0.8)));
       } catch (err) {
         console.warn("zoomOut error:", err);
@@ -184,7 +190,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
     }
   }, [filteredBlocks, connections, setEntities, graph, zoomPadding]);
 
-  const handleBlockClick = useCallback((block: any) => {
+  const handleBlockClick = useCallback((block: GraphBlock) => {
     setSelectedBlockId(block.id);
     onSelectBlock(block, block.file, block.data?.line);
   }, [onSelectBlock]);
@@ -248,8 +254,8 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
           <button
             onClick={() => {
               try {
-                const curScale = (graph as any)?.cameraService?.scale ?? 1;
-                (graph as any)?.zoom({ scale: Math.min(2.5, curScale * 1.25) });
+                const curScale = (graph as GraphWithCamera | null)?.cameraService?.scale ?? 1;
+                (graph as GraphWithCamera | null)?.zoom?.({ scale: Math.min(2.5, curScale * 1.25) });
                 setZoomLevel((prev) => Math.min(200, Math.round(prev * 1.25)));
               } catch (e) {
                 console.warn(e);
@@ -260,11 +266,12 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
           >
             <ZoomIn size={12} />
           </button>
+          <span className="text-[10px] text-neutral-400 font-mono px-1 select-none">{zoomLevel}%</span>
           <button
             onClick={() => {
               try {
-                const curScale = (graph as any)?.cameraService?.scale ?? 1;
-                (graph as any)?.zoom({ scale: Math.max(0.4, curScale * 0.8) });
+                const curScale = (graph as GraphWithCamera | null)?.cameraService?.scale ?? 1;
+                (graph as GraphWithCamera | null)?.zoom?.({ scale: Math.max(0.4, curScale * 0.8) });
                 setZoomLevel((prev) => Math.max(40, Math.round(prev * 0.8)));
               } catch (e) {
                 console.warn(e);
@@ -279,7 +286,7 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
           <button
             onClick={() => {
               try {
-                graph?.zoomTo("center", { padding: zoomPadding });
+                (graph as GraphWithCamera | null)?.zoomTo?.("center", { padding: zoomPadding });
                 setZoomLevel(100);
               } catch (e) {
                 console.warn(e);
@@ -307,7 +314,8 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
       {/* GRAVITY-UI GRAPH CANVAS */}
       <GraphCanvas
         graph={graph}
-        renderBlock={(block: any) => {
+        renderBlock={(rawBlock) => {
+          const block = rawBlock as unknown as GraphBlock;
           const isBlast = block.type === "blast_radius";
           const isMemory = block.type === "memory";
           const isPR = block.type === "company_pr";
@@ -463,11 +471,11 @@ const GraphCanvasViewer = forwardRef<GraphCanvasHandle, GraphCanvasProps>(functi
             </div>
           );
         }}
-        onStateChanged={(data: any) => {
+        onStateChanged={(data: { state?: GraphState }) => {
           if (data?.state === GraphState.ATTACHED || data?.state === GraphState.READY) {
             try {
               start();
-              graph?.zoomTo("center", { padding: zoomPadding });
+              (graph as GraphWithCamera | null)?.zoomTo?.("center", { padding: zoomPadding });
             } catch (e) {
               console.debug("Graph start/zoom initialization", e);
             }

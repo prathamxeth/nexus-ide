@@ -774,7 +774,7 @@ export default function NexusIDE() {
     // Search AST nodes
     for (const node of nodes) {
       if (node.label.toLowerCase().includes(q)) {
-        const fileTarget = node.properties?.file || (node.type === "Function" ? "auth.ts" : "worker.py");
+        const fileTarget = (typeof node.properties?.file === "string" ? node.properties.file : undefined) || (node.type === "Function" ? "auth.ts" : "worker.py");
         results.push({
           file: fileTarget,
           line: 1,
